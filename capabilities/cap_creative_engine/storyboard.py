@@ -19,6 +19,26 @@ from typing import List, Dict, Any, Optional
 from .templates import get_template
 
 
+def align_to_frame(seconds: float, fps: int = 30) -> float:
+    """
+    将时长对齐到帧边界，返回秒数（保留3位小数）
+    
+    视频平台标准帧率：30fps或60fps
+    30fps: 每帧=1/30秒≈0.0333秒
+    60fps: 每帧=1/60秒≈0.0167秒
+    
+    这样可以确保所有片段时长是帧的整数倍，避免浮点数精度导致的重叠或间隙。
+    """
+    frame_duration = 1.0 / fps
+    total_frames = round(seconds / frame_duration)
+    return round(total_frames * frame_duration, 3)
+
+
+def align_to_frame_us(seconds: float, fps: int = 30) -> int:
+    """将时长对齐到帧边界，返回微秒整数"""
+    return int(round(align_to_frame(seconds, fps) * 1000000))
+
+
 @dataclass
 class Shot:
     """单个镜头"""
@@ -218,24 +238,25 @@ class StoryboardGenerator:
         return storyboard
 
     def _calculate_durations(self, num_shots: int, base_duration: float, rhythm: str) -> List[float]:
-        """根据节奏计算每个镜头的时长"""
+        """根据节奏计算每个镜头的时长（帧对齐到30fps）"""
         if rhythm == "快切":
-            return [base_duration * 0.7] * num_shots
+            raw = [base_duration * 0.7] * num_shots
         elif rhythm == "舒缓":
-            return [base_duration * 1.2] * num_shots
+            raw = [base_duration * 1.2] * num_shots
         elif rhythm == "递进":
             # 从慢到快
-            return [base_duration * (1.3 - i * 0.1) for i in range(num_shots)]
+            raw = [base_duration * (1.3 - i * 0.1) for i in range(num_shots)]
         else:  # 混合
-            durations = []
+            raw = []
             for i in range(num_shots):
                 if i == 0:
-                    durations.append(base_duration * 1.3)  # 开篇稍长
+                    raw.append(base_duration * 1.3)  # 开篇稍长
                 elif i == num_shots - 1:
-                    durations.append(base_duration * 1.2)  # 结尾稍长
+                    raw.append(base_duration * 1.2)  # 结尾稍长
                 else:
-                    durations.append(base_duration * 0.9)  # 中间紧凑
-            return durations
+                    raw.append(base_duration * 0.9)  # 中间紧凑
+        # 帧对齐到30fps，确保时长是帧的整数倍
+        return [align_to_frame(d, fps=30) for d in raw]
 
     def _cycle_sequence(self, seq: List[str], count: int) -> List[str]:
         """循环序列到指定长度"""

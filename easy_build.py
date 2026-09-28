@@ -34,6 +34,7 @@ from capabilities.cap_keyframe_engine import auto_keyframe_for_still_image, add_
 from capabilities.cap_subtitle_designer import add_artistic_subtitle, add_hook_title
 from capabilities.cap_effect_library import get_style_preset, auto_add_transitions, add_transition
 from capabilities.cap_creative_engine import CreativeEngine, Storyboard, Shot
+from capabilities.cap_creative_engine.storyboard import align_to_frame_us
 
 
 # ==================== 素材扫描 ====================
@@ -172,10 +173,10 @@ def easy_build(input_dir: str, theme: str = "极简", output_name: str = None,
         if not material:
             continue
 
-        # 使用整数微秒避免浮点数精度问题（3.6s会被解析为3599999us导致重叠）
-        duration_us = int(round(shot.duration * 1000000))
-        # 确保起始时间与前一片段不重叠（加1us缓冲）
-        start_us = current_time + 1 if current_time > 0 else 0
+        # 帧对齐到30fps，确保时长和起始时间落在帧边界上
+        duration_us = align_to_frame_us(shot.duration, fps=30)
+        # 起始时间直接累加（帧对齐后不会重叠）
+        start_us = current_time
 
         try:
             seg = project.add_media_safe(
@@ -233,8 +234,8 @@ def easy_build(input_dir: str, theme: str = "极简", output_name: str = None,
     for i, shot in enumerate(storyboard.shots):
         if shot.subtitle and i < len(segments):
             try:
-                start_us = sum(int(round(s.duration * 1000000)) for s in storyboard.shots[:i])
-                duration_us = int(round(shot.duration * 1000000))
+                start_us = sum(align_to_frame_us(s.duration, fps=30) for s in storyboard.shots[:i])
+                duration_us = align_to_frame_us(shot.duration, fps=30)
                 project.add_text_simple(
                     shot.subtitle,
                     start_time=start_us,
