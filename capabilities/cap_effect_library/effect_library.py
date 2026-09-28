@@ -142,16 +142,19 @@ def add_transition(project, segment, transition_type: str = "dissolve", duration
 
 def auto_add_transitions(project, segments: list, transition_type: str = "dissolve"):
     """
-    为多个片段自动添加转场（除第一个外）
+    为多个片段自动添加转场
+
+    注意：剪映转场应添加在【前一个】片段上（出点转场），
+    即片段i和i+1之间的转场要添加在segments[i]上。
+    因此对前n-1个片段添加转场。
 
     Args:
         project: JyProject实例
         segments: 片段列表
         transition_type: 转场类型
     """
-    for i, seg in enumerate(segments):
-        if i > 0:  # 第一个片段不加转场
-            add_transition(project, seg, transition_type)
+    for i in range(len(segments) - 1):
+        add_transition(project, segments[i], transition_type)
 
 
 def get_style_preset(theme: str) -> dict:
