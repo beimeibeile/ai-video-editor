@@ -34,6 +34,7 @@ import pyJianYingDraft as draft
 from capabilities.cap_keyframe_engine import auto_keyframe_for_still_image, add_fade_in_out
 from capabilities.cap_subtitle_designer import add_artistic_subtitle, add_hook_title
 from capabilities.cap_effect_library import get_style_preset, auto_add_transitions, add_transition
+from capabilities.cap_audio_designer import add_bgm, add_sfx, match_bgm
 
 
 # ==================== 素材扫描 ====================
@@ -181,13 +182,18 @@ def easy_build(input_dir: str, theme: str = "极简", output_name: str = None,
     add_hook_title(project, hook, start_time="0s", duration="2.5s", style=style["subtitle"])
     print(f"  ✅ 钩子标题: {hook}")
 
-    # BGM
-    bgm = bgm_query or style["bgm"]
-    try:
-        project.add_cloud_music(bgm, start_time="0s", duration=f"{total_duration}s", track_name="BGM")
-        print(f"  ✅ BGM: {bgm}")
-    except Exception as e:
-        print(f"  ⚠️  BGM添加失败（可手动补）: {e}")
+    # BGM（使用音频设计模块自动匹配）
+    bgm_kw = bgm_query or style["bgm"]
+    bgm_result = add_bgm(project, theme, start_time="0s", duration=f"{total_duration}s")
+    if bgm_result:
+        print(f"  ✅ BGM: {bgm_result}")
+    else:
+        print(f"  ⚠️  BGM添加失败（可手动补）")
+
+    # 开头强调音效
+    sfx_result = add_sfx(project, "强调", start_time="0s", duration="0.5s")
+    if sfx_result:
+        print(f"  ✅ 开头音效: {sfx_result}")
 
     # 7. 保存
     print("[7/7] 保存工程")
