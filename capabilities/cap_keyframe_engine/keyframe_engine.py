@@ -145,13 +145,15 @@ def add_fade_in_out(segment, start_us: int, duration_us: int,
 
     end_us = start_us + duration_us
 
-    # 淡入
-    segment.add_keyframe(KP.alpha, start_us, 0.0, **Keyframe.EASE_IN)
-    segment.add_keyframe(KP.alpha, start_us + fade_in_us, 1.0, **Keyframe.EASE_IN)
+    # 淡入（fade_in_us=0时跳过）
+    if fade_in_us > 0:
+        segment.add_keyframe(KP.alpha, start_us, 0.0, **Keyframe.EASE_IN)
+        segment.add_keyframe(KP.alpha, start_us + fade_in_us, 1.0, **Keyframe.EASE_IN)
 
-    # 淡出
-    segment.add_keyframe(KP.alpha, end_us - fade_out_us, 1.0, **Keyframe.EASE_OUT)
-    segment.add_keyframe(KP.alpha, end_us, 0.0, **Keyframe.EASE_OUT)
+    # 淡出（fade_out_us=0时跳过）
+    if fade_out_us > 0:
+        segment.add_keyframe(KP.alpha, end_us - fade_out_us, 1.0, **Keyframe.EASE_OUT)
+        segment.add_keyframe(KP.alpha, end_us, 0.0, **Keyframe.EASE_OUT)
 
 
 def auto_keyframe_for_still_image(segment, start_us: int, duration_us: int,
@@ -182,11 +184,12 @@ def auto_keyframe_for_still_image(segment, start_us: int, duration_us: int,
     # 添加运镜
     add_ken_burns(segment, start_us, duration_us, move_type, intensity)
 
-    # 添加淡入淡出（首尾片段）
+    # 淡入淡出：仅首片段淡入、尾片段淡出，中间保持不透明（避免黑屏）
+    # 注意：调用方需传入total_count参数，或由调用方控制首尾
+    # 这里默认：index==0淡入，其他不做淡入淡出（由转场负责过渡）
     if index == 0:
         add_fade_in_out(segment, start_us, duration_us, fade_in_us=500000, fade_out_us=0)
-    else:
-        add_fade_in_out(segment, start_us, duration_us, fade_in_us=200000, fade_out_us=200000)
+    # 中间和尾部片段不做alpha淡入淡出，避免与转场冲突导致黑屏
 
 
 def list_camera_moves() -> List[str]:

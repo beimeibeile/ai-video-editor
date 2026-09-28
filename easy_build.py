@@ -174,7 +174,7 @@ def easy_build(input_dir: str, theme: str = "极简", output_name: str = None,
 
     # 转场
     if len(segments) > 1:
-        auto_add_transitions(project, segments[1:], transition_type=style["transition"])
+        auto_add_transitions(project, segments, transition_type=style["transition"])
         print(f"  ✅ 转场: {style['transition']} x{len(segments)-1}")
 
     # 钩子标题
