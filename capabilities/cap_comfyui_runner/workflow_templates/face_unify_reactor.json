@@ -1,0 +1,32 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "{{source_image}}" }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "{{target_image}}" }
+  },
+  "3": {
+    "class_type": "ReActorFaceSwap",
+    "inputs": {
+      "enabled": true,
+      "input_image": ["2", 0],
+      "source_image": ["1", 0],
+      "swap_model": "{{swap_model}}",
+      "facedetection": "{{facedetection}}",
+      "face_restore_model": "{{face_restore_model}}",
+      "face_restore_visibility": {{face_restore_visibility}},
+      "codeformer_weight": {{codeformer_weight}},
+      "detect_gender_input": "no",
+      "detect_gender_source": "no",
+      "input_faces_index": "0",
+      "source_faces_index": "0",
+      "console_log_level": 1
+    }
+  },
+  "4": {
+    "class_type": "SaveImage",
+    "inputs": { "filename_prefix": "face_unify_{{timestamp}}", "images": ["3", 0] }
+  }
+}
