@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-09-29T15:48:32.106582",
+  "updated_at": "2026-09-29T16:03:54.068054",
   "total": 17,
   "assets": {
     "075887caba58": {
@@ -95,7 +95,7 @@
       "format": ".mp4",
       "size_bytes": 9504,
       "description": "简约型浅色缓慢背景",
-      "usage_count": 1,
+      "usage_count": 3,
       "created_at": "2026-09-29T14:32:43.100532"
     },
     "a988d44aa408": {
@@ -269,7 +269,7 @@
       "format": ".wav",
       "size_bytes": 7134,
       "description": "click点击音效",
-      "usage_count": 5,
+      "usage_count": 15,
       "created_at": "2026-09-29T14:32:46.260282"
     },
     "34f345e6e159": {

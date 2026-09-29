@@ -342,7 +342,7 @@ class E2EPipeline:
                 prompt=f"{shot.subtitle}，{shot.emotion}氛围，{shot.shot_size}，电影感",
                 width=ltx_w, height=ltx_h,
                 frames=frames, fps=24,
-                steps=10, seed=-1,
+                steps=10, seed=None,  # None=内部生成随机种子（LTX不接受-1）
                 strength=0.7,
                 server_addr=self.comfyui_addr,
                 timeout=300,
