@@ -1,4 +1,4 @@
-"""
+﻿"""
 视频转场效果生成工具
 使用ffmpeg xfade滤镜实现视频之间的各种转场效果
 支持淡入淡出、滑动、缩放、旋转等多种转场
@@ -47,7 +47,7 @@ def concat_with_transition(
         raise ValueError(f"未知转场效果: {transition}，可用: {TRANSITION_EFFECTS}")
 
     # 获取每个视频的时长
-    from ffmpeg_utils import get_video_info_simple
+    from .ffmpeg_utils import get_video_info_simple
     ffprobe_path = ffmpeg_path.replace("ffmpeg", "ffprobe")
     durations = []
     for v in video_paths:
