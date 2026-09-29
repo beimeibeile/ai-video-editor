@@ -253,6 +253,22 @@ class AssetIndex:
                 elif asset_type == "audio":
                     asset.update(self._get_audio_info(filepath))
 
+                # 集成质检
+                try:
+                    from asset_quality import inspect_asset
+                    qa = inspect_asset(filepath)
+                    asset["quality_score"] = qa.get("quality_score", 0)
+                    asset["valid"] = qa.get("valid", False)
+                    asset["issues"] = qa.get("issues", [])
+                    asset["file_hash"] = qa.get("file_hash", "")
+                    if not asset["valid"]:
+                        asset["tags"].append("质量异常")
+                except Exception as e:
+                    asset["quality_score"] = 0
+                    asset["valid"] = True
+                    asset["issues"] = [f"质检异常: {str(e)[:30]}"]
+                    asset["file_hash"] = ""
+
                 self.assets[asset_id] = asset
                 updated += 1
 
@@ -267,7 +283,8 @@ class AssetIndex:
     def search(self, asset_type: str = None, tags: List[str] = None,
                min_duration: float = None, max_duration: float = None,
                orientation: str = None, ratio: str = None,
-               keyword: str = None, limit: int = 20) -> List[Dict]:
+               keyword: str = None, min_quality: int = 0,
+               only_valid: bool = True, limit: int = 20) -> List[Dict]:
         """
         多维度检索素材
 
@@ -278,6 +295,8 @@ class AssetIndex:
             orientation: 方向过滤 (portrait/landscape/square)
             ratio: 比例过滤 (如 "9:16")
             keyword: 关键词模糊匹配（文件名/标签）
+            min_quality: 最低质量分（0-100）
+            only_valid: 只保留质检有效的素材
             limit: 返回数量上限
 
         Returns:
@@ -313,6 +332,12 @@ class AssetIndex:
 
             # 比例过滤
             if ratio and asset.get("ratio") != ratio:
+                continue
+
+            # 质量过滤
+            if only_valid and not asset.get("valid", True):
+                continue
+            if asset.get("quality_score", 0) < min_quality:
                 continue
 
             # 关键词模糊匹配
@@ -397,6 +422,26 @@ class AssetIndex:
             "library_root": self.library_root,
         }
 
+    def quality_report(self) -> Dict:
+        """生成素材库质量报告"""
+        from asset_quality import quality_report as _qr
+        return _qr(list(self.assets.values()))
+
+    def find_duplicates(self) -> Dict[str, List[Dict]]:
+        """检测重复素材（基于file_hash）"""
+        from asset_quality import find_duplicates as _fd
+        return _fd(list(self.assets.values()))
+
+    def get_high_quality(self, asset_type: str = None,
+                          min_score: int = 80, limit: int = 10) -> List[Dict]:
+        """快速获取高质量素材"""
+        return self.search(asset_type=asset_type, min_quality=min_score,
+                          only_valid=True, limit=limit)
+
+    def get_invalid(self) -> List[Dict]:
+        """获取质检异常的素材"""
+        return [a for a in self.assets.values() if not a.get("valid", True)]
+
     def _save(self):
         """保存索引到文件"""
         data = {
@@ -434,7 +479,8 @@ class AssetIndex:
 
 # ==================== 便捷函数 ====================
 
-def build_index(library_root: str, force: bool = False) -> AssetIndex:
+def build_index(library_root: str, force: bool = False,
+                run_quality_check: bool = True) -> AssetIndex:
     """构建/更新素材库索引"""
     idx = AssetIndex(library_root)
     count = idx.scan(force=force)
