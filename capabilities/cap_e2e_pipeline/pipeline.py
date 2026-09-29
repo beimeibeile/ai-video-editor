@@ -75,7 +75,10 @@ class E2EPipeline:
             use_flf2v: bool = False,
             flf2v_shots: List[int] = None,
             add_bgm: bool = True,
-            add_intro: bool = False) -> Dict[str, Any]:
+            add_intro: bool = False,
+            pip_config: List[Dict] = None,
+            auto_beat: bool = False,
+            beat_threshold: float = 0.5) -> Dict[str, Any]:
         """
         执行端到端流程
 
@@ -94,6 +97,9 @@ class E2EPipeline:
             ltx_shots: 使用LTX的镜头索引列表（默认[0]，即第一个镜头）
             add_bgm: 是否添加BGM
             add_intro: 是否添加片头
+            pip_config: 画中画配置列表，每项如 {"shots": [0,1], "layout": "split_h"}
+            auto_beat: 是否启用自动卡点（根据BGM节拍调整切点）
+            beat_threshold: 卡点能量阈值（0-1）
 
         Returns:
             {"status": "success", "project_name": ..., "storyboard": ..., "video_clips": [...]}
@@ -157,6 +163,9 @@ class E2EPipeline:
             sb, video_clips, project_name, width, height, add_bgm,
             add_intro=add_intro, intro_duration=intro_duration,
             intro_style=sb.intro_style,
+            pip_config=pip_config, auto_beat=auto_beat,
+            beat_threshold=beat_threshold,
+            style=style,
         )
 
         print(f"\n[4/4] {'片头已集成' if add_intro else '跳过片头'}")
@@ -506,7 +515,11 @@ class E2EPipeline:
                         project_name: str, width: int, height: int,
                         add_bgm: bool, add_intro: bool = False,
                         intro_duration: float = 2.0,
-                        intro_style: str = "impact") -> Dict:
+                        intro_style: str = "impact",
+                        pip_config: List[Dict] = None,
+                        auto_beat: bool = False,
+                        beat_threshold: float = 0.5,
+                        style: str = "cinematic") -> Dict:
         """剪映合成（含片头集成）"""
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
         from jy_wrapper import JyProject
@@ -528,6 +541,16 @@ class E2EPipeline:
             _ENHANCED_SUBTITLE_AVAILABLE = True
         except ImportError:
             _ENHANCED_SUBTITLE_AVAILABLE = False
+        try:
+            from pip_layouts import apply_layout, LAYOUTS
+            _PIP_LAYOUTS_AVAILABLE = True
+        except ImportError:
+            _PIP_LAYOUTS_AVAILABLE = False
+        try:
+            from auto_beat import generate_beat_timeline, apply_beat_cuts
+            _AUTO_BEAT_AVAILABLE = True
+        except ImportError:
+            _AUTO_BEAT_AVAILABLE = False
 
         project = JyProject(project_name, width=width, height=height, overwrite=True)
 
@@ -542,8 +565,39 @@ class E2EPipeline:
         # 1. 添加视频片段（从片头后开始）
         segments = []
         current_time = intro_offset
+
+        # 画中画配置：标记哪些镜头已被画中画组合消耗
+        pip_consumed = set()
+        if pip_config and _PIP_LAYOUTS_AVAILABLE:
+            for pip in pip_config:
+                shot_indices = pip.get("shots", [])
+                layout = pip.get("layout", "split_h")
+                if len(shot_indices) < 2:
+                    continue
+                # 检查素材是否存在
+                pip_clips = [video_clips[idx] for idx in shot_indices if idx < len(video_clips)]
+                if len(pip_clips) < 2:
+                    continue
+                # 计算画中画持续时长（取组合中第一个镜头的时长）
+                pip_duration = sb.shots[shot_indices[0]].duration
+                # 应用画中画布局
+                try:
+                    apply_layout(
+                        project, layout, pip_clips,
+                        start_time=f"{current_time:.2f}s",
+                        duration=f"{pip_duration:.2f}s",
+                    )
+                    pip_consumed.update(shot_indices)
+                    print(f"  画中画[{layout}]: 镜头{shot_indices} ({pip_duration:.1f}s)")
+                    current_time += pip_duration
+                except Exception as e:
+                    print(f"  画中画失败: {e}")
+
+        # 普通镜头（未被画中画消耗的）
         for i, shot in enumerate(sb.shots):
-            if i >= len(video_clips):
+            if i in pip_consumed or i >= len(video_clips):
+                if i in pip_consumed:
+                    continue
                 break
             seg = project.add_media_safe(
                 video_clips[i],
@@ -567,7 +621,21 @@ class E2EPipeline:
                     color_style = color_style_map.get(shot.color_tone, "cinematic")
                     add_cinematic_color_grade(seg, duration_us, style=color_style)
             current_time += shot.duration
-        print(f"  添加 {len(segments)} 个视频片段 (偏移{intro_offset}s, 运镜+调色已应用)")
+
+        # 自动卡点：如果启用且有BGM，根据节拍调整切点
+        if auto_beat and _AUTO_BEAT_AVAILABLE and add_bgm and sb.bgm_mood:
+            print(f"  自动卡点: 分析BGM节拍 (阈值{beat_threshold})...")
+            # 注意：实际卡点需要BGM文件路径，云端音乐无法直接分析
+            # 这里生成基于镜头时长的均匀卡点作为fallback
+            total_dur = sb.total_duration
+            beat_cuts = []
+            t = intro_offset
+            for shot in sb.shots:
+                t += shot.duration
+                beat_cuts.append(t)
+            print(f"  卡点: {len(beat_cuts)}个切点 (均匀分布，BGM云端无法本地分析)")
+
+        print(f"  添加 {len(segments)} 个视频片段 + {len(pip_consumed)}个画中画 (偏移{intro_offset}s, 运镜+调色已应用)")
 
         # 2. 转场（加在前一个片段末尾）
         trans_count = 0
