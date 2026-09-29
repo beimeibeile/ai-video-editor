@@ -20,6 +20,13 @@ sys.path.insert(0, SKILL_ROOT)
 from cap_storyboard_engine import generate_storyboard, Storyboard
 from cap_asset_library import get_library
 
+# 创意引擎（可选，用于自动生成创意字幕）
+try:
+    from cap_creative_engine import CreativeEngine
+    _CREATIVE_ENGINE_AVAILABLE = True
+except ImportError:
+    _CREATIVE_ENGINE_AVAILABLE = False
+
 
 class E2EPipeline:
     """端到端视频生成流程"""
@@ -107,6 +114,24 @@ class E2EPipeline:
             shot_count=shot_count, hook_text=hook_text,
             ending_text=ending_text, custom_subtitles=custom_subtitles,
         )
+
+        # 创意引擎字幕优化（如果用户未提供自定义字幕）
+        if custom_subtitles is None and _CREATIVE_ENGINE_AVAILABLE:
+            try:
+                creative = CreativeEngine()
+                creative_sb = creative.generate_storyboard(
+                    theme=theme, num_shots=shot_count,
+                    hook=hook_text, use_hot_trends=True,
+                )
+                creative_subtitles = [s.subtitle for s in creative_sb.shots if s.subtitle]
+                if creative_subtitles:
+                    for i, shot in enumerate(sb.shots):
+                        if i < len(creative_subtitles):
+                            shot.subtitle = creative_subtitles[i]
+                    print(f"  创意字幕: 已优化 {len(creative_subtitles)} 个镜头字幕")
+            except Exception as e:
+                print(f"  创意字幕优化跳过: {e}")
+
         print(sb.summary())
 
         # 保存分镜
@@ -120,19 +145,16 @@ class E2EPipeline:
             sb, input_images, width, height, use_ltx, ltx_shots, project_name
         )
 
-        # ==================== 步骤3：剪映合成 ====================
+        # ==================== 步骤3：剪映合成（含片头） ====================
         print("\n[3/4] 剪映合成")
+        intro_duration = 2.0 if add_intro else 0.0
         result = self._build_jianying(
-            sb, video_clips, project_name, width, height, add_bgm
+            sb, video_clips, project_name, width, height, add_bgm,
+            add_intro=add_intro, intro_duration=intro_duration,
+            intro_style=sb.intro_style,
         )
 
-        # ==================== 步骤4：片头（可选） ====================
-        if add_intro:
-            print("\n[4/4] 添加片头")
-            # 片头生成逻辑（调用cap_intro_generator）
-            pass
-        else:
-            print("\n[4/4] 跳过片头")
+        print(f"\n[4/4] {'片头已集成' if add_intro else '跳过片头'}")
 
         print(f"\n{'='*60}")
         print(f"完成: {project_name}")
@@ -216,6 +238,91 @@ class E2EPipeline:
 
         return video_clips
 
+    def _add_intro_to_project(self, project, sb: Storyboard,
+                               duration: float, style: str,
+                               width: int, height: int, draft) -> float:
+        """在剪映工程中添加片头轨道，返回片头时长（秒）"""
+        import subprocess
+
+        # 片头风格配置
+        intro_styles = {
+            "impact": {"bg_color": "#0a0a1a", "accent": "#ff4444", "main_size": 16, "main_color": (1, 0.9, 0.3), "anim": "放大", "y": 0.3},
+            "cute": {"bg_color": "#1a0a1a", "accent": "#ff88cc", "main_size": 13, "main_color": (1, 0.7, 0.9), "anim": "弹入", "y": 0.2},
+            "funny": {"bg_color": "#1a1a0a", "accent": "#ffcc00", "main_size": 14, "main_color": (1, 0.9, 0.2), "anim": "弹性伸缩", "y": 0.25},
+            "minimal": {"bg_color": "#0a0a0a", "accent": "#888888", "main_size": 11, "main_color": (1, 1, 1), "anim": "渐显", "y": 0.1},
+            "suspense": {"bg_color": "#050510", "accent": "#4444ff", "main_size": 12, "main_color": (0.7, 0.8, 1), "anim": "打字机_I", "y": 0.15},
+        }
+        cfg = intro_styles.get(style, intro_styles["minimal"])
+
+        # 1. 生成片头背景（优先素材库，降级ffmpeg）
+        bg_path = None
+        best = self.asset_lib.get_best_match("background", context="片头背景", style=style)
+        if best:
+            bg_path = self.asset_lib.get_path(best["id"])
+
+        if not bg_path or not os.path.exists(bg_path):
+            # ffmpeg生成渐变背景+Ken Burns
+            bg_path = os.path.join(self.work_dir, "output", f"{project.name}_intro_bg.mp4")
+            temp_img = bg_path + ".png"
+            subprocess.run([
+                self.ffmpeg, "-y",
+                "-f", "lavfi", "-i", f"color=c={cfg['bg_color']}:s={width}x{height}:d=1",
+                "-vf", f"drawbox=x=0:y=0:w=iw:h=ih/4:color={cfg['accent']}@0.2:t=fill,"
+                       f"drawbox=x=0:y=ih*3/4:w=iw:h=ih/4:color={cfg['accent']}@0.15:t=fill",
+                "-frames:v", "1", temp_img
+            ], capture_output=True)
+
+            from cap_ffmpeg_motion.ffmpeg_motion import FFmpegMotion
+            fm = FFmpegMotion(ffmpeg_path=self.ffmpeg)
+            fm.image_to_ken_burns(
+                temp_img, bg_path, duration=duration,
+                move_type="zoom_in", intensity=0.08,
+                width=width, height=height, fps=30
+            )
+            if os.path.exists(temp_img):
+                os.remove(temp_img)
+
+        # 2. 背景轨道
+        if bg_path and os.path.exists(bg_path):
+            project.add_media_safe(bg_path, start_time="0s", duration=f"{duration}s", track_name="IntroBG")
+
+        # 3. 主标题
+        title = sb.hook_text or sb.theme
+        project.add_text_simple(
+            title,
+            start_time="0.3s", duration=f"{max(duration - 0.5, 0.5)}s",
+            font_size=cfg["main_size"],
+            color_rgb=cfg["main_color"],
+            style=draft.TextStyle(size=cfg["main_size"], bold=True),
+            border=draft.TextBorder(color=(0, 0, 0), width=50),
+            shadow=draft.TextShadow(color=(0, 0, 0), distance=8, diffuse=15),
+            clip_settings=draft.ClipSettings(transform_y=cfg["y"]),
+            anim_in=cfg["anim"],
+            track_name="IntroTitle",
+        )
+
+        # 4. 副标题（主题）
+        project.add_text_simple(
+            sb.theme,
+            start_time="0.8s", duration=f"{max(duration - 1.0, 0.5)}s",
+            font_size=6.0,
+            color_rgb=(0.8, 0.8, 0.8),
+            clip_settings=draft.ClipSettings(transform_y=cfg["y"] - 0.25),
+            anim_in="渐显",
+            track_name="IntroSub",
+        )
+
+        # 5. 片头音效
+        sfx_best = self.asset_lib.get_best_match("sfx", context="片头冲击", style=style)
+        if sfx_best:
+            sfx_path = self.asset_lib.get_path(sfx_best["id"])
+            try:
+                project.add_media_safe(sfx_path, start_time="0.1s", duration="0.5s", track_name="IntroSFX")
+            except Exception:
+                pass
+
+        return duration
+
     def _try_ltx_i2v(self, img_path: str, out_path: str, shot,
                      width: int, height: int) -> bool:
         """尝试LTX-2.5 I2V，失败返回False"""
@@ -247,8 +354,10 @@ class E2EPipeline:
 
     def _build_jianying(self, sb: Storyboard, video_clips: List[str],
                         project_name: str, width: int, height: int,
-                        add_bgm: bool) -> Dict:
-        """剪映合成"""
+                        add_bgm: bool, add_intro: bool = False,
+                        intro_duration: float = 2.0,
+                        intro_style: str = "impact") -> Dict:
+        """剪映合成（含片头集成）"""
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
         from jy_wrapper import JyProject
         import pyJianYingDraft as draft
@@ -262,9 +371,17 @@ class E2EPipeline:
 
         project = JyProject(project_name, width=width, height=height, overwrite=True)
 
-        # 1. 添加视频片段
+        # 0. 片头（在正片之前）
+        intro_offset = 0.0
+        if add_intro:
+            intro_offset = self._add_intro_to_project(
+                project, sb, intro_duration, intro_style, width, height, draft
+            )
+            print(f"  片头: {intro_duration}s ({intro_style})")
+
+        # 1. 添加视频片段（从片头后开始）
         segments = []
-        current_time = 0.0
+        current_time = intro_offset
         for i, shot in enumerate(sb.shots):
             if i >= len(video_clips):
                 break
@@ -276,7 +393,7 @@ class E2EPipeline:
             if seg:
                 segments.append(seg)
             current_time += shot.duration
-        print(f"  添加 {len(segments)} 个视频片段")
+        print(f"  添加 {len(segments)} 个视频片段 (偏移{intro_offset}s)")
 
         # 2. 转场（加在前一个片段末尾）
         trans_count = 0
@@ -299,9 +416,9 @@ class E2EPipeline:
                 print(f"  转场{i}失败: {e}")
         print(f"  添加 {trans_count} 个转场")
 
-        # 3. 字幕
+        # 3. 字幕（从片头后开始）
         sub_count = 0
-        current_time = 0.0
+        current_time = intro_offset
         for i, shot in enumerate(sb.shots):
             if shot.subtitle and add_artistic_subtitle:
                 add_artistic_subtitle(
@@ -315,9 +432,9 @@ class E2EPipeline:
             current_time += shot.duration
         print(f"  添加 {sub_count} 个字幕")
 
-        # 4. 音效（从素材库智能匹配）
+        # 4. 音效（从片头后开始）
         sfx_count = 0
-        current_time = 0.0
+        current_time = intro_offset
         for i, shot in enumerate(sb.shots):
             if shot.sfx_hint:
                 best = self.asset_lib.get_best_match(
@@ -336,14 +453,15 @@ class E2EPipeline:
             current_time += shot.duration
         print(f"  添加 {sfx_count} 个音效")
 
-        # 5. BGM
+        # 5. BGM（覆盖片头+正片）
         if add_bgm and sb.bgm_mood:
+            total_dur = intro_offset + sb.total_duration
             try:
                 project.add_cloud_music(
                     sb.bgm_mood, start_time="0s",
-                    duration=f"{sb.total_duration}s", track_name="BGM"
+                    duration=f"{total_dur}s", track_name="BGM"
                 )
-                print(f"  BGM: {sb.bgm_mood}")
+                print(f"  BGM: {sb.bgm_mood} ({total_dur:.1f}s)")
             except Exception as e:
                 print(f"  BGM失败: {e}")
 

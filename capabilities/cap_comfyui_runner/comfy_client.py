@@ -14,6 +14,11 @@ class ComfyClient:
     """ComfyUI API客户端"""
 
     def __init__(self, server_addr: str = "127.0.0.1:8188", client_id: str = None):
+        # 兼容带http://前缀的地址
+        if server_addr.startswith("http://"):
+            server_addr = server_addr[7:]
+        elif server_addr.startswith("https://"):
+            server_addr = server_addr[8:]
         self.server_addr = server_addr
         self.client_id = client_id or str(uuid.uuid4())
         self.base_url = f"http://{server_addr}"

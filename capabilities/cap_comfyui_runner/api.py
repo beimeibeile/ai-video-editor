@@ -127,7 +127,6 @@ def img2video_ltx25(
     """
     import os as _os
     import uuid as _uuid
-    import urllib.request as _urllib_request
 
     if not _os.path.exists(image_path):
         raise FileNotFoundError(f"输入图片不存在: {image_path}")
@@ -143,24 +142,10 @@ def img2video_ltx25(
     cfg_models = LTX25_MODELS.get(model, LTX25_MODELS["int8_distilled"])
     use_lora = cfg_models.get("lora") is not None
 
-    # 上传图片到ComfyUI
-    img_filename = _os.path.basename(image_path)
-    with open(image_path, "rb") as f:
-        img_data = f.read()
-    boundary = "----WebKitFormBoundary" + _uuid.uuid4().hex
-    body = (
-        f"--{boundary}\r\n"
-        f"Content-Disposition: form-data; name=\"image\"; filename=\"{img_filename}\"\r\n"
-        f"Content-Type: image/png\r\n\r\n"
-    ).encode("utf-8") + img_data + f"\r\n--{boundary}--\r\n".encode("utf-8")
-    req = _urllib_request.Request(
-        f"http://{server_addr}/upload/image",
-        data=body,
-        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
-    )
-    with _urllib_request.urlopen(req, timeout=30) as resp:
-        upload_result = json.loads(resp.read())
-    comfy_img_name = upload_result.get("name", img_filename)
+    # 上传图片到ComfyUI（使用ComfyClient）
+    client = ComfyClient(server_addr)
+    upload_result = client.upload_image(image_path)
+    comfy_img_name = upload_result.get("name", _os.path.basename(image_path))
     print(f"  图片已上传: {comfy_img_name}")
 
     # 构建工作流
@@ -272,10 +257,9 @@ def img2video_ltx25(
             workflow[adev_id] = {"class_type": "LTXVAudioVAEDecode", "inputs": {"samples": [sep_id, 1], "audio_vae": [avae_key + "b", 0]}}
             workflow[asave_id] = {"class_type": "SaveAudio", "inputs": {"audio": [adev_id, 0], "filename_prefix": "ltx25_i2v_av"}}
 
-    # 提交并等待（使用ComfyClient，与txt2video一致）
+    # 提交并等待（复用前面创建的client）
     output_dir = os.path.dirname(output_path) or "."
     os.makedirs(output_dir, exist_ok=True)
-    client = ComfyClient(server_addr)
     results = client.run_workflow(workflow, output_dir=output_dir, timeout=timeout)
 
     if results:
@@ -366,7 +350,6 @@ def flf2video_ltx25(
     """
     import os as _os
     import uuid as _uuid
-    import urllib.request as _urllib_request
 
     if not _os.path.exists(first_image_path):
         raise FileNotFoundError(f"首帧图片不存在: {first_image_path}")
@@ -382,27 +365,10 @@ def flf2video_ltx25(
     cfg_models = LTX25_MODELS.get(model, LTX25_MODELS["int8_distilled"])
     use_lora = cfg_models.get("lora") is not None
 
-    # 上传两张图片
-    def _upload_img(path):
-        fname = _os.path.basename(path)
-        with open(path, "rb") as f:
-            data = f.read()
-        boundary = "----WebKitFormBoundary" + _uuid.uuid4().hex
-        body = (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="image"; filename="{fname}"\r\n'
-            f"Content-Type: image/png\r\n\r\n"
-        ).encode("utf-8") + data + f"\r\n--{boundary}--\r\n".encode("utf-8")
-        req = _urllib_request.Request(
-            f"http://{server_addr}/upload/image",
-            data=body,
-            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
-        )
-        with _urllib_request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read()).get("name", fname)
-
-    first_img = _upload_img(first_image_path)
-    last_img = _upload_img(last_image_path)
+    # 上传两张图片（使用ComfyClient）
+    client = ComfyClient(server_addr)
+    first_img = client.upload_image(first_image_path).get("name", _os.path.basename(first_image_path))
+    last_img = client.upload_image(last_image_path).get("name", _os.path.basename(last_image_path))
     print(f"  首帧: {first_img}, 尾帧: {last_img}")
 
     # 上传中间帧引导
