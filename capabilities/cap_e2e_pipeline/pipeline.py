@@ -381,10 +381,12 @@ class E2EPipeline:
             if not check_comfyui_ready(self.comfyui_addr):
                 return False
 
-            # LTX-2.5尺寸限制（必须能被32整除）
-            ltx_w = (width // 32) * 32
-            ltx_h = (height // 32) * 32
-            frames = max(int(shot.duration * 24), 24)
+            # LTX-2.5参数优化：帧数对齐8n+1，分辨率限制768x432（12GB显存安全），步数20
+            max_ltx_w, max_ltx_h = 768, 432
+            ltx_w = min((width // 32) * 32, max_ltx_w)
+            ltx_h = min((height // 32) * 32, max_ltx_h)
+            raw_frames = max(int(shot.duration * 24), 17)
+            frames = ((raw_frames - 1) // 8) * 8 + 1  # 对齐8n+1
 
             result = img2video_ltx25(
                 image_path=img_path,
@@ -392,7 +394,7 @@ class E2EPipeline:
                 prompt=f"{shot.subtitle}，{shot.emotion}氛围，{shot.shot_size}，电影感",
                 width=ltx_w, height=ltx_h,
                 frames=frames, fps=24,
-                steps=10, seed=None,  # None=内部生成随机种子（LTX不接受-1）
+                steps=20, seed=None,  # None=内部生成随机种子（LTX不接受-1）
                 strength=0.7,
                 server_addr=self.comfyui_addr,
                 timeout=300,
@@ -411,8 +413,9 @@ class E2EPipeline:
             if not check_comfyui_ready(self.comfyui_addr):
                 return {}
 
-            ltx_w = (width // 32) * 32
-            ltx_h = (height // 32) * 32
+            max_ltx_w, max_ltx_h = 768, 432
+            ltx_w = min((width // 32) * 32, max_ltx_w)
+            ltx_h = min((height // 32) * 32, max_ltx_h)
 
             # 收集图片和提示词
             images = []
@@ -489,10 +492,12 @@ class E2EPipeline:
             if not check_comfyui_ready(self.comfyui_addr):
                 return False
 
-            # FLF2V尺寸限制（必须能被32整除）
-            flf_w = (width // 32) * 32
-            flf_h = (height // 32) * 32
-            frames = max(int(shot.duration * 24), 48)
+            # FLF2V参数优化：帧数对齐8n+1，分辨率限制768x432，步数20
+            max_flf_w, max_flf_h = 768, 432
+            flf_w = min((width // 32) * 32, max_flf_w)
+            flf_h = min((height // 32) * 32, max_flf_h)
+            raw_frames = max(int(shot.duration * 24), 17)
+            frames = ((raw_frames - 1) // 8) * 8 + 1  # 对齐8n+1
 
             result = flf2video_ltx25_v2(
                 first_image_path=first_img,
@@ -501,7 +506,7 @@ class E2EPipeline:
                 prompt=f"{shot.subtitle}，{shot.emotion}氛围，平滑过渡，电影感运镜",
                 width=flf_w, height=flf_h,
                 frames=frames, fps=24,
-                steps=10, seed=None,
+                steps=20, seed=None,
                 first_strength=1.0, last_strength=1.0,
                 server_addr=self.comfyui_addr,
                 timeout=300,
