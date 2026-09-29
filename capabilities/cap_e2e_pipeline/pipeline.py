@@ -523,6 +523,11 @@ class E2EPipeline:
             _CAMERA_MOVES_AVAILABLE = True
         except ImportError:
             _CAMERA_MOVES_AVAILABLE = False
+        try:
+            from enhanced_subtitle import add_styled_subtitle, SUBTITLE_STYLES
+            _ENHANCED_SUBTITLE_AVAILABLE = True
+        except ImportError:
+            _ENHANCED_SUBTITLE_AVAILABLE = False
 
         project = JyProject(project_name, width=width, height=height, overwrite=True)
 
@@ -585,21 +590,37 @@ class E2EPipeline:
                 print(f"  转场{i}失败: {e}")
         print(f"  添加 {trans_count} 个转场")
 
-        # 3. 字幕（从片头后开始）
+        # 3. 字幕（从片头后开始）—— 优先使用enhanced_subtitle半透明字幕条
         sub_count = 0
         current_time = intro_offset
+        # 分镜风格→字幕风格映射
+        style_map = {
+            "cinematic": "cinema", "vlog": "vlog", "tutorial": "news",
+            "thriller": "tech", "emotional": "vlog",
+        }
+        sub_style = style_map.get(style, "cinema")
+
         for i, shot in enumerate(sb.shots):
-            if shot.subtitle and add_artistic_subtitle:
-                add_artistic_subtitle(
-                    project,
-                    main_text=shot.subtitle,
-                    start_time=f"{current_time + 0.2:.2f}s",
-                    duration=f"{max(shot.duration - 0.4, 0.5):.2f}s",
-                    style=shot.subtitle_style,
-                )
+            if shot.subtitle:
+                if _ENHANCED_SUBTITLE_AVAILABLE:
+                    add_styled_subtitle(
+                        project,
+                        text=shot.subtitle,
+                        start_time=f"{current_time + 0.2:.2f}s",
+                        duration=f"{max(shot.duration - 0.4, 0.5):.2f}s",
+                        style=sub_style,
+                    )
+                elif add_artistic_subtitle:
+                    add_artistic_subtitle(
+                        project,
+                        main_text=shot.subtitle,
+                        start_time=f"{current_time + 0.2:.2f}s",
+                        duration=f"{max(shot.duration - 0.4, 0.5):.2f}s",
+                        style=shot.subtitle_style,
+                    )
                 sub_count += 1
             current_time += shot.duration
-        print(f"  添加 {sub_count} 个字幕")
+        print(f"  添加 {sub_count} 个字幕 ({sub_style}风格)")
 
         # 4. 音效（从片头后开始）
         sfx_count = 0
