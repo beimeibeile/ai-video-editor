@@ -90,6 +90,7 @@ def img2video_ltx25(
     strength: float = 1.0,
     model: str = "int8_distilled",
     lora_strength: float = 1.0,
+    generate_audio: bool = False,
     server_addr: str = "127.0.0.1:8188",
     timeout: int = 600,
 ) -> str:
@@ -116,6 +117,7 @@ def img2video_ltx25(
         strength: 图像引导强度（1.0=完全遵循原图，0.5=更自由创作）
         model: 模型版本 "int8_distilled" 或 "int8_dev_lora"
         lora_strength: LoRA强度（仅dev_lora模式）
+        generate_audio: 是否同时生成音频（默认False）
         server_addr: ComfyUI地址
         timeout: 超时秒数
 
@@ -240,6 +242,154 @@ def img2video_ltx25(
     result = _wait_for_completion(prompt_id, server_addr, timeout)
 
     # 下载输出视频
+    output_dir = _os.path.dirname(output_path)
+    if output_dir:
+        _os.makedirs(output_dir, exist_ok=True)
+
+    for node_id, node_output in result.get("outputs", {}).items():
+        if "images" in node_output:
+            for img_info in node_output["images"]:
+                if img_info.get("type") == "output":
+                    vid_url = f"http://{server_addr}/view?filename={img_info['filename']}&subfolder={img_info.get('subfolder', '')}&type=output"
+                    _urllib_request.urlretrieve(vid_url, output_path)
+                    print(f"  视频已保存: {output_path}")
+                    return output_path
+
+    raise RuntimeError("未找到输出视频")
+
+
+def flf2video_ltx25(
+    first_image_path: str,
+    last_image_path: str,
+    output_path: str,
+    prompt: str = "smooth transition, cinematic camera movement, high quality",
+    negative_prompt: str = "blurry, low quality, distorted, static",
+    width: int = 768,
+    height: int = 448,
+    frames: int = 97,
+    fps: int = 24,
+    steps: int = 42,
+    seed: int = None,
+    cfg: float = 1.0,
+    first_strength: float = 1.0,
+    last_strength: float = 1.0,
+    model: str = "int8_distilled",
+    lora_strength: float = 1.0,
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 600,
+) -> str:
+    """
+    LTX-2.5 首尾帧视频（First-Last Frame to Video, FLF2V）
+
+    提供首帧和尾帧两张图片，模型自动生成中间的过渡视频。
+    使用LTXVAddGuide节点在frame 0和frame N-1添加图像引导。
+
+    Args:
+        first_image_path: 首帧图片路径
+        last_image_path: 尾帧图片路径
+        output_path: 输出视频路径
+        prompt: 运动/过渡描述提示词
+        negative_prompt: 负向提示词
+        width/height: 输出分辨率（height必须能被32整除）
+        frames: 帧数（97帧≈4秒@24fps）
+        fps: 帧率
+        steps: 采样步数
+        seed: 随机种子
+        cfg: CFG值
+        first_strength: 首帧引导强度（1.0=完全遵循）
+        last_strength: 尾帧引导强度
+        model: 模型版本 "int8_distilled" 或 "int8_dev_lora"
+        lora_strength: LoRA强度
+        server_addr: ComfyUI地址
+        timeout: 超时秒数
+
+    Returns:
+        输出视频文件路径
+    """
+    import os as _os
+    import uuid as _uuid
+    import urllib.request as _urllib_request
+
+    if not _os.path.exists(first_image_path):
+        raise FileNotFoundError(f"首帧图片不存在: {first_image_path}")
+    if not _os.path.exists(last_image_path):
+        raise FileNotFoundError(f"尾帧图片不存在: {last_image_path}")
+
+    if height % 32 != 0:
+        height = (height // 32) * 32
+
+    if seed is None:
+        seed = int(_uuid.uuid4().int % (2**31))
+
+    cfg_models = LTX25_MODELS.get(model, LTX25_MODELS["int8_distilled"])
+    use_lora = cfg_models.get("lora") is not None
+
+    # 上传两张图片
+    def _upload_img(path):
+        fname = _os.path.basename(path)
+        with open(path, "rb") as f:
+            data = f.read()
+        boundary = "----WebKitFormBoundary" + _uuid.uuid4().hex
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="image"; filename="{fname}"\r\n'
+            f"Content-Type: image/png\r\n\r\n"
+        ).encode("utf-8") + data + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        req = _urllib_request.Request(
+            f"http://{server_addr}/upload/image",
+            data=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
+        )
+        with _urllib_request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read()).get("name", fname)
+
+    first_img = _upload_img(first_image_path)
+    last_img = _upload_img(last_image_path)
+    print(f"  首帧: {first_img}, 尾帧: {last_img}")
+
+    # 构建工作流
+    if use_lora:
+        base = {
+            "1": {"class_type": "UNETLoader", "inputs": {"unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+            "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": cfg_models["clip"], "type": "ltxv"}},
+            "3": {"class_type": "LoraLoader", "inputs": {"model": ["1", 0], "clip": ["2", 0], "lora_name": cfg_models["lora"], "strength_model": lora_strength, "strength_clip": lora_strength}},
+            "4": {"class_type": "VAELoader", "inputs": {"vae_name": cfg_models["vae"]}},
+            "5": {"class_type": "LoadImage", "inputs": {"image": first_img}},
+            "6": {"class_type": "LoadImage", "inputs": {"image": last_img}},
+            "7": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["3", 1]}},
+            "8": {"class_type": "CLIPTextEncode", "inputs": {"text": negative_prompt, "clip": ["3", 1]}},
+            "9": {"class_type": "LTXVConditioning", "inputs": {"positive": ["7", 0], "negative": ["8", 0], "frame_rate": fps}},
+            "10": {"class_type": "EmptyLTXVLatentVideo", "inputs": {"width": width, "height": height, "length": frames, "batch_size": 1}},
+            "11": {"class_type": "LTXVAddGuide", "inputs": {"positive": ["9", 0], "negative": ["9", 1], "vae": ["4", 0], "latent": ["10", 0], "image": ["5", 0], "frame_idx": 0, "strength": first_strength}},
+            "12": {"class_type": "LTXVAddGuide", "inputs": {"positive": ["11", 0], "negative": ["11", 1], "vae": ["4", 0], "latent": ["11", 2], "image": ["6", 0], "frame_idx": frames - 1, "strength": last_strength}},
+            "13": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform", "denoise": 1.0, "model": ["3", 0], "positive": ["12", 0], "negative": ["12", 1], "latent_image": ["12", 2]}},
+            "14": {"class_type": "LTXVTiledVAEDecode", "inputs": {"latents": ["13", 0], "vae": ["4", 0], "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}},
+            "15": {"class_type": "CreateVideo", "inputs": {"images": ["14", 0], "fps": fps}},
+            "16": {"class_type": "SaveVideo", "inputs": {"video": ["15", 0], "filename_prefix": "ltx25_flf2v", "format": "auto", "codec": "auto"}},
+        }
+    else:
+        base = {
+            "1": {"class_type": "UNETLoader", "inputs": {"unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+            "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": cfg_models["clip"], "type": "ltxv"}},
+            "3": {"class_type": "VAELoader", "inputs": {"vae_name": cfg_models["vae"]}},
+            "4": {"class_type": "LoadImage", "inputs": {"image": first_img}},
+            "5": {"class_type": "LoadImage", "inputs": {"image": last_img}},
+            "6": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
+            "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative_prompt, "clip": ["2", 0]}},
+            "8": {"class_type": "LTXVConditioning", "inputs": {"positive": ["6", 0], "negative": ["7", 0], "frame_rate": fps}},
+            "9": {"class_type": "EmptyLTXVLatentVideo", "inputs": {"width": width, "height": height, "length": frames, "batch_size": 1}},
+            "10": {"class_type": "LTXVAddGuide", "inputs": {"positive": ["8", 0], "negative": ["8", 1], "vae": ["3", 0], "latent": ["9", 0], "image": ["4", 0], "frame_idx": 0, "strength": first_strength}},
+            "11": {"class_type": "LTXVAddGuide", "inputs": {"positive": ["10", 0], "negative": ["10", 1], "vae": ["3", 0], "latent": ["10", 2], "image": ["5", 0], "frame_idx": frames - 1, "strength": last_strength}},
+            "12": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform", "denoise": 1.0, "model": ["1", 0], "positive": ["11", 0], "negative": ["11", 1], "latent_image": ["11", 2]}},
+            "13": {"class_type": "LTXVTiledVAEDecode", "inputs": {"latents": ["12", 0], "vae": ["3", 0], "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}},
+            "14": {"class_type": "CreateVideo", "inputs": {"images": ["13", 0], "fps": fps}},
+            "15": {"class_type": "SaveVideo", "inputs": {"video": ["14", 0], "filename_prefix": "ltx25_flf2v", "format": "auto", "codec": "auto"}},
+        }
+
+    prompt_id = _submit_workflow(base, server_addr)
+    print(f"  任务已提交: {prompt_id}")
+    result = _wait_for_completion(prompt_id, server_addr, timeout)
+
     output_dir = _os.path.dirname(output_path)
     if output_dir:
         _os.makedirs(output_dir, exist_ok=True)
@@ -1120,6 +1270,7 @@ def txt2video_ltx25(
     negative_prompt: str = "blurry, low quality, distorted, ugly, watermark, text",
     model: str = "int8_distilled",
     lora_strength: float = 1.0,
+    generate_audio: bool = False,
     server_addr: str = "127.0.0.1:8188",
     timeout: int = 600,
 ) -> str:
@@ -1144,6 +1295,7 @@ def txt2video_ltx25(
         negative_prompt: 负向提示词
         model: 模型版本 "int8_distilled" 或 "int8_dev_lora"
         lora_strength: LoRA强度（仅dev_lora模式有效，默认1.0）
+        generate_audio: 是否同时生成音频（默认False，True时输出带音频的视频）
         server_addr: ComfyUI地址
         timeout: 超时秒数（默认600）
 
