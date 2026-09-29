@@ -334,6 +334,9 @@ class FFmpegMotion:
         video_speed = 1.0 / speed  # setpts是反向的
         audio_speed = speed
 
+        # 检测是否有音频流
+        has_audio = self._has_audio_stream(input_path)
+
         # atempo只支持0.5-2.0，超出需要链式
         if audio_speed > 2.0:
             audio_filter = f"atempo=2.0,atempo={audio_speed/2.0}"
@@ -342,19 +345,41 @@ class FFmpegMotion:
         else:
             audio_filter = f"atempo={audio_speed}"
 
-        cmd = [
-            self.ffmpeg, "-y",
-            "-i", input_path,
-            "-filter_complex",
-            f"[0:v]setpts={video_speed}*PTS[v];[0:a]{audio_filter}[a]",
-            "-map", "[v]", "-map", "[a]",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            output_path,
-        ]
+        if has_audio:
+            cmd = [
+                self.ffmpeg, "-y",
+                "-i", input_path,
+                "-filter_complex",
+                f"[0:v]setpts={video_speed}*PTS[v];[0:a]{audio_filter}[a]",
+                "-map", "[v]", "-map", "[a]",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                output_path,
+            ]
+        else:
+            cmd = [
+                self.ffmpeg, "-y",
+                "-i", input_path,
+                "-filter:v", f"setpts={video_speed}*PTS",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                "-an",
+                output_path,
+            ]
 
         if self._run(cmd):
             return output_path
         return None
+
+    def _has_audio_stream(self, video_path: str) -> bool:
+        """检测视频是否有音频流"""
+        try:
+            result = subprocess.run(
+                [self.ffprobe, "-v", "error", "-select_streams", "a",
+                 "-show_entries", "stream=codec_type", "-of", "csv=p=0", video_path],
+                capture_output=True, text=True, timeout=10
+            )
+            return bool(result.stdout.strip())
+        except Exception:
+            return False
 
     # ==================== 动态文字条 ====================
 

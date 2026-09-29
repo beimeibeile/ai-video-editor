@@ -236,24 +236,89 @@ def img2video_ltx25(
                 "format": "auto", "codec": "auto"}},
         }
 
+    # 音视频联合生成
+    if generate_audio:
+        audio_vae_name = "ltx\\ltx-2.5-audio-vae-bf16.safetensors"
+        # 在现有workflow基础上插入音频节点
+        # 找到KSampler节点，将其latent_image改为AV合并后的latent
+        ksampler_key = None
+        for k, v in workflow.items():
+            if v.get("class_type") == "KSampler":
+                ksampler_key = k
+                break
+        if ksampler_key:
+            orig_latent = workflow[ksampler_key]["inputs"]["latent_image"]
+            # 添加音频节点
+            max_id = max(int(k) for k in workflow.keys())
+            av_id = str(max_id + 1)
+            ae_id = str(max_id + 2)
+            ac_id = str(max_id + 3)
+            sep_id = str(max_id + 4)
+            adev_id = str(max_id + 5)
+            asave_id = str(max_id + 6)
+            # 找VAELoader节点添加audio vae
+            vae_keys = [k for k, v in workflow.items() if v.get("class_type") == "VAELoader"]
+            avae_key = vae_keys[-1] if vae_keys else "3"
+            workflow[avae_key + "b"] = {"class_type": "VAELoader", "inputs": {"vae_name": audio_vae_name}}
+            workflow[ae_id] = {"class_type": "LTXVEmptyLatentAudio", "inputs": {"frames_number": frames, "frame_rate": fps, "batch_size": 1, "audio_vae": [avae_key + "b", 0]}}
+            workflow[ac_id] = {"class_type": "LTXVConcatAVLatent", "inputs": {"video_latent": orig_latent, "audio_latent": [ae_id, 0]}}
+            workflow[ksampler_key]["inputs"]["latent_image"] = [ac_id, 0]
+            workflow[sep_id] = {"class_type": "LTXVSeparateAVLatent", "inputs": {"av_latent": [ksampler_key, 0]}}
+            # 修改VAE解码节点的输入为分离后的video_latent
+            for k, v in workflow.items():
+                if v.get("class_type") == "LTXVTiledVAEDecode":
+                    v["inputs"]["latents"] = [sep_id, 0]
+            workflow[adev_id] = {"class_type": "LTXVAudioVAEDecode", "inputs": {"samples": [sep_id, 1], "audio_vae": [avae_key + "b", 0]}}
+            workflow[asave_id] = {"class_type": "SaveAudio", "inputs": {"audio": [adev_id, 0], "filename_prefix": "ltx25_i2v_av"}}
+
     # 提交并等待
     prompt_id = _submit_workflow(workflow, server_addr)
     print(f"  任务已提交: {prompt_id}")
     result = _wait_for_completion(prompt_id, server_addr, timeout)
 
-    # 下载输出视频
+    # 下载输出
     output_dir = _os.path.dirname(output_path)
     if output_dir:
         _os.makedirs(output_dir, exist_ok=True)
 
+    video_file = None
+    audio_file = None
     for node_id, node_output in result.get("outputs", {}).items():
         if "images" in node_output:
             for img_info in node_output["images"]:
                 if img_info.get("type") == "output":
-                    vid_url = f"http://{server_addr}/view?filename={img_info['filename']}&subfolder={img_info.get('subfolder', '')}&type=output"
-                    _urllib_request.urlretrieve(vid_url, output_path)
-                    print(f"  视频已保存: {output_path}")
-                    return output_path
+                    url = f"http://{server_addr}/view?filename={img_info['filename']}&subfolder={img_info.get('subfolder', '')}&type=output"
+                    if img_info["filename"].endswith((".mp4", ".webm")):
+                        video_file = output_path + ".raw.mp4"
+                        _urllib_request.urlretrieve(url, video_file)
+                    elif img_info["filename"].endswith((".flac", ".wav")):
+                        audio_file = output_path + ".audio.flac"
+                        _urllib_request.urlretrieve(url, audio_file)
+        if "audio" in node_output:
+            for aud_info in node_output["audio"]:
+                if aud_info.get("type") == "output":
+                    url = f"http://{server_addr}/view?filename={aud_info['filename']}&subfolder={aud_info.get('subfolder', '')}&type=output"
+                    audio_file = output_path + ".audio.flac"
+                    _urllib_request.urlretrieve(url, audio_file)
+
+    if video_file:
+        if generate_audio and audio_file:
+            import subprocess
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", video_file, "-i", audio_file,
+                 "-c:v", "copy", "-c:a", "aac", "-shortest", output_path],
+                capture_output=True, timeout=60
+            )
+            if _os.path.exists(video_file):
+                _os.remove(video_file)
+            if _os.path.exists(audio_file):
+                _os.remove(audio_file)
+            print(f"  音视频已合并: {output_path}")
+            return output_path
+        else:
+            _os.replace(video_file, output_path)
+            print(f"  视频已保存: {output_path}")
+            return output_path
 
     raise RuntimeError("未找到输出视频")
 
@@ -1387,11 +1452,89 @@ def txt2video_ltx25(
                 "format": "auto", "codec": "auto"}},
         }
 
+    # 音视频联合生成：替换纯视频工作流为AV联合工作流
+    if generate_audio:
+        audio_vae_name = "ltx\\ltx-2.5-audio-vae-bf16.safetensors"
+        if use_lora:
+            # dev+LoRA模式的AV联合工作流
+            av_workflow = {
+                "1": {"class_type": "UNETLoader", "inputs": {"unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+                "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": cfg_models["clip"], "type": "ltxv"}},
+                "3": {"class_type": "LoraLoader", "inputs": {"model": ["1", 0], "clip": ["2", 0], "lora_name": cfg_models["lora"], "strength_model": lora_strength, "strength_clip": lora_strength}},
+                "4": {"class_type": "VAELoader", "inputs": {"vae_name": cfg_models["vae"]}},
+                "4b": {"class_type": "VAELoader", "inputs": {"vae_name": audio_vae_name}},
+                "5": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["3", 1]}},
+                "6": {"class_type": "CLIPTextEncode", "inputs": {"text": negative_prompt, "clip": ["3", 1]}},
+                "7": {"class_type": "LTXVConditioning", "inputs": {"positive": ["5", 0], "negative": ["6", 0], "frame_rate": fps}},
+                "8": {"class_type": "EmptyLTXVLatentVideo", "inputs": {"width": width, "height": height, "length": frames, "batch_size": 1}},
+                "8b": {"class_type": "LTXVEmptyLatentAudio", "inputs": {"frames_number": frames, "frame_rate": fps, "batch_size": 1, "audio_vae": ["4b", 0]}},
+                "8c": {"class_type": "LTXVConcatAVLatent", "inputs": {"video_latent": ["8", 0], "audio_latent": ["8b", 0]}},
+                "9": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform", "denoise": 1.0, "model": ["3", 0], "positive": ["7", 0], "negative": ["7", 1], "latent_image": ["8c", 0]}},
+                "9b": {"class_type": "LTXVSeparateAVLatent", "inputs": {"av_latent": ["9", 0]}},
+                "10": {"class_type": "LTXVTiledVAEDecode", "inputs": {"latents": ["9b", 0], "vae": ["4", 0], "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}},
+                "11": {"class_type": "CreateVideo", "inputs": {"images": ["10", 0], "fps": fps}},
+                "12": {"class_type": "SaveVideo", "inputs": {"video": ["11", 0], "filename_prefix": "ltx25_txt2video_av", "format": "auto", "codec": "auto"}},
+                "13": {"class_type": "LTXVAudioVAEDecode", "inputs": {"samples": ["9b", 1], "audio_vae": ["4b", 0]}},
+                "14": {"class_type": "SaveAudio", "inputs": {"audio": ["13", 0], "filename_prefix": "ltx25_txt2video_av"}},
+            }
+        else:
+            # distilled模式的AV联合工作流
+            av_workflow = {
+                "1": {"class_type": "UNETLoader", "inputs": {"unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+                "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": cfg_models["clip"], "type": "ltxv"}},
+                "3": {"class_type": "VAELoader", "inputs": {"vae_name": cfg_models["vae"]}},
+                "3b": {"class_type": "VAELoader", "inputs": {"vae_name": audio_vae_name}},
+                "4": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
+                "5": {"class_type": "CLIPTextEncode", "inputs": {"text": negative_prompt, "clip": ["2", 0]}},
+                "6": {"class_type": "LTXVConditioning", "inputs": {"positive": ["4", 0], "negative": ["5", 0], "frame_rate": fps}},
+                "7": {"class_type": "EmptyLTXVLatentVideo", "inputs": {"width": width, "height": height, "length": frames, "batch_size": 1}},
+                "7b": {"class_type": "LTXVEmptyLatentAudio", "inputs": {"frames_number": frames, "frame_rate": fps, "batch_size": 1, "audio_vae": ["3b", 0]}},
+                "7c": {"class_type": "LTXVConcatAVLatent", "inputs": {"video_latent": ["7", 0], "audio_latent": ["7b", 0]}},
+                "8": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform", "denoise": 1.0, "model": ["1", 0], "positive": ["6", 0], "negative": ["6", 1], "latent_image": ["7c", 0]}},
+                "8b": {"class_type": "LTXVSeparateAVLatent", "inputs": {"av_latent": ["8", 0]}},
+                "9": {"class_type": "LTXVTiledVAEDecode", "inputs": {"latents": ["8b", 0], "vae": ["3", 0], "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}},
+                "10": {"class_type": "CreateVideo", "inputs": {"images": ["9", 0], "fps": fps}},
+                "11": {"class_type": "SaveVideo", "inputs": {"video": ["10", 0], "filename_prefix": "ltx25_txt2video_av", "format": "auto", "codec": "auto"}},
+                "12": {"class_type": "LTXVAudioVAEDecode", "inputs": {"samples": ["8b", 1], "audio_vae": ["3b", 0]}},
+                "13": {"class_type": "SaveAudio", "inputs": {"audio": ["12", 0], "filename_prefix": "ltx25_txt2video_av"}},
+            }
+        workflow = av_workflow
+
     output_dir = os.path.dirname(output_path) or "."
     results = client.run_workflow(workflow, output_dir=output_dir, timeout=timeout)
 
     if results:
-        if results[0] != output_path:
-            os.replace(results[0], output_path)
+        video_path = None
+        audio_path = None
+        for p in results:
+            if p.endswith((".mp4", ".webm", ".mov")):
+                video_path = p
+            elif p.endswith((".flac", ".wav", ".mp3", ".ogg")):
+                audio_path = p
+
+        if not video_path:
+            video_path = results[0]
+
+        if generate_audio and audio_path and video_path:
+            # 用ffmpeg合并音频到视频
+            import subprocess
+            temp_merged = output_path + ".temp.mp4"
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", video_path, "-i", audio_path,
+                 "-c:v", "copy", "-c:a", "aac", "-shortest", temp_merged],
+                capture_output=True, timeout=60
+            )
+            if os.path.exists(temp_merged):
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+                os.replace(temp_merged, output_path)
+                # 清理临时音频
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                print(f"  音视频已合并: {output_path}")
+                return output_path
+
+        if video_path != output_path:
+            os.replace(video_path, output_path)
         return output_path
     raise RuntimeError("LTX-2.5文生视频失败，无输出")
