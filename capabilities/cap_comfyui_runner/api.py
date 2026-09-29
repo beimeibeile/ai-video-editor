@@ -2905,3 +2905,124 @@ def generate_shot_assets(
     vid_ok = sum(1 for v in videos if v)
     print(f"\n[素材流水线] 完成: 图片{img_ok}/{len(prompts)}, 视频{vid_ok}/{len(valid_images)}")
     return result
+
+
+def hunyuan_i2v(
+    image_path: str,
+    output_path: str,
+    prompt: str = "smooth camera movement, cinematic, high quality, detailed",
+    negative_prompt: str = "blurry, low quality, distorted, static, no motion, ugly, deformed",
+    width: int = 640,
+    height: int = 360,
+    frames: int = 33,
+    fps: int = 16,
+    steps: int = 20,
+    seed: int = None,
+    cfg: float = 6.0,
+    sampler_name: str = "dpmpp_2m",
+    scheduler: str = "karras",
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 600,
+) -> str:
+    """
+    混元视频1.5 图生视频（HunyuanVideo 1.5 Image-to-Video）
+
+    腾讯混元视频1.5模型，720p i2v版本，电影级动效，动作控制精准。
+    RTX 3080 12GB建议分辨率640x360或更低，33帧≈2秒@16fps。
+
+    Args:
+        image_path: 输入图片路径（本地文件）
+        output_path: 输出视频路径（.mp4）
+        prompt: 运动描述提示词（英文效果最佳）
+        negative_prompt: 负向提示词
+        width/height: 输出分辨率（建议640x360，720p需大显存）
+        frames: 帧数（33帧≈2秒@16fps）
+        fps: 帧率
+        steps: 采样步数
+        seed: 随机种子（None为随机）
+        cfg: CFG值（混元视频建议6.0）
+        sampler_name: 采样器名称
+        scheduler: 调度器
+        server_addr: ComfyUI地址
+        timeout: 超时秒数
+
+    Returns:
+        输出视频文件路径
+    """
+    import os as _os
+    import uuid as _uuid
+
+    if not _os.path.exists(image_path):
+        raise FileNotFoundError(f"输入图片不存在: {image_path}")
+
+    if seed is None:
+        seed = int(_uuid.uuid4().int % (2**31))
+
+    # 上传图片到ComfyUI
+    client = ComfyClient(server_addr)
+    upload_result = client.upload_image(image_path)
+    comfy_img_name = upload_result.get("name", _os.path.basename(image_path))
+    print(f"  图片已上传: {comfy_img_name}")
+
+    # 加载工作流模板
+    workflow = load_workflow_template(os.path.join(TEMPLATE_DIR, "hunyuan_i2v.json"))
+
+    # 替换参数
+    workflow["8"]["inputs"]["prompt"] = prompt
+    workflow["9"]["inputs"]["prompt"] = negative_prompt
+    workflow["10"]["inputs"]["image"] = comfy_img_name
+    workflow["11"]["inputs"]["width"] = width
+    workflow["11"]["inputs"]["height"] = height
+    workflow["11"]["inputs"]["length"] = frames
+    workflow["12"]["inputs"]["seed"] = seed
+    workflow["12"]["inputs"]["steps"] = steps
+    workflow["12"]["inputs"]["cfg"] = cfg
+    workflow["12"]["inputs"]["sampler_name"] = sampler_name
+    workflow["12"]["inputs"]["scheduler"] = scheduler
+    workflow["14"]["inputs"]["frame_rate"] = fps
+    workflow["14"]["inputs"]["filename_prefix"] = "hunyuan_i2v"
+
+    # 提交任务
+    prompt_id = client.queue_prompt(workflow)
+    print(f"  任务已提交: {prompt_id}")
+
+    # 等待完成
+    result = client.wait_for_completion(prompt_id, timeout=timeout)
+    if not result.get("completed"):
+        raise RuntimeError(f"任务失败或超时: {result}")
+
+    # 下载输出视频
+    outputs = result.get("outputs", {})
+    video_node = outputs.get("14", {})
+    videos = video_node.get("videos", [])
+
+    if not videos:
+        # 尝试从images字段获取（VHS_VideoCombine可能输出images）
+        images = video_node.get("images", [])
+        if images:
+            # 如果是图片序列，需要合成视频
+            print(f"  输出为图片序列({len(images)}张)，需合成视频")
+            # 下载第一张图片作为预览
+            first_img = images[0]
+            img_filename = first_img.get("filename", "")
+            img_data = client.download_image(img_filename, first_img.get("subfolder", ""), first_img.get("type", "output"))
+            preview_path = output_path.replace(".mp4", "_preview.png")
+            with open(preview_path, "wb") as f:
+                f.write(img_data)
+            print(f"  预览图已保存: {preview_path}")
+            raise RuntimeError("VHS_VideoCombine输出为图片序列，未生成视频文件")
+        raise RuntimeError(f"未找到输出视频: {outputs}")
+
+    # 下载视频
+    video_info = videos[0]
+    video_filename = video_info.get("filename", "")
+    video_data = client.download_image(video_filename, video_info.get("subfolder", ""), video_info.get("type", "output"))
+
+    # 保存到输出路径
+    _os.makedirs(_os.path.dirname(output_path) or ".", exist_ok=True)
+    with open(output_path, "wb") as f:
+        f.write(video_data)
+
+    print(f"  输出已保存: {output_path}")
+    return output_path
+

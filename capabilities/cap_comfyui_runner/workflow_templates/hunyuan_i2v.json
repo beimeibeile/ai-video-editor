@@ -1,0 +1,109 @@
+{
+  "3": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "hunyuanvideo1.5_720p_i2v_fp16.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "4": {
+    "class_type": "DualCLIPLoader",
+    "inputs": {
+      "clip_name1": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "clip_name2": "byt5_small_glyphxl_fp16.safetensors",
+      "type": "hunyuan_video_15"
+    }
+  },
+  "5": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "hunyuanvideo15_vae_fp16.safetensors"
+    }
+  },
+  "6": {
+    "class_type": "CLIPVisionLoader",
+    "inputs": {
+      "clip_name": "SD15-CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+    }
+  },
+  "7": {
+    "class_type": "CLIPVisionEncode",
+    "inputs": {
+      "clip_vision": ["6", 0],
+      "image": ["10", 0],
+      "crop": "center"
+    }
+  },
+  "8": {
+    "class_type": "TextEncodeHunyuanVideo_ImageToVideo",
+    "inputs": {
+      "clip": ["4", 0],
+      "clip_vision_output": ["7", 0],
+      "prompt": "POSITIVE_PROMPT",
+      "image_interleave": 2
+    }
+  },
+  "9": {
+    "class_type": "TextEncodeHunyuanVideo_ImageToVideo",
+    "inputs": {
+      "clip": ["4", 0],
+      "clip_vision_output": ["7", 0],
+      "prompt": "NEGATIVE_PROMPT",
+      "image_interleave": 2
+    }
+  },
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "START_IMAGE"
+    }
+  },
+  "11": {
+    "class_type": "HunyuanVideo15ImageToVideo",
+    "inputs": {
+      "positive": ["8", 0],
+      "negative": ["9", 0],
+      "vae": ["5", 0],
+      "width": 640,
+      "height": 360,
+      "length": 33,
+      "batch_size": 1,
+      "start_image": ["10", 0],
+      "clip_vision_output": ["7", 0]
+    }
+  },
+  "12": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["3", 0],
+      "seed": 42,
+      "steps": 20,
+      "cfg": 6.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "positive": ["11", 0],
+      "negative": ["11", 1],
+      "latent_image": ["11", 2],
+      "denoise": 1.0
+    }
+  },
+  "13": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": ["12", 0],
+      "vae": ["5", 0]
+    }
+  },
+  "14": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": ["13", 0],
+      "frame_rate": 16,
+      "loop_count": 0,
+      "filename_prefix": "hunyuan_i2v",
+      "format": "video/h264-mp4",
+      "pingpong": false,
+      "save_output": true
+    }
+  }
+}
