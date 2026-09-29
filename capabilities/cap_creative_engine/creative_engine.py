@@ -1,4 +1,4 @@
-"""
+﻿"""
 创意引擎 - 理解用户诉求，生成创意方向和分镜脚本
 
 流程：
@@ -10,6 +10,7 @@
 """
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
@@ -198,10 +199,19 @@ class CreativeEngine:
             theme = "极简"
 
         # 热点搜索增强
-        if use_hot_trends and self.trends.available and not hook:
-            hooks = self.trends.generate_hook_suggestions(theme, count=1)
-            if hooks:
-                hook = hooks[0]
+        if use_hot_trends and self.trends.available:
+            # 1. 生成钩子文案
+            if not hook:
+                hooks = self.trends.generate_hook_suggestions(theme, count=1)
+                if hooks:
+                    hook = hooks[0]
+
+            # 2. 搜索爆款文案，提炼网感字幕（如果用户未提供自定义字幕）
+            if custom_subtitles is None:
+                search_subtitles = self._extract_subtitles_from_search(theme, num_shots)
+                if search_subtitles:
+                    custom_subtitles = search_subtitles
+                    print(f"  创意字幕: 从搜索结果提炼 {len(custom_subtitles)} 个网感字幕")
 
         # 生成分镜
         generator = StoryboardGenerator(theme=theme)
@@ -213,6 +223,62 @@ class CreativeEngine:
         )
 
         return storyboard
+
+    def _extract_subtitles_from_search(self, theme: str, count: int) -> List[str]:
+        """从AnySearch搜索结果中提炼网感字幕"""
+        try:
+            # 搜索爆款文案
+            results = self.trends.search_copywriting(theme, max_results=5)
+            if not results:
+                return []
+
+            # 从title和snippet中提取短句
+            raw_phrases = []
+            for r in results:
+                # 从title提取
+                title = r.get("title", "")
+                if title:
+                    raw_phrases.append(title)
+                # 从snippet提取句子
+                snippet = r.get("snippet", "")
+                if snippet:
+                    # 按标点分割
+                    sentences = re.split(r'[。！？；\n\r]', snippet)
+                    raw_phrases.extend(sentences)
+
+            # 过滤和清洗
+            cleaned = []
+            seen = set()
+            for p in raw_phrases:
+                p = p.strip()
+                # 过滤：4-20字，不含URL/特殊字符
+                if (4 <= len(p) <= 20 and
+                    not re.search(r'http|www|\.com|\.cn|点击|关注|点赞|收藏|转发', p) and
+                    p not in seen):
+                    seen.add(p)
+                    cleaned.append(p)
+
+            # 如果搜索结果不够，补充主题相关的创意短语
+            if len(cleaned) < count:
+                creative_phrases = [
+                    f"{theme}｜视觉盛宴",
+                    f"{theme}｜帧帧如画",
+                    f"{theme}｜光影叙事",
+                    f"{theme}｜美好瞬间",
+                    f"{theme}｜极致体验",
+                    f"{theme}｜沉浸式",
+                ]
+                for p in creative_phrases:
+                    if p not in seen:
+                        cleaned.append(p)
+                        seen.add(p)
+                    if len(cleaned) >= count:
+                        break
+
+            return cleaned[:count]
+        except Exception as e:
+            print(f"  搜索字幕提炼失败: {e}")
+            return []
 
     def get_improvement_suggestions(self, storyboard: Storyboard) -> List[str]:
         """
