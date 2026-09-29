@@ -2,10 +2,14 @@
 AnySearch 搜索客户端
 统一封装网页搜索、批量搜索、页面提取
 API Key从config读取，不硬编码
+支持用量追踪、预警和自动降级（日限额耗尽时is_available返回False）
 """
 import requests
+import json
+import os
+import datetime
 from typing import List, Dict, Optional
-import sys, os
+import sys
 # 确保skill根目录在path中
 _skill_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if _skill_root not in sys.path:
@@ -14,21 +18,96 @@ from core.config import config
 
 
 class AnySearchClient:
-    """AnySearch API客户端"""
+    """AnySearch API客户端（含用量追踪与预警）"""
 
     def __init__(self, api_key: str = None, endpoint: str = None):
         self.api_key = api_key or config.anysearch_api_key
         self.endpoint = endpoint or config.anysearch_endpoint
+        self.daily_limit = config.anysearch_daily_limit
+        self.warning_ratio = config.anysearch_warning_ratio
         self.session = requests.Session()
         if self.api_key:
             self.session.headers.update({
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             })
+        # 用量追踪文件
+        self._usage_file = os.path.join(_skill_root, ".cache", "anysearch_usage.json")
+        self._usage = self._load_usage()
+
+    def _load_usage(self) -> Dict:
+        """加载今日用量记录"""
+        today = datetime.date.today().isoformat()
+        try:
+            if os.path.exists(self._usage_file):
+                with open(self._usage_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                # 日期变化则重置
+                if data.get("date") != today:
+                    data = {"date": today, "count": 0, "last_warning": ""}
+                return data
+        except Exception:
+            pass
+        return {"date": today, "count": 0, "last_warning": ""}
+
+    def _save_usage(self):
+        """保存用量记录"""
+        try:
+            os.makedirs(os.path.dirname(self._usage_file), exist_ok=True)
+            with open(self._usage_file, "w", encoding="utf-8") as f:
+                json.dump(self._usage, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def _increment_usage(self) -> bool:
+        """递增用量计数，返回是否允许继续调用"""
+        today = datetime.date.today().isoformat()
+        if self._usage.get("date") != today:
+            self._usage = {"date": today, "count": 0, "last_warning": ""}
+
+        self._usage["count"] = self._usage.get("count", 0) + 1
+        count = self._usage["count"]
+
+        # 预警检查（每天只警告一次）
+        warning_threshold = int(self.daily_limit * self.warning_ratio)
+        if count >= warning_threshold and self._usage.get("last_warning") != today:
+            remaining = self.daily_limit - count
+            print(f"⚠️  AnySearch用量预警: 今日已调用 {count}/{self.daily_limit} 次，剩余 {remaining} 次")
+            self._usage["last_warning"] = today
+
+        # 限额耗尽检查
+        if count >= self.daily_limit:
+            print(f"🚫 AnySearch今日配额已耗尽 ({count}/{self.daily_limit})，自动降级为本地模板")
+            self._save_usage()
+            return False
+
+        self._save_usage()
+        return True
+
+    @property
+    def usage_info(self) -> Dict:
+        """查询当前用量信息"""
+        today = datetime.date.today().isoformat()
+        if self._usage.get("date") != today:
+            return {"date": today, "count": 0, "limit": self.daily_limit, "remaining": self.daily_limit}
+        count = self._usage.get("count", 0)
+        return {
+            "date": today,
+            "count": count,
+            "limit": self.daily_limit,
+            "remaining": max(0, self.daily_limit - count),
+            "warning_threshold": int(self.daily_limit * self.warning_ratio),
+        }
 
     @property
     def is_available(self) -> bool:
-        return bool(self.api_key)
+        """API可用且今日配额未耗尽"""
+        if not self.api_key:
+            return False
+        today = datetime.date.today().isoformat()
+        if self._usage.get("date") != today:
+            return True
+        return self._usage.get("count", 0) < self.daily_limit
 
     def search(self, query: str, max_results: int = 5, timeout: int = 30) -> List[Dict]:
         """
@@ -44,6 +123,8 @@ class AnySearchClient:
         """
         if not self.is_available:
             return []
+        if not self._increment_usage():
+            return []
 
         try:
             r = self.session.post(
@@ -54,6 +135,11 @@ class AnySearchClient:
             data = r.json()
             if data.get("code") == 0:
                 return data.get("data", {}).get("results", [])
+            # API返回配额错误
+            if "quota" in str(data.get("message", "")).lower() or data.get("code") in (429, 1001):
+                print(f"🚫 AnySearch API返回配额错误，标记今日配额耗尽")
+                self._usage["count"] = self.daily_limit
+                self._save_usage()
         except Exception as e:
             print(f"⚠️  AnySearch搜索失败: {e}")
         return []
@@ -76,6 +162,8 @@ class AnySearchClient:
             query = q.get("query", "")
             max_results = q.get("max_results", 5)
             results[query] = self.search(query, max_results, timeout)
+            if not self.is_available:
+                break
         return results
 
     def extract(self, url: str, timeout: int = 30) -> str:
@@ -89,6 +177,8 @@ class AnySearchClient:
             Markdown格式的页面内容
         """
         if not self.is_available:
+            return ""
+        if not self._increment_usage():
             return ""
 
         try:
@@ -113,7 +203,7 @@ class AnySearchClient:
         """
         results = self.search(query, max_results, timeout)
         for r in results:
-            if r.get("url"):
+            if r.get("url") and self.is_available:
                 r["full_content"] = self.extract(r["url"], timeout)
         return results
 
@@ -137,3 +227,8 @@ def search(query: str, max_results: int = 5) -> List[Dict]:
 def extract(url: str) -> str:
     """快捷提取函数"""
     return get_client().extract(url)
+
+
+def get_usage_info() -> Dict:
+    """查询AnySearch当前用量信息"""
+    return get_client().usage_info

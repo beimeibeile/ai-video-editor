@@ -68,6 +68,19 @@ class Config:
     def anysearch_endpoint(self) -> str:
         return self.get("ANYSEARCH_API_ENDPOINT", "https://api.anysearch.com")
 
+    @property
+    def anysearch_daily_limit(self) -> int:
+        """每日调用上限（不同用户级别不同，可在.env配置）"""
+        return self.get_int("ANYSEARCH_DAILY_LIMIT", 100)
+
+    @property
+    def anysearch_warning_ratio(self) -> float:
+        """预警阈值比例（达到上限的百分之多少时预警）"""
+        try:
+            return float(self.get("ANYSEARCH_WARNING_RATIO", "0.8"))
+        except (ValueError, TypeError):
+            return 0.8
+
     # ── ComfyUI 配置 ──
     @property
     def comfyui_address(self) -> str:
