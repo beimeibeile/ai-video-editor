@@ -2988,13 +2988,16 @@ def hunyuan_i2v(
 
     # 等待完成
     result = client.wait_for_completion(prompt_id, timeout=timeout)
-    if not result.get("completed"):
+    status = result.get("status", {})
+    if not status.get("completed"):
+        if status.get("status_str") == "error":
+            raise RuntimeError(f"任务执行失败: {json.dumps(status, ensure_ascii=False)[:500]}")
         raise RuntimeError(f"任务失败或超时: {result}")
 
     # 下载输出视频
     outputs = result.get("outputs", {})
     video_node = outputs.get("14", {})
-    videos = video_node.get("videos", [])
+    videos = video_node.get("videos", []) or video_node.get("gifs", [])
 
     if not videos:
         # 尝试从images字段获取（VHS_VideoCombine可能输出images）

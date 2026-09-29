@@ -23,7 +23,7 @@
   "6": {
     "class_type": "CLIPVisionLoader",
     "inputs": {
-      "clip_name": "SD15-CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+      "clip_name": "sigclip_vision_patch14_384.safetensors"
     }
   },
   "7": {
