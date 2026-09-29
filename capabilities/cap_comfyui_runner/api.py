@@ -946,6 +946,70 @@ def controlnet_img2img(
     return output_path
 
 
+def preprocess_image(
+    input_image: str,
+    preprocessor: str = "Canny",
+    output_path: str = None,
+    resolution: int = 512,
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 120,
+) -> str:
+    """
+    通用图片预处理器（Canny/Depth/Lineart/OpenPose/Scribble等）
+
+    Args:
+        input_image: 输入图片路径
+        preprocessor: 预处理器名称（Canny/DepthAnything/Lineart/Openpose/SoftEdge/Scribble/Segmentation等）
+        output_path: 输出路径（None则自动命名）
+        resolution: 处理分辨率
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        输出文件路径
+
+    常用预处理器:
+        - Canny: 边缘检测
+        - DepthAnything: 深度估计
+        - Lineart: 线稿生成
+        - Lineart_Anime: 动漫线稿
+        - Openpose: 姿态估计
+        - Softedge: 软边缘
+        - Scribble: 涂鸦
+        - Segmentation: 语义分割
+        - Tile: 纹理重绘
+        - Inpaint: 修复遮罩
+    """
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行")
+
+    if output_path is None:
+        base, ext = os.path.splitext(input_image)
+        output_path = f"{base}_{preprocessor.lower()}{ext}"
+
+    timestamp = int(time.time())
+    workflow = load_workflow_template(
+        os.path.join(TEMPLATE_DIR, "preprocess_image.json"),
+        input_image=os.path.basename(input_image),
+        preprocessor=preprocessor,
+        resolution=resolution,
+        timestamp=timestamp,
+    )
+
+    input_images = {os.path.basename(input_image): input_image}
+    output_dir = os.path.dirname(output_path) or "."
+    results = client.run_workflow(
+        workflow, input_images=input_images,
+        output_dir=output_dir, timeout=timeout
+    )
+
+    if results and os.path.exists(results[0]) and results[0] != output_path:
+        os.replace(results[0], output_path)
+
+    return output_path
+
+
 def generate_pose_skeleton(
     view: str = "front",
     output_path: str = None,
