@@ -1,4 +1,4 @@
-"""
+﻿"""
 AnySearch 搜索客户端
 统一封装网页搜索、批量搜索、页面提取
 API Key从config读取，不硬编码
@@ -109,14 +109,22 @@ class AnySearchClient:
             return True
         return self._usage.get("count", 0) < self.daily_limit
 
-    def search(self, query: str, max_results: int = 5, timeout: int = 30) -> List[Dict]:
+    def search(self, query: str, max_results: int = 5, timeout: int = 30,
+               tag: str = None, zone: str = None, language: str = None,
+               params: Dict = None, format: str = "json") -> List[Dict]:
         """
-        通用网页搜索
+        统一搜索接口（支持垂类搜索）
 
         Args:
             query: 搜索关键词
-            max_results: 最大结果数
+            max_results: 最大结果数（1-10，默认5）
             timeout: 超时秒数
+            tag: 垂类标签，格式 {domain}.{sub_domain}，如 "code.doc"、"general.general"
+                 不传则自动意图路由；传了则强制路由到指定垂类
+            zone: 地区，"cn" 或 "intl"
+            language: 偏好语言，如 "zh-CN" 或 "en"
+            params: 垂类扩展参数，如 {"library": "golang"}、{"ticker": "AAPL"}
+            format: 输出格式，"json" 或 "markdown"（markdown时content字段为结构化Markdown）
 
         Returns:
             结果列表，每项包含title, url, snippet, content
@@ -127,9 +135,20 @@ class AnySearchClient:
             return []
 
         try:
+            payload = {"query": query, "max_results": max_results}
+            if tag:
+                payload["tag"] = tag
+            if zone:
+                payload["zone"] = zone
+            if language:
+                payload["language"] = language
+            if params:
+                payload["params"] = params
+            if format:
+                payload["format"] = format
             r = self.session.post(
                 f"{self.endpoint}/v1/search",
-                json={"query": query, "max_results": max_results},
+                json=payload,
                 timeout=timeout
             )
             data = r.json()
@@ -206,6 +225,89 @@ class AnySearchClient:
             if r.get("url") and self.is_available:
                 r["full_content"] = self.extract(r["url"], timeout)
         return results
+
+    def get_sub_domains(self, domains: List[str] = None, timeout: int = 15) -> Dict:
+        """
+        查询可用的垂类子域定义（不消耗搜索额度！）
+
+        Args:
+            domains: 要查询的domain列表，如 ["code", "finance"]。None则查询常用domain
+            timeout: 超时秒数
+
+        Returns:
+            {domain: {description, sub_domains: [{sub_domain, description, params}]}}
+        """
+        if not self.api_key:
+            return {}
+        if domains is None:
+            domains = ["general", "code", "academic", "business", "finance",
+                       "tech", "entertainment", "music", "game", "movie"]
+
+        result = {}
+        for domain in domains:
+            try:
+                r = self.session.get(
+                    f"{self.endpoint}/v1/sub-domains",
+                    params={"domain": domain},
+                    timeout=timeout
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    for d in data.get("data", {}).get("domains", []):
+                        result[d["domain"]] = {
+                            "description": d.get("description", ""),
+                            "sub_domains": d.get("sub_domains", [])
+                        }
+            except Exception:
+                pass
+        return result
+
+    def vertical_search(self, tag: str, query: str, max_results: int = 5,
+                        params: Dict = None, timeout: int = 30,
+                        language: str = "zh-CN", zone: str = None) -> List[Dict]:
+        """
+        垂类搜索快捷方法（强制路由到指定垂类，获得更精准的结果）
+
+        Args:
+            tag: 垂类标签，如 "code.doc"、"academic.search"、"general.general"
+            query: 搜索关键词
+            max_results: 最大结果数
+            params: 垂类扩展参数
+            timeout: 超时秒数
+            language: 偏好语言
+            zone: 地区，"cn" 或 "intl"
+
+        Returns:
+            结果列表
+        """
+        return self.search(query, max_results=max_results, timeout=timeout,
+                           tag=tag, params=params, language=language, zone=zone)
+
+    # ── 常用垂类快捷方法 ──
+
+    def search_code(self, query: str, library: str = None, lang: str = None,
+                    max_results: int = 5) -> List[Dict]:
+        """代码/文档搜索（code.doc 或 code.snippet）"""
+        params = {}
+        if library:
+            params["library"] = library
+        tag = "code.doc" if library else "code.snippet"
+        if lang and tag == "code.snippet":
+            params["lang"] = lang
+        return self.vertical_search(tag, query, max_results, params=params)
+
+    def search_academic(self, query: str, max_results: int = 5,
+                        open_access: bool = False) -> List[Dict]:
+        """学术论文搜索（academic.search）"""
+        params = {}
+        if open_access:
+            params["open_access"] = "true"
+        return self.vertical_search("academic.search", query, max_results, params=params)
+
+    def search_hot_topics(self, query: str, max_results: int = 5) -> List[Dict]:
+        """热点/通用搜索（general.general，中文优先）"""
+        return self.vertical_search("general.general", query, max_results,
+                                    language="zh-CN", zone="cn")
 
 
 # 全局单例
