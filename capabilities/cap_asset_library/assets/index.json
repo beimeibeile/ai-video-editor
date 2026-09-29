@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-09-29T14:25:03.975757",
+  "updated_at": "2026-09-29T14:27:39.417458",
   "total": 1,
   "assets": {
     "075887caba58": {
@@ -19,7 +19,7 @@
       "format": ".mp4",
       "size_bytes": 22327,
       "description": "赛博朋克深色推镜背景",
-      "usage_count": 1,
+      "usage_count": 2,
       "created_at": "2026-09-29T14:25:03.975244"
     }
   }

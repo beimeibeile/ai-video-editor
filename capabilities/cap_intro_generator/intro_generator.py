@@ -15,17 +15,24 @@ from typing import Optional
 
 from .styles import get_style, get_duration, STYLES
 
+# 通用素材库（统一检索入口）
+try:
+    from cap_asset_library import get_library
+    _ASSET_LIB_AVAILABLE = True
+except ImportError:
+    _ASSET_LIB_AVAILABLE = False
+
 
 class IntroGenerator:
     """片头生成器"""
 
     def __init__(self, jianying_skill_path: str = None):
-        # 资源库路径
+        # 资源库路径（兼容旧版，实际检索走素材库）
         self.module_dir = os.path.dirname(os.path.abspath(__file__))
         self.assets_dir = os.path.join(self.module_dir, "assets")
-        self.sfx_dir = os.path.join(self.assets_dir, "sfx")
-        self.bg_dir = os.path.join(self.assets_dir, "backgrounds")
-        self.sticker_dir = os.path.join(self.assets_dir, "stickers")
+
+        # 通用素材库
+        self.asset_lib = get_library() if _ASSET_LIB_AVAILABLE else None
 
         # 剪映skill路径
         if jianying_skill_path is None:
@@ -35,15 +42,20 @@ class IntroGenerator:
         # ffmpeg路径（从环境变量或默认路径）
         self.ffmpeg = os.environ.get("FFMPEG_PATH", r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe")
 
-    def _find_asset(self, asset_dir: str, keywords: list, extensions: list) -> Optional[str]:
-        """在资源库中查找匹配的素材"""
-        if not os.path.exists(asset_dir):
+    def _find_asset(self, asset_type: str, context: str = "", style: str = None,
+                    mood: str = None, tags: list = None) -> Optional[str]:
+        """通过素材库智能检索最佳匹配素材"""
+        if self.asset_lib is None:
             return None
-        for f in os.listdir(asset_dir):
-            if any(f.lower().endswith(ext) for ext in extensions):
-                for kw in keywords:
-                    if kw.lower() in f.lower():
-                        return os.path.join(asset_dir, f)
+        best = self.asset_lib.get_best_match(
+            asset_type=asset_type,
+            context=context,
+            style=style,
+            mood=mood,
+            tags=tags
+        )
+        if best:
+            return self.asset_lib.get_path(best["id"])
         return None
 
     def _generate_simple_bg(self, output_path: str, style_config: dict,
@@ -113,12 +125,14 @@ class IntroGenerator:
         bg_path = custom_bg_path
 
         if bg_path is None:
-            # 优先查找本地背景库
-            bg_path = self._find_asset(self.bg_dir, [style, "bg"], [".mp4", ".mov"])
+            # 优先通过素材库智能检索背景
+            bg_path = self._find_asset("background", context="片头背景", style=style)
+            bg_from_lib = bg_path is not None
             if bg_path is None:
                 # 降级：ffmpeg生成简单背景
                 bg_path = os.path.join(work_dir, f"bg_{style}.mp4")
                 self._generate_simple_bg(bg_path, style_config, width, height, duration)
+                bg_from_lib = False
 
         # 2. 初始化剪映
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
@@ -168,11 +182,13 @@ class IntroGenerator:
                 track_name="IntroSub",
             )
 
-        # 5. 音效（优先本地音效库）
+        # 5. 音效（通过素材库智能检索）
         sfx_list = style_config.get("sfx", [])
+        sfx_found = 0
         for i, sfx_name in enumerate(sfx_list):
-            sfx_path = self._find_asset(self.sfx_dir, [sfx_name], [".mp3", ".wav", ".m4a"])
+            sfx_path = self._find_asset("sfx", context=sfx_name, style=style)
             if sfx_path:
+                sfx_found += 1
                 sfx_time = main_start + i * 0.3
                 try:
                     project.add_media_safe(sfx_path, start_time=f"{sfx_time}s", duration="0.5s", track_name="IntroSFX")
@@ -187,8 +203,8 @@ class IntroGenerator:
             "duration": duration,
             "style": style_config["name"],
             "video_type": video_type,
-            "background": "custom" if custom_bg_path else ("local" if self._find_asset(self.bg_dir, [style], [".mp4"]) else "ffmpeg_fallback"),
-            "sfx_count": len([s for s in sfx_list if self._find_asset(self.sfx_dir, [s], [".mp3", ".wav"])]),
+            "background": "custom" if custom_bg_path else ("asset_library" if bg_from_lib else "ffmpeg_fallback"),
+            "sfx_count": sfx_found,
         }
 
 
