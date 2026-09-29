@@ -2379,7 +2379,6 @@ def matting_video(
         # 用ffmpeg合成带alpha的WebM
         first_frame = matted_frames[0]
         # 推断帧率
-        info = get_video_info(video_path, ffprobe_path=ffmpeg_path.replace("ffmpeg", "ffprobe"))
         v_fps = info.get("video", {}).get("fps", 24) if info else 24
         cmd = [ffmpeg_path, "-y", "-framerate", str(v_fps), "-i",
                os.path.join(matted_dir, "%04d.png"),
@@ -2444,13 +2443,13 @@ def upscale_video(
     frames = extract_frames_from_video(video_path, frames_dir, fps=0, ffmpeg_path=ffmpeg_path)
     print(f"  [超分] 共 {len(frames)} 帧")
 
-    # Step 2: 逐帧超分
-    print(f"  [超分] Step2: 逐帧超分 (x{scale}, {model_name})...")
+    # Step 2: 逐帧超分（upscale_image固定4x，不传入scale参数）
+    print(f"  [超分] Step2: 逐帧超分 (x4, {model_name})...")
     up_frames = []
     for i, frame in enumerate(frames):
         out_path = os.path.join(up_dir, os.path.basename(frame))
         try:
-            upscale_image(frame, output_path=out_path, scale=scale,
+            upscale_image(frame, output_path=out_path,
                           model_name=model_name, server_addr=server_addr,
                           timeout=timeout_per_frame)
             up_frames.append(out_path)
@@ -2462,9 +2461,30 @@ def upscale_video(
     if not up_frames:
         raise RuntimeError("超分失败，无帧输出")
 
+    # Step 2.5: 重命名超分帧为 %04d.png 格式（ffmpeg合成需要）
+    print(f"  [超分] Step2.5: 重命名帧为 %04d.png 格式...")
+    renamed_frames = []
+    for i, frame in enumerate(up_frames):
+        if os.path.exists(frame):
+            new_name = os.path.join(up_dir, f"{i+1:04d}.png")
+            if frame != new_name:
+                try:
+                    os.replace(frame, new_name)
+                    renamed_frames.append(new_name)
+                except Exception as e:
+                    print(f"    [{i+1}] ⚠️ 重命名失败: {e}")
+                    renamed_frames.append(frame)
+            else:
+                renamed_frames.append(frame)
+    up_frames = renamed_frames
+
     # Step 3: 合成视频（保留音轨）
     print(f"  [超分] Step3: 合成视频...")
-    info = get_video_info(video_path, ffprobe_path=ffmpeg_path.replace("ffmpeg", "ffprobe"))
+    # 正确替换ffmpeg为ffprobe（只替换文件名，不替换目录名）
+    _ff_dir = os.path.dirname(ffmpeg_path)
+    _ff_name = os.path.basename(ffmpeg_path).replace("ffmpeg", "ffprobe")
+    _ffprobe_path = os.path.join(_ff_dir, _ff_name)
+    info = get_video_info(video_path, ffprobe_path=_ffprobe_path)
     v_fps = info.get("video", {}).get("fps", 24) if info else 24
     has_audio = info.get("audio") is not None if info else False
 
