@@ -512,12 +512,17 @@ class E2EPipeline:
         from jy_wrapper import JyProject
         import pyJianYingDraft as draft
 
-        # 艺术字幕
+        # 艺术字幕 + 运镜预设库
         sys.path.insert(0, os.path.join(SKILL_ROOT, "..", "scripts"))
         try:
             from artistic_subtitle import add_artistic_subtitle
         except ImportError:
             add_artistic_subtitle = None
+        try:
+            from camera_moves import apply_storyboard_camera_move, add_cinematic_color_grade
+            _CAMERA_MOVES_AVAILABLE = True
+        except ImportError:
+            _CAMERA_MOVES_AVAILABLE = False
 
         project = JyProject(project_name, width=width, height=height, overwrite=True)
 
@@ -542,8 +547,22 @@ class E2EPipeline:
             )
             if seg:
                 segments.append(seg)
+                # 应用运镜关键帧（根据分镜camera_move字段）
+                if _CAMERA_MOVES_AVAILABLE:
+                    duration_us = int(shot.duration * 1_000_000)
+                    apply_storyboard_camera_move(
+                        seg, shot.camera_move, duration_us,
+                        intensity=shot.move_intensity
+                    )
+                    # 应用调色（根据分镜color_tone）
+                    color_style_map = {
+                        "冷": "cool", "暖": "warm", "中性": "cinematic",
+                        "高对比": "noir", "低饱和": "vintage",
+                    }
+                    color_style = color_style_map.get(shot.color_tone, "cinematic")
+                    add_cinematic_color_grade(seg, duration_us, style=color_style)
             current_time += shot.duration
-        print(f"  添加 {len(segments)} 个视频片段 (偏移{intro_offset}s)")
+        print(f"  添加 {len(segments)} 个视频片段 (偏移{intro_offset}s, 运镜+调色已应用)")
 
         # 2. 转场（加在前一个片段末尾）
         trans_count = 0
