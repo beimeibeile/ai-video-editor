@@ -75,6 +75,189 @@ def upscale_image(
     return output_path
 
 
+def img2video_ltx25(
+    image_path: str,
+    output_path: str,
+    prompt: str = "smooth camera movement, cinematic, high quality",
+    negative_prompt: str = "blurry, low quality, distorted, static, no motion",
+    width: int = 768,
+    height: int = 448,
+    frames: int = 97,
+    fps: int = 24,
+    steps: int = 42,
+    seed: int = None,
+    cfg: float = 1.0,
+    strength: float = 1.0,
+    model: str = "int8_distilled",
+    lora_strength: float = 1.0,
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 600,
+) -> str:
+    """
+    LTX-2.5 INT8 图生视频（Image-to-Video）
+
+    将静态图片转化为动态视频，支持运镜、动作生成。
+    核心节点：LTXVImgToVideo（一次性生成conditioning+latent）。
+
+    重要：height必须能被32整除（如448/480/512），
+    不能用432（会导致VAE编码维度错误）。
+
+    Args:
+        image_path: 输入图片路径（本地文件）
+        output_path: 输出视频路径（.mp4）
+        prompt: 运动描述提示词（英文效果最佳）
+        negative_prompt: 负向提示词
+        width/height: 输出分辨率（height必须能被32整除）
+        frames: 帧数（97帧≈4秒@24fps，必须为8n+1）
+        fps: 帧率
+        steps: 采样步数
+        seed: 随机种子（None为随机）
+        cfg: CFG值（LTX-2.5用1.0）
+        strength: 图像引导强度（1.0=完全遵循原图，0.5=更自由创作）
+        model: 模型版本 "int8_distilled" 或 "int8_dev_lora"
+        lora_strength: LoRA强度（仅dev_lora模式）
+        server_addr: ComfyUI地址
+        timeout: 超时秒数
+
+    Returns:
+        输出视频文件路径
+    """
+    import os as _os
+    import uuid as _uuid
+    import urllib.request as _urllib_request
+
+    if not _os.path.exists(image_path):
+        raise FileNotFoundError(f"输入图片不存在: {image_path}")
+
+    # height必须能被32整除
+    if height % 32 != 0:
+        height = (height // 32) * 32
+        print(f"  ⚠️ height调整为{height}（必须能被32整除）")
+
+    if seed is None:
+        seed = int(_uuid.uuid4().int % (2**31))
+
+    cfg_models = LTX25_MODELS.get(model, LTX25_MODELS["int8_distilled"])
+    use_lora = cfg_models.get("lora") is not None
+
+    # 上传图片到ComfyUI
+    img_filename = _os.path.basename(image_path)
+    with open(image_path, "rb") as f:
+        img_data = f.read()
+    boundary = "----WebKitFormBoundary" + _uuid.uuid4().hex
+    body = (
+        f"--{boundary}\r\n"
+        f"Content-Disposition: form-data; name=\"image\"; filename=\"{img_filename}\"\r\n"
+        f"Content-Type: image/png\r\n\r\n"
+    ).encode("utf-8") + img_data + f"\r\n--{boundary}--\r\n".encode("utf-8")
+    req = _urllib_request.Request(
+        f"http://{server_addr}/upload/image",
+        data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
+    )
+    with _urllib_request.urlopen(req, timeout=30) as resp:
+        upload_result = json.loads(resp.read())
+    comfy_img_name = upload_result.get("name", img_filename)
+    print(f"  图片已上传: {comfy_img_name}")
+
+    # 构建工作流
+    if use_lora:
+        workflow = {
+            "1": {"class_type": "UNETLoader", "inputs": {
+                "unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+            "2": {"class_type": "CLIPLoader", "inputs": {
+                "clip_name": cfg_models["clip"], "type": "ltxv"}},
+            "3": {"class_type": "LoraLoader", "inputs": {
+                "model": ["1", 0], "clip": ["2", 0],
+                "lora_name": cfg_models["lora"],
+                "strength_model": lora_strength, "strength_clip": lora_strength}},
+            "4": {"class_type": "VAELoader", "inputs": {
+                "vae_name": cfg_models["vae"]}},
+            "5": {"class_type": "LoadImage", "inputs": {"image": comfy_img_name}},
+            "6": {"class_type": "CLIPTextEncode", "inputs": {
+                "text": prompt, "clip": ["3", 1]}},
+            "7": {"class_type": "CLIPTextEncode", "inputs": {
+                "text": negative_prompt, "clip": ["3", 1]}},
+            "8": {"class_type": "LTXVImgToVideo", "inputs": {
+                "positive": ["6", 0], "negative": ["7", 0],
+                "vae": ["4", 0], "image": ["5", 0],
+                "width": width, "height": height, "length": frames,
+                "batch_size": 1, "strength": strength}},
+            "9": {"class_type": "KSampler", "inputs": {
+                "seed": seed, "steps": steps, "cfg": cfg,
+                "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform",
+                "denoise": 1.0, "model": ["3", 0],
+                "positive": ["8", 0], "negative": ["8", 1],
+                "latent_image": ["8", 2]}},
+            "10": {"class_type": "LTXVTiledVAEDecode", "inputs": {
+                "latents": ["9", 0], "vae": ["4", 0],
+                "horizontal_tiles": 1, "vertical_tiles": 1,
+                "overlap": 6, "last_frame_fix": False}},
+            "11": {"class_type": "CreateVideo", "inputs": {
+                "images": ["10", 0], "fps": fps}},
+            "12": {"class_type": "SaveVideo", "inputs": {
+                "video": ["11", 0], "filename_prefix": "ltx25_i2v",
+                "format": "auto", "codec": "auto"}},
+        }
+    else:
+        workflow = {
+            "1": {"class_type": "UNETLoader", "inputs": {
+                "unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+            "2": {"class_type": "CLIPLoader", "inputs": {
+                "clip_name": cfg_models["clip"], "type": "ltxv"}},
+            "3": {"class_type": "VAELoader", "inputs": {
+                "vae_name": cfg_models["vae"]}},
+            "4": {"class_type": "LoadImage", "inputs": {"image": comfy_img_name}},
+            "5": {"class_type": "CLIPTextEncode", "inputs": {
+                "text": prompt, "clip": ["2", 0]}},
+            "6": {"class_type": "CLIPTextEncode", "inputs": {
+                "text": negative_prompt, "clip": ["2", 0]}},
+            "7": {"class_type": "LTXVImgToVideo", "inputs": {
+                "positive": ["5", 0], "negative": ["6", 0],
+                "vae": ["3", 0], "image": ["4", 0],
+                "width": width, "height": height, "length": frames,
+                "batch_size": 1, "strength": strength}},
+            "8": {"class_type": "KSampler", "inputs": {
+                "seed": seed, "steps": steps, "cfg": cfg,
+                "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform",
+                "denoise": 1.0, "model": ["1", 0],
+                "positive": ["7", 0], "negative": ["7", 1],
+                "latent_image": ["7", 2]}},
+            "9": {"class_type": "LTXVTiledVAEDecode", "inputs": {
+                "latents": ["8", 0], "vae": ["3", 0],
+                "horizontal_tiles": 1, "vertical_tiles": 1,
+                "overlap": 6, "last_frame_fix": False}},
+            "10": {"class_type": "CreateVideo", "inputs": {
+                "images": ["9", 0], "fps": fps}},
+            "11": {"class_type": "SaveVideo", "inputs": {
+                "video": ["10", 0], "filename_prefix": "ltx25_i2v",
+                "format": "auto", "codec": "auto"}},
+        }
+
+    # 提交并等待
+    prompt_id = _submit_workflow(workflow, server_addr)
+    print(f"  任务已提交: {prompt_id}")
+    result = _wait_for_completion(prompt_id, server_addr, timeout)
+
+    # 下载输出视频
+    output_dir = _os.path.dirname(output_path)
+    if output_dir:
+        _os.makedirs(output_dir, exist_ok=True)
+
+    for node_id, node_output in result.get("outputs", {}).items():
+        if "images" in node_output:
+            for img_info in node_output["images"]:
+                if img_info.get("type") == "output":
+                    vid_url = f"http://{server_addr}/view?filename={img_info['filename']}&subfolder={img_info.get('subfolder', '')}&type=output"
+                    _urllib_request.urlretrieve(vid_url, output_path)
+                    print(f"  视频已保存: {output_path}")
+                    return output_path
+
+    raise RuntimeError("未找到输出视频")
+
+
+# ==================== 工具函数 ====================
+
 def upscale_batch(
     input_paths: List[str],
     output_dir: str,
