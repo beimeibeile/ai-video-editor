@@ -99,14 +99,14 @@ def main():
             segments.append(seg)
             print(f"  ✅ [{i+1}] {filename} ({start}, {duration})")
 
-    # 3. 自动转场
+    # 3. 自动转场（注意：转场必须加在前一个片段上）
     if AUTO_TRANSITION and len(segments) > 1:
         print(f"[3/6] 添加自动转场: {TRANSITION_TYPE} ({TRANSITION_DURATION})")
         for i in range(1, len(segments)):
             try:
                 project.add_transition_simple(
                     TRANSITION_TYPE,
-                    video_segment=segments[i],
+                    video_segment=segments[i-1],  # 转场加在前一个片段末尾
                     duration=TRANSITION_DURATION
                 )
                 print(f"  ✅ 转场 [{i}]")
