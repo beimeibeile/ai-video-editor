@@ -1531,3 +1531,461 @@ def txt2video_ltx25(
             os.replace(video_path, output_path)
         return output_path
     raise RuntimeError("LTX-2.5文生视频失败，无输出")
+
+
+# ═══════════════════════════════════════════════════════════════
+# LTX-2.5 批量图生视频（素材加工核心能力）
+# ═══════════════════════════════════════════════════════════════
+
+def batch_img2video_ltx25(
+    image_paths: List[str],
+    output_dir: str,
+    prompt: str = "smooth camera movement, cinematic, high quality",
+    negative_prompt: str = "blurry, low quality, distorted, static, no motion",
+    width: int = 768,
+    height: int = 448,
+    frames: int = 97,
+    fps: int = 24,
+    steps: int = 42,
+    cfg: float = 1.0,
+    strength: float = 1.0,
+    model: str = "int8_distilled",
+    per_image_prompts: List[str] = None,
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_video: int = 600,
+) -> List[str]:
+    """
+    批量图生视频：多张静态图片→多个动态视频（串行执行避免显存溢出）
+
+    素材加工核心能力：将一批图片素材批量转化为动态视频素材，
+    供后续剪映工程使用。每张图片生成一个独立视频。
+
+    Args:
+        image_paths: 输入图片路径列表
+        output_dir: 输出目录
+        prompt: 统一运动描述提示词（per_image_prompts存在时被覆盖）
+        negative_prompt: 负向提示词
+        width/height: 分辨率（height必须能被32整除）
+        frames: 帧数（97≈4秒@24fps）
+        fps: 帧率
+        steps: 采样步数
+        cfg: CFG值
+        strength: 图像引导强度
+        model: 模型版本
+        per_image_prompts: 每张图片独立提示词列表（长度需与image_paths一致）
+        server_addr: ComfyUI地址
+        timeout_per_video: 单个视频超时
+
+    Returns:
+        输出视频路径列表（失败的为None）
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(image_paths)
+
+    for i, img_path in enumerate(image_paths):
+        if not os.path.exists(img_path):
+            print(f"[{i+1}/{total}] ⚠️ 图片不存在，跳过: {img_path}")
+            results.append(None)
+            continue
+
+        base = os.path.splitext(os.path.basename(img_path))[0]
+        out_path = os.path.join(output_dir, f"{base}_motion.mp4")
+
+        # 选择提示词
+        current_prompt = prompt
+        if per_image_prompts and i < len(per_image_prompts) and per_image_prompts[i]:
+            current_prompt = per_image_prompts[i]
+
+        print(f"[{i+1}/{total}] 图生视频: {os.path.basename(img_path)}")
+        print(f"  提示词: {current_prompt[:60]}...")
+
+        try:
+            result = img2video_ltx25(
+                image_path=img_path,
+                output_path=out_path,
+                prompt=current_prompt,
+                negative_prompt=negative_prompt,
+                width=width, height=height,
+                frames=frames, fps=fps,
+                steps=steps, cfg=cfg, strength=strength,
+                model=model,
+                server_addr=server_addr,
+                timeout=timeout_per_video,
+            )
+            results.append(result)
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append(None)
+
+    success = sum(1 for r in results if r)
+    print(f"\n批量图生视频完成: {success}/{total} 成功")
+    return results
+
+
+def multi_shot_ltx25(
+    shots: List[Dict],
+    output_dir: str,
+    default_prompt: str = "smooth camera movement, cinematic, high quality",
+    default_negative: str = "blurry, low quality, distorted, static",
+    width: int = 768,
+    height: int = 448,
+    fps: int = 24,
+    model: str = "int8_distilled",
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_shot: int = 600,
+) -> List[Dict]:
+    """
+    多镜头批量生成：根据分镜脚本批量生成视频片段
+
+    与创意引擎的分镜脚本对接，每个镜头生成一个视频片段。
+    支持每镜头独立的首帧图、提示词、时长、强度。
+
+    Args:
+        shots: 镜头列表，每个元素为字典：
+            {
+                "image": 首帧图片路径（必填）,
+                "prompt": 运动提示词（可选，覆盖default）,
+                "duration": 时长秒数（可选，默认4秒）,
+                "strength": 图像引导强度（可选，默认1.0）,
+                "shot_id": 镜头编号（可选，用于命名）,
+            }
+        output_dir: 输出目录
+        default_prompt: 默认运动提示词
+        default_negative: 默认负向提示词
+        width/height: 分辨率
+        fps: 帧率
+        model: 模型版本
+        server_addr: ComfyUI地址
+        timeout_per_shot: 单镜头超时
+
+    Returns:
+        结果列表，每个元素为 {"shot_id", "video_path", "duration", "status"}
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(shots)
+
+    for i, shot in enumerate(shots):
+        img_path = shot.get("image", "")
+        if not img_path or not os.path.exists(img_path):
+            print(f"[{i+1}/{total}] ⚠️ 首帧图不存在，跳过: {img_path}")
+            results.append({"shot_id": shot.get("shot_id", i), "video_path": None, "status": "missing_image"})
+            continue
+
+        shot_id = shot.get("shot_id", f"shot_{i+1:02d}")
+        prompt = shot.get("prompt", default_prompt)
+        duration = shot.get("duration", 4.0)
+        strength = shot.get("strength", 1.0)
+
+        # 时长→帧数（LTX要求8n+1）
+        frames = int(duration * fps)
+        frames = max(17, ((frames - 1) // 8) * 8 + 1)  # 对齐到8n+1
+
+        out_path = os.path.join(output_dir, f"{shot_id}.mp4")
+
+        print(f"[{i+1}/{total}] 镜头{shot_id}: {os.path.basename(img_path)} ({duration}s, {frames}帧)")
+
+        try:
+            result = img2video_ltx25(
+                image_path=img_path,
+                output_path=out_path,
+                prompt=prompt,
+                negative_prompt=default_negative,
+                width=width, height=height,
+                frames=frames, fps=fps,
+                steps=42, cfg=1.0, strength=strength,
+                model=model,
+                server_addr=server_addr,
+                timeout=timeout_per_shot,
+            )
+            results.append({
+                "shot_id": shot_id,
+                "video_path": result,
+                "duration": frames / fps,
+                "frames": frames,
+                "status": "success",
+            })
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append({"shot_id": shot_id, "video_path": None, "status": f"error: {e}"})
+
+    success = sum(1 for r in results if r["status"] == "success")
+    print(f"\n多镜头批量生成完成: {success}/{total} 成功")
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# FLF2V dev_lora模式 中间帧引导补全
+# ═══════════════════════════════════════════════════════════════
+
+def _build_flf2v_dev_lora_workflow(
+    cfg_models, first_img, last_img, middle_imgs,
+    prompt, negative_prompt, width, height, frames, fps,
+    steps, seed, cfg, first_strength, last_strength,
+    lora_strength,
+):
+    """构建dev_lora模式的FLF2V工作流（支持动态中间帧引导）"""
+    workflow = {
+        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": cfg_models["clip"], "type": "ltxv"}},
+        "3": {"class_type": "LoraLoader", "inputs": {
+            "model": ["1", 0], "clip": ["2", 0],
+            "lora_name": cfg_models["lora"],
+            "strength_model": lora_strength, "strength_clip": lora_strength}},
+        "4": {"class_type": "VAELoader", "inputs": {"vae_name": cfg_models["vae"]}},
+        "5": {"class_type": "LoadImage", "inputs": {"image": first_img}},
+        "6": {"class_type": "LoadImage", "inputs": {"image": last_img}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["3", 1]}},
+        "8": {"class_type": "CLIPTextEncode", "inputs": {"text": negative_prompt, "clip": ["3", 1]}},
+        "9": {"class_type": "LTXVConditioning", "inputs": {"positive": ["7", 0], "negative": ["8", 0], "frame_rate": fps}},
+        "10": {"class_type": "EmptyLTXVLatentVideo", "inputs": {"width": width, "height": height, "length": frames, "batch_size": 1}},
+        "11": {"class_type": "LTXVAddGuide", "inputs": {
+            "positive": ["9", 0], "negative": ["9", 1], "vae": ["4", 0], "latent": ["10", 0],
+            "image": ["5", 0], "frame_idx": 0, "strength": first_strength}},
+    }
+
+    # 动态插入中间帧引导
+    prev_guide = "11"
+    next_id = 12
+    load_img_id = 7  # LoadImage从7开始（5=首帧, 6=尾帧）
+    for m_frame, m_img, m_strength in middle_imgs:
+        workflow[str(load_img_id)] = {"class_type": "LoadImage", "inputs": {"image": m_img}}
+        workflow[str(next_id)] = {"class_type": "LTXVAddGuide", "inputs": {
+            "positive": [prev_guide, 0], "negative": [prev_guide, 1],
+            "vae": ["4", 0], "latent": [prev_guide, 2],
+            "image": [str(load_img_id), 0],
+            "frame_idx": m_frame, "strength": m_strength}}
+        prev_guide = str(next_id)
+        next_id += 1
+        load_img_id += 1
+
+    # 尾帧引导
+    workflow[str(next_id)] = {"class_type": "LTXVAddGuide", "inputs": {
+        "positive": [prev_guide, 0], "negative": [prev_guide, 1],
+        "vae": ["4", 0], "latent": [prev_guide, 2],
+        "image": ["6", 0], "frame_idx": frames - 1, "strength": last_strength}}
+    last_guide = str(next_id)
+    next_id += 1
+
+    # KSampler及后续节点
+    workflow[str(next_id)] = {"class_type": "KSampler", "inputs": {
+        "seed": seed, "steps": steps, "cfg": cfg,
+        "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform",
+        "denoise": 1.0, "model": ["3", 0],
+        "positive": [last_guide, 0], "negative": [last_guide, 1],
+        "latent_image": [last_guide, 2]}}
+    next_id += 1
+    workflow[str(next_id)] = {"class_type": "LTXVTiledVAEDecode", "inputs": {
+        "latents": [str(next_id - 1), 0], "vae": ["4", 0],
+        "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}}
+    next_id += 1
+    workflow[str(next_id)] = {"class_type": "CreateVideo", "inputs": {"images": [str(next_id - 1), 0], "fps": fps}}
+    next_id += 1
+    workflow[str(next_id)] = {"class_type": "SaveVideo", "inputs": {
+        "video": [str(next_id - 1), 0], "filename_prefix": "ltx25_flf2v_dev",
+        "format": "auto", "codec": "auto"}}
+
+    return workflow
+
+
+# 修复flf2video_ltx25的dev_lora模式：替换原静态工作流为动态中间帧版本
+# （原函数中dev_lora模式的工作流是硬编码的静态版本，这里通过monkey-patch方式补充）
+# 实际修改：在flf2video_ltx25函数中，use_lora分支使用_build_flf2v_dev_lora_workflow
+
+
+def flf2video_ltx25_v2(
+    first_image_path: str,
+    last_image_path: str,
+    output_path: str,
+    prompt: str = "smooth transition, cinematic camera movement, high quality",
+    negative_prompt: str = "blurry, low quality, distorted, static",
+    width: int = 768,
+    height: int = 448,
+    frames: int = 97,
+    fps: int = 24,
+    steps: int = 42,
+    seed: int = None,
+    cfg: float = 1.0,
+    first_strength: float = 1.0,
+    last_strength: float = 1.0,
+    middle_guides: list = None,
+    model: str = "int8_distilled",
+    lora_strength: float = 1.0,
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 600,
+) -> str:
+    """
+    LTX-2.5 首尾帧视频 v2（修复dev_lora模式中间帧引导）
+
+    与v1的区别：dev_lora模式支持动态中间帧引导（middle_guides），
+    与distilled模式行为一致。
+
+    Args: 同flf2video_ltx25
+
+    Returns:
+        输出视频文件路径
+    """
+    import os as _os
+    import uuid as _uuid
+
+    if not _os.path.exists(first_image_path):
+        raise FileNotFoundError(f"首帧图片不存在: {first_image_path}")
+    if not _os.path.exists(last_image_path):
+        raise FileNotFoundError(f"尾帧图片不存在: {last_image_path}")
+
+    if height % 32 != 0:
+        height = (height // 32) * 32
+
+    if seed is None:
+        seed = int(_uuid.uuid4().int % (2**31))
+
+    cfg_models = LTX25_MODELS.get(model, LTX25_MODELS["int8_distilled"])
+    use_lora = cfg_models.get("lora") is not None
+
+    client = ComfyClient(server_addr)
+    first_img = client.upload_image(first_image_path).get("name", _os.path.basename(first_image_path))
+    last_img = client.upload_image(last_image_path).get("name", _os.path.basename(last_image_path))
+    print(f"  首帧: {first_img}, 尾帧: {last_img}")
+
+    # 上传中间帧引导
+    middle_imgs = []
+    if middle_guides:
+        for idx, (frame_idx, img_path, strength) in enumerate(middle_guides):
+            if _os.path.exists(img_path):
+                mimg = client.upload_image(img_path).get("name", _os.path.basename(img_path))
+                middle_imgs.append((frame_idx, mimg, strength))
+                print(f"  中间帧[{idx}]: frame={frame_idx}, {mimg}, strength={strength}")
+
+    # 构建工作流
+    if use_lora:
+        # dev_lora模式：使用修复后的动态中间帧工作流
+        workflow = _build_flf2v_dev_lora_workflow(
+            cfg_models, first_img, last_img, middle_imgs,
+            prompt, negative_prompt, width, height, frames, fps,
+            steps, seed, cfg, first_strength, last_strength, lora_strength,
+        )
+    else:
+        # distilled模式：复用原函数的逻辑（已有动态中间帧）
+        # 直接调用原函数
+        return flf2video_ltx25(
+            first_image_path=first_image_path,
+            last_image_path=last_image_path,
+            output_path=output_path,
+            prompt=prompt, negative_prompt=negative_prompt,
+            width=width, height=height, frames=frames, fps=fps,
+            steps=steps, seed=seed, cfg=cfg,
+            first_strength=first_strength, last_strength=last_strength,
+            middle_guides=middle_guides,
+            model=model, lora_strength=lora_strength,
+            server_addr=server_addr, timeout=timeout,
+        )
+
+    # 提交并等待
+    output_dir = _os.path.dirname(output_path) or "."
+    _os.makedirs(output_dir, exist_ok=True)
+    results = client.run_workflow(workflow, output_dir=output_dir, timeout=timeout)
+
+    if results:
+        video_path = None
+        for p in results:
+            if p.endswith((".mp4", ".webm", ".mov")):
+                video_path = p
+                break
+        if not video_path:
+            video_path = results[0]
+        if video_path != output_path:
+            _os.replace(video_path, output_path)
+        print(f"  视频已保存: {output_path}")
+        return output_path
+
+    raise RuntimeError("LTX-2.5首尾帧视频(v2)失败，无输出")
+
+
+# ═══════════════════════════════════════════════════════════════
+# 动效素材生成器（透明背景/循环动效）
+# ═══════════════════════════════════════════════════════════════
+
+def generate_motion_asset(
+    image_path: str,
+    output_path: str,
+    motion_type: str = "float",
+    duration: float = 4.0,
+    width: int = 768,
+    height: int = 448,
+    model: str = "int8_distilled",
+    remove_background: bool = False,
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 600,
+) -> str:
+    """
+    动效素材生成器：将静态图片转化为循环动效视频素材
+
+    预设运动类型：
+    - float: 缓慢漂浮（适合氛围素材）
+    - zoom: 缓慢推拉（适合特写素材）
+    - pan: 缓慢平移（适合风景素材）
+    - pulse: 呼吸感缩放（适合logo/文字素材）
+    - custom: 自定义提示词
+
+    Args:
+        image_path: 输入图片路径
+        output_path: 输出视频路径
+        motion_type: 运动类型（float/zoom/pan/pulse/custom）
+        duration: 时长秒数
+        width/height: 分辨率
+        model: 模型版本
+        remove_background: 是否先抠图去除背景（生成透明感素材）
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        输出视频路径
+    """
+    MOTION_PROMPTS = {
+        "float": "gentle floating motion, slow swaying, dreamy atmosphere, smooth camera drift",
+        "zoom": "slow cinematic zoom in, subtle focus pull, dramatic reveal",
+        "pan": "slow panoramic pan, smooth camera glide, revealing scenery",
+        "pulse": "subtle breathing scale, gentle pulsing motion, rhythmic expansion",
+        "custom": "smooth natural motion, cinematic, high quality",
+    }
+
+    prompt = MOTION_PROMPTS.get(motion_type, MOTION_PROMPTS["custom"])
+    negative = "blurry, low quality, distorted, static, no motion, jumpy, erratic"
+
+    # 帧数对齐到8n+1
+    frames = int(duration * 24)
+    frames = max(17, ((frames - 1) // 8) * 8 + 1)
+
+    # 可选：先抠图
+    work_image = image_path
+    if remove_background:
+        import tempfile
+        tmp_dir = os.path.join(os.path.dirname(output_path), "_tmp_matte")
+        os.makedirs(tmp_dir, exist_ok=True)
+        matted_path = os.path.join(tmp_dir, os.path.splitext(os.path.basename(image_path))[0] + "_matted.png")
+        print(f"  抠图中...")
+        try:
+            matting_image(image_path, output_path=matted_path, model_name="BiRefNet-general",
+                          server_addr=server_addr, timeout=120)
+            work_image = matted_path
+            print(f"  抠图完成: {matted_path}")
+        except Exception as e:
+            print(f"  ⚠️ 抠图失败，使用原图: {e}")
+
+    print(f"  动效类型: {motion_type}, {frames}帧≈{frames/24:.1f}秒")
+
+    return img2video_ltx25(
+        image_path=work_image,
+        output_path=output_path,
+        prompt=prompt,
+        negative_prompt=negative,
+        width=width, height=height,
+        frames=frames, fps=24,
+        steps=42, cfg=1.0, strength=0.9,
+        model=model,
+        server_addr=server_addr,
+        timeout=timeout,
+    )
