@@ -1,8 +1,9 @@
-"""
+﻿"""
 ComfyUI高级场景API
 封装常用任务：图片超分、批量超分等
 """
 import os
+import json
 import time
 from typing import List, Optional
 from .comfy_client import ComfyClient, load_workflow_template
@@ -271,56 +272,46 @@ def img2video_ltx25(
             workflow[adev_id] = {"class_type": "LTXVAudioVAEDecode", "inputs": {"samples": [sep_id, 1], "audio_vae": [avae_key + "b", 0]}}
             workflow[asave_id] = {"class_type": "SaveAudio", "inputs": {"audio": [adev_id, 0], "filename_prefix": "ltx25_i2v_av"}}
 
-    # 提交并等待
-    prompt_id = _submit_workflow(workflow, server_addr)
-    print(f"  任务已提交: {prompt_id}")
-    result = _wait_for_completion(prompt_id, server_addr, timeout)
+    # 提交并等待（使用ComfyClient，与txt2video一致）
+    output_dir = os.path.dirname(output_path) or "."
+    os.makedirs(output_dir, exist_ok=True)
+    client = ComfyClient(server_addr)
+    results = client.run_workflow(workflow, output_dir=output_dir, timeout=timeout)
 
-    # 下载输出
-    output_dir = _os.path.dirname(output_path)
-    if output_dir:
-        _os.makedirs(output_dir, exist_ok=True)
+    if results:
+        video_path = None
+        audio_path = None
+        for p in results:
+            if p.endswith((".mp4", ".webm", ".mov")):
+                video_path = p
+            elif p.endswith((".flac", ".wav", ".mp3", ".ogg")):
+                audio_path = p
+        if not video_path:
+            video_path = results[0]
 
-    video_file = None
-    audio_file = None
-    for node_id, node_output in result.get("outputs", {}).items():
-        if "images" in node_output:
-            for img_info in node_output["images"]:
-                if img_info.get("type") == "output":
-                    url = f"http://{server_addr}/view?filename={img_info['filename']}&subfolder={img_info.get('subfolder', '')}&type=output"
-                    if img_info["filename"].endswith((".mp4", ".webm")):
-                        video_file = output_path + ".raw.mp4"
-                        _urllib_request.urlretrieve(url, video_file)
-                    elif img_info["filename"].endswith((".flac", ".wav")):
-                        audio_file = output_path + ".audio.flac"
-                        _urllib_request.urlretrieve(url, audio_file)
-        if "audio" in node_output:
-            for aud_info in node_output["audio"]:
-                if aud_info.get("type") == "output":
-                    url = f"http://{server_addr}/view?filename={aud_info['filename']}&subfolder={aud_info.get('subfolder', '')}&type=output"
-                    audio_file = output_path + ".audio.flac"
-                    _urllib_request.urlretrieve(url, audio_file)
-
-    if video_file:
-        if generate_audio and audio_file:
+        if generate_audio and audio_path and video_path:
             import subprocess
+            temp_merged = output_path + ".temp.mp4"
             subprocess.run(
-                ["ffmpeg", "-y", "-i", video_file, "-i", audio_file,
-                 "-c:v", "copy", "-c:a", "aac", "-shortest", output_path],
+                ["ffmpeg", "-y", "-i", video_path, "-i", audio_path,
+                 "-c:v", "copy", "-c:a", "aac", "-shortest", temp_merged],
                 capture_output=True, timeout=60
             )
-            if _os.path.exists(video_file):
-                _os.remove(video_file)
-            if _os.path.exists(audio_file):
-                _os.remove(audio_file)
-            print(f"  音视频已合并: {output_path}")
-            return output_path
-        else:
-            _os.replace(video_file, output_path)
-            print(f"  视频已保存: {output_path}")
-            return output_path
+            if os.path.exists(temp_merged):
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+                os.replace(temp_merged, output_path)
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                print(f"  音视频已合并: {output_path}")
+                return output_path
 
-    raise RuntimeError("未找到输出视频")
+        if video_path != output_path:
+            os.replace(video_path, output_path)
+        print(f"  视频已保存: {output_path}")
+        return output_path
+
+    raise RuntimeError("LTX-2.5图生视频失败，无输出")
 
 
 def flf2video_ltx25(
@@ -485,25 +476,26 @@ def flf2video_ltx25(
         base["{}".format(next_id)] = {"class_type": "CreateVideo", "inputs": {"images": [str(next_id-1), 0], "fps": fps}}
         next_id += 1
         base["{}".format(next_id)] = {"class_type": "SaveVideo", "inputs": {"video": [str(next_id-1), 0], "filename_prefix": "ltx25_flf2v", "format": "auto", "codec": "auto"}}
+    # 提交并等待（使用ComfyClient）
+    output_dir = os.path.dirname(output_path) or "."
+    os.makedirs(output_dir, exist_ok=True)
+    client = ComfyClient(server_addr)
+    results = client.run_workflow(base, output_dir=output_dir, timeout=timeout)
 
-    prompt_id = _submit_workflow(base, server_addr)
-    print(f"  任务已提交: {prompt_id}")
-    result = _wait_for_completion(prompt_id, server_addr, timeout)
+    if results:
+        video_path = None
+        for p in results:
+            if p.endswith((".mp4", ".webm", ".mov")):
+                video_path = p
+                break
+        if not video_path:
+            video_path = results[0]
+        if video_path != output_path:
+            os.replace(video_path, output_path)
+        print(f"  视频已保存: {output_path}")
+        return output_path
 
-    output_dir = _os.path.dirname(output_path)
-    if output_dir:
-        _os.makedirs(output_dir, exist_ok=True)
-
-    for node_id, node_output in result.get("outputs", {}).items():
-        if "images" in node_output:
-            for img_info in node_output["images"]:
-                if img_info.get("type") == "output":
-                    vid_url = f"http://{server_addr}/view?filename={img_info['filename']}&subfolder={img_info.get('subfolder', '')}&type=output"
-                    _urllib_request.urlretrieve(vid_url, output_path)
-                    print(f"  视频已保存: {output_path}")
-                    return output_path
-
-    raise RuntimeError("未找到输出视频")
+    raise RuntimeError("LTX-2.5首尾帧视频失败，无输出")
 
 
 # ==================== 工具函数 ====================
