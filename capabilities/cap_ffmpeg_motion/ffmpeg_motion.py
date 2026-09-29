@@ -89,35 +89,36 @@ class FFmpegMotion:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         # zoompan滤镜参数
-        # 缩放从1.0到1.0+intensity，或反向
+        # base_zoom=1.1确保图片始终填满画布（安全边距，防止比例不匹配导致黑边）
         total_frames = int(duration * fps)
+        base_zoom = 1.1
 
         if move_type == "zoom_in":
-            zoom_expr = f"min(1+{intensity}*on/{total_frames}, 1.5)"
+            zoom_expr = f"min({base_zoom}+{intensity}*on/{total_frames}, 1.5)"
             x_expr = "iw/2-(iw/zoom/2)"
             y_expr = "ih/2-(ih/zoom/2)"
         elif move_type == "zoom_out":
-            zoom_expr = f"max(1+{intensity}*(1-on/{total_frames}), 1.0)"
+            zoom_expr = f"max({base_zoom}+{intensity}*(1-on/{total_frames}), {base_zoom})"
             x_expr = "iw/2-(iw/zoom/2)"
             y_expr = "ih/2-(ih/zoom/2)"
         elif move_type == "pan_left":
-            zoom_expr = f"1+{intensity}"
+            zoom_expr = f"{base_zoom}+{intensity}"
             x_expr = f"iw/2-(iw/zoom/2)-{intensity*0.5}*on/{total_frames}*iw"
             y_expr = "ih/2-(ih/zoom/2)"
         elif move_type == "pan_right":
-            zoom_expr = f"1+{intensity}"
+            zoom_expr = f"{base_zoom}+{intensity}"
             x_expr = f"iw/2-(iw/zoom/2)+{intensity*0.5}*on/{total_frames}*iw"
             y_expr = "ih/2-(ih/zoom/2)"
         elif move_type == "pan_up":
-            zoom_expr = f"1+{intensity}"
+            zoom_expr = f"{base_zoom}+{intensity}"
             x_expr = "iw/2-(iw/zoom/2)"
             y_expr = f"ih/2-(ih/zoom/2)-{intensity*0.5}*on/{total_frames}*ih"
         elif move_type == "pan_down":
-            zoom_expr = f"1+{intensity}"
+            zoom_expr = f"{base_zoom}+{intensity}"
             x_expr = "iw/2-(iw/zoom/2)"
             y_expr = f"ih/2-(ih/zoom/2)+{intensity*0.5}*on/{total_frames}*ih"
         else:
-            zoom_expr = f"min(1+{intensity}*on/{total_frames}, 1.5)"
+            zoom_expr = f"min({base_zoom}+{intensity}*on/{total_frames}, 1.5)"
             x_expr = "iw/2-(iw/zoom/2)"
             y_expr = "ih/2-(ih/zoom/2)"
 

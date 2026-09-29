@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-09-29T16:26:13.388138",
+  "updated_at": "2026-09-29T19:19:59.921191",
   "total": 17,
   "assets": {
     "075887caba58": {
@@ -19,7 +19,7 @@
       "format": ".mp4",
       "size_bytes": 22327,
       "description": "赛博朋克深色推镜背景",
-      "usage_count": 2,
+      "usage_count": 3,
       "created_at": "2026-09-29T14:25:03.975244"
     },
     "2edaa8cd924f": {
@@ -193,7 +193,7 @@
       "format": ".wav",
       "size_bytes": 44178,
       "description": "嗖~转场音效",
-      "usage_count": 1,
+      "usage_count": 5,
       "created_at": "2026-09-29T14:32:46.115415"
     },
     "a34240cf5e9d": {
@@ -231,7 +231,7 @@
       "format": ".wav",
       "size_bytes": 70638,
       "description": "boom冲击音效",
-      "usage_count": 4,
+      "usage_count": 11,
       "created_at": "2026-09-29T14:32:46.185943"
     },
     "572530750e3d": {
