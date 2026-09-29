@@ -895,3 +895,114 @@ def txt2img_zimage(
             os.replace(results[0], output_path)
         return output_path
     raise RuntimeError("Z-Image-Turbo生成失败，无输出")
+
+# ═══════════════════════════════════════════════════════════════
+# LTX-2.5 INT8 文生视频（高质量动效素材生成）
+# ═══════════════════════════════════════════════════════════════
+
+LTX25_MODELS = {
+    "int8": {
+        "unet": "ltx\\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+        "clip": "ltx\\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+        "vae": "ltx\\ltx-2.5-video-vae-bf16.safetensors",
+    },
+}
+
+LTX25_PRESETS = {
+    "480p": {"width": 768, "height": 432, "frames": 97},
+    "720p": {"width": 1280, "height": 720, "frames": 97},
+    "5s":   {"width": 768, "height": 432, "frames": 121},
+}
+
+
+def txt2video_ltx25(
+    prompt: str,
+    output_path: str,
+    width: int = 768,
+    height: int = 432,
+    frames: int = 97,
+    fps: float = 24.0,
+    steps: int = 42,
+    seed: int = None,
+    cfg: float = 1.0,
+    negative_prompt: str = "blurry, low quality, distorted, ugly, watermark, text",
+    model: str = "int8",
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 600,
+) -> str:
+    """
+    LTX-2.5 INT8 文生视频（Lightricks开源，22B参数，INT8量化）
+
+    核心优势：动作控制精准、支持快慢变速切换、电影级画质。
+    模型组合：INT8 convrot主模型 + Gemma4-12B with-proj INT8文本编码器。
+    经RTX 3080 12GB验证：768x432@97帧可稳定运行。
+
+    Args:
+        prompt: 正向提示词（英文效果最佳）
+        output_path: 输出视频路径（.mp4）
+        width/height: 分辨率（默认768x432，12GB显存推荐）
+        frames: 帧数（97帧≈4秒@24fps，帧数必须为8n+1）
+        fps: 帧率（默认24）
+        steps: 采样步数（42步 distilled模型）
+        seed: 随机种子（None为随机）
+        cfg: CFG值（LTX-2.5 distilled用1.0）
+        negative_prompt: 负向提示词
+        model: 模型版本 "int8"
+        server_addr: ComfyUI地址
+        timeout: 超时秒数（默认600）
+
+    Returns:
+        输出视频文件路径
+    """
+    import random
+
+    if seed is None:
+        seed = random.randint(0, 2**31 - 1)
+
+    cfg_models = LTX25_MODELS.get(model, LTX25_MODELS["int8"])
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行，请先启动ComfyUI")
+
+    workflow = {
+        "1": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": cfg_models["unet"], "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": cfg_models["clip"], "type": "ltxv"}},
+        "3": {"class_type": "VAELoader", "inputs": {
+            "vae_name": cfg_models["vae"]}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {
+            "text": prompt, "clip": ["2", 0]}},
+        "5": {"class_type": "CLIPTextEncode", "inputs": {
+            "text": negative_prompt, "clip": ["2", 0]}},
+        "6": {"class_type": "LTXVConditioning", "inputs": {
+            "positive": ["4", 0], "negative": ["5", 0], "frame_rate": fps}},
+        "7": {"class_type": "EmptyLTXVLatentVideo", "inputs": {
+            "width": width, "height": height, "length": frames, "batch_size": 1}},
+        "8": {"class_type": "KSampler", "inputs": {
+            "seed": seed, "steps": steps, "cfg": cfg,
+            "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform",
+            "denoise": 1.0, "model": ["1", 0],
+            "positive": ["6", 0], "negative": ["6", 1],
+            "latent_image": ["7", 0]}},
+        "9": {"class_type": "LTXVTiledVAEDecode", "inputs": {
+            "latents": ["8", 0], "vae": ["3", 0],
+            "horizontal_tiles": 1, "vertical_tiles": 1,
+            "overlap": 6, "last_frame_fix": False}},
+        "10": {"class_type": "CreateVideo", "inputs": {
+            "images": ["9", 0], "fps": fps}},
+        "11": {"class_type": "SaveVideo", "inputs": {
+            "video": ["10", 0], "filename_prefix": "ltx25_txt2video",
+            "format": "auto", "codec": "auto"}},
+    }
+
+    output_dir = os.path.dirname(output_path) or "."
+    results = client.run_workflow(workflow, output_dir=output_dir, timeout=timeout)
+
+    if results:
+        if results[0] != output_path:
+            os.replace(results[0], output_path)
+        return output_path
+    raise RuntimeError("LTX-2.5文生视频失败，无输出")
