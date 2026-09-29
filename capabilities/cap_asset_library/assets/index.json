@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-09-29T14:25:03.975757",
+  "total": 1,
+  "assets": {
+    "075887caba58": {
+      "id": "075887caba58",
+      "name": "bg_cyberpunk.mp4",
+      "path": "backgrounds\\bg_cyberpunk.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "推镜",
+        "深色"
+      ],
+      "style": "impact",
+      "mood": "震撼",
+      "duration": 6.0,
+      "format": ".mp4",
+      "size_bytes": 22327,
+      "description": "赛博朋克深色推镜背景",
+      "usage_count": 1,
+      "created_at": "2026-09-29T14:25:03.975244"
+    }
+  }
+}
