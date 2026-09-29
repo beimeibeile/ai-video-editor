@@ -199,6 +199,14 @@ class E2EPipeline:
         }
 
         video_clips = []
+
+        # 批量LTX优化：收集所有需要LTX的镜头，一次性批量生成
+        ltx_shot_indices = [i for i in range(len(sb.shots)) if use_ltx and i in ltx_shots]
+        ltx_results = {}  # {shot_index: output_path}
+        if len(ltx_shot_indices) > 1:
+            print(f"  批量LTX: {len(ltx_shot_indices)}个镜头将批量生成")
+            ltx_results = self._batch_ltx_i2v(sb, input_images, ltx_shot_indices, width, height, project_name)
+
         for i, shot in enumerate(sb.shots):
             out_path = os.path.join(self.work_dir, "output", f"{project_name}_shot_{i:02d}.mp4")
 
@@ -234,16 +242,21 @@ class E2EPipeline:
                         width=width, height=height, fps=30
                     )
             elif use_ltx and i in ltx_shots:
-                # LTX-2.5 I2V（需要ComfyUI运行）
-                ltx_success = self._try_ltx_i2v(img_path, out_path, shot, width, height)
-                if not ltx_success:
-                    # 降级为Ken Burns
-                    print(f"  镜头{i}: LTX失败，降级Ken Burns")
-                    fm.image_to_ken_burns(
-                        img_path, out_path, duration=shot.duration,
-                        move_type=move_type, intensity=shot.move_intensity,
-                        width=width, height=height, fps=30
-                    )
+                # 优先使用批量结果
+                if i in ltx_results and ltx_results[i] and os.path.exists(ltx_results[i]):
+                    out_path = ltx_results[i]
+                    print(f"  镜头{i}: 使用批量LTX结果")
+                else:
+                    # LTX-2.5 I2V（需要ComfyUI运行）
+                    ltx_success = self._try_ltx_i2v(img_path, out_path, shot, width, height)
+                    if not ltx_success:
+                        # 降级为Ken Burns
+                        print(f"  镜头{i}: LTX失败，降级Ken Burns")
+                        fm.image_to_ken_burns(
+                            img_path, out_path, duration=shot.duration,
+                            move_type=move_type, intensity=shot.move_intensity,
+                            width=width, height=height, fps=30
+                        )
             else:
                 fm.image_to_ken_burns(
                     img_path, out_path, duration=shot.duration,
@@ -254,6 +267,15 @@ class E2EPipeline:
             video_clips.append(out_path)
             size_kb = os.path.getsize(out_path) // 1024 if os.path.exists(out_path) else 0
             print(f"  镜头{i}: {shot.camera_move}({move_type}) 强度{shot.move_intensity} -> {size_kb}KB")
+
+        # 素材质检
+        print(f"\n  素材质检:")
+        for i, clip in enumerate(video_clips):
+            qc = self._validate_clip(clip)
+            if qc.get("valid"):
+                print(f"    镜头{i}: ✅ {qc['width']}x{qc['height']} {qc['fps']}fps {qc['duration']:.1f}s {qc['size_mb']}MB")
+            else:
+                print(f"    镜头{i}: ❌ {qc.get('reason', '未知')}")
 
         return video_clips
 
@@ -371,11 +393,90 @@ class E2EPipeline:
             print(f"  LTX I2V异常: {e}")
             return False
 
+    def _batch_ltx_i2v(self, sb: Storyboard, input_images: List[str],
+                        shot_indices: List[int], width: int, height: int,
+                        project_name: str) -> Dict[int, str]:
+        """批量LTX I2V：一次性生成多个镜头的视频（减少模型加载开销）"""
+        try:
+            from cap_comfyui_runner.api import batch_img2video_ltx25, check_comfyui_ready
+            if not check_comfyui_ready(self.comfyui_addr):
+                return {}
+
+            ltx_w = (width // 32) * 32
+            ltx_h = (height // 32) * 32
+
+            # 收集图片和提示词
+            images = []
+            prompts = []
+            for idx in shot_indices:
+                if input_images and idx < len(input_images):
+                    img_path = input_images[idx]
+                else:
+                    img_path = os.path.join(self.work_dir, "input", f"{project_name}_shot_{idx:02d}.png")
+                if os.path.exists(img_path):
+                    images.append(img_path)
+                    shot = sb.shots[idx]
+                    prompts.append(f"{shot.subtitle}，{shot.emotion}氛围，{shot.shot_size}，电影感")
+                else:
+                    images.append(None)
+                    prompts.append("")
+
+            # 过滤掉不存在的图片
+            valid_pairs = [(idx, img, p) for idx, img, p in zip(shot_indices, images, prompts) if img]
+            if not valid_pairs:
+                return {}
+
+            valid_indices = [p[0] for p in valid_pairs]
+            valid_images = [p[1] for p in valid_pairs]
+            valid_prompts = [p[2] for p in valid_pairs]
+
+            output_dir = os.path.join(self.work_dir, "output")
+            results = batch_img2video_ltx25(
+                image_paths=valid_images,
+                output_dir=output_dir,
+                prompt="cinematic, high quality",
+                per_image_prompts=valid_prompts,
+                width=ltx_w, height=ltx_h,
+                frames=97, fps=24, steps=10,
+                strength=0.7,
+                server_addr=self.comfyui_addr,
+                timeout_per_video=300,
+            )
+
+            # 映射回镜头索引
+            ltx_results = {}
+            for idx, result in zip(valid_indices, results):
+                if result and os.path.exists(result):
+                    ltx_results[idx] = result
+            return ltx_results
+        except Exception as e:
+            print(f"  批量LTX异常: {e}")
+            return {}
+
+    def _validate_clip(self, video_path: str) -> Dict:
+        """素材质检：验证生成的视频片段"""
+        try:
+            from cap_comfyui_runner.api import get_video_info
+            if not os.path.exists(video_path):
+                return {"valid": False, "reason": "文件不存在"}
+            info = get_video_info(video_path)
+            v = info.get("video", {})
+            return {
+                "valid": True,
+                "width": v.get("width", 0),
+                "height": v.get("height", 0),
+                "fps": v.get("fps", 0),
+                "duration": info.get("duration_sec", 0),
+                "size_mb": info.get("size_mb", 0),
+            }
+        except Exception as e:
+            return {"valid": False, "reason": str(e)}
+
     def _try_flf2v(self, first_img: str, last_img: str, out_path: str,
                    shot, width: int, height: int) -> bool:
         """尝试LTX-2.5 FLF2V首尾帧视频，失败返回False"""
         try:
-            from cap_comfyui_runner.api import flf2video_ltx25, check_comfyui_ready
+            from cap_comfyui_runner.api import flf2video_ltx25_v2, check_comfyui_ready
             if not check_comfyui_ready(self.comfyui_addr):
                 return False
 
@@ -384,7 +485,7 @@ class E2EPipeline:
             flf_h = (height // 32) * 32
             frames = max(int(shot.duration * 24), 48)
 
-            result = flf2video_ltx25(
+            result = flf2video_ltx25_v2(
                 first_image_path=first_img,
                 last_image_path=last_img,
                 output_path=out_path,
