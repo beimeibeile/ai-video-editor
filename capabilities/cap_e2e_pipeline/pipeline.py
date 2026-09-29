@@ -72,6 +72,8 @@ class E2EPipeline:
             input_images: List[str] = None,
             use_ltx: bool = True,
             ltx_shots: List[int] = None,
+            use_flf2v: bool = False,
+            flf2v_shots: List[int] = None,
             add_bgm: bool = True,
             add_intro: bool = False) -> Dict[str, Any]:
         """
@@ -101,6 +103,8 @@ class E2EPipeline:
 
         if ltx_shots is None:
             ltx_shots = [0] if use_ltx else []
+        if flf2v_shots is None:
+            flf2v_shots = []
 
         print(f"{'='*60}")
         print(f"端到端视频生成: {theme}")
@@ -142,7 +146,8 @@ class E2EPipeline:
         # ==================== 步骤2：素材准备 ====================
         print("\n[2/4] 素材加工")
         video_clips = self._prepare_materials(
-            sb, input_images, width, height, use_ltx, ltx_shots, project_name
+            sb, input_images, width, height, use_ltx, ltx_shots,
+            use_flf2v, flf2v_shots, project_name
         )
 
         # ==================== 步骤3：剪映合成（含片头） ====================
@@ -171,7 +176,10 @@ class E2EPipeline:
 
     def _prepare_materials(self, sb: Storyboard, input_images: List[str],
                            width: int, height: int, use_ltx: bool,
-                           ltx_shots: List[int], project_name: str) -> List[str]:
+                           ltx_shots: List[int], use_flf2v: bool = False,
+                           flf2v_shots: List[int] = None, project_name: str = "") -> List[str]:
+        if flf2v_shots is None:
+            flf2v_shots = []
         """素材加工：生成/动态化每个镜头的视频"""
         from cap_ffmpeg_motion.ffmpeg_motion import FFmpegMotion
         fm = FFmpegMotion(ffmpeg_path=self.ffmpeg)
@@ -214,7 +222,18 @@ class E2EPipeline:
             # 动态化
             move_type = move_map.get(shot.camera_move, "zoom_in")
 
-            if use_ltx and i in ltx_shots:
+            if use_flf2v and i in flf2v_shots:
+                # FLF2V首尾帧：首帧=当前图，尾帧=下一镜头图（最后一镜头尾帧=当前图）
+                last_img = input_images[i+1] if (input_images and i+1 < len(input_images)) else img_path
+                flf_success = self._try_flf2v(img_path, last_img, out_path, shot, width, height)
+                if not flf_success:
+                    print(f"  镜头{i}: FLF2V失败，降级Ken Burns")
+                    fm.image_to_ken_burns(
+                        img_path, out_path, duration=shot.duration,
+                        move_type=move_type, intensity=shot.move_intensity,
+                        width=width, height=height, fps=30
+                    )
+            elif use_ltx and i in ltx_shots:
                 # LTX-2.5 I2V（需要ComfyUI运行）
                 ltx_success = self._try_ltx_i2v(img_path, out_path, shot, width, height)
                 if not ltx_success:
@@ -350,6 +369,36 @@ class E2EPipeline:
             return result and os.path.exists(out_path)
         except Exception as e:
             print(f"  LTX I2V异常: {e}")
+            return False
+
+    def _try_flf2v(self, first_img: str, last_img: str, out_path: str,
+                   shot, width: int, height: int) -> bool:
+        """尝试LTX-2.5 FLF2V首尾帧视频，失败返回False"""
+        try:
+            from cap_comfyui_runner.api import flf2video_ltx25, check_comfyui_ready
+            if not check_comfyui_ready(self.comfyui_addr):
+                return False
+
+            # FLF2V尺寸限制（必须能被32整除）
+            flf_w = (width // 32) * 32
+            flf_h = (height // 32) * 32
+            frames = max(int(shot.duration * 24), 48)
+
+            result = flf2video_ltx25(
+                first_image_path=first_img,
+                last_image_path=last_img,
+                output_path=out_path,
+                prompt=f"{shot.subtitle}，{shot.emotion}氛围，平滑过渡，电影感运镜",
+                width=flf_w, height=flf_h,
+                frames=frames, fps=24,
+                steps=10, seed=None,
+                first_strength=1.0, last_strength=1.0,
+                server_addr=self.comfyui_addr,
+                timeout=300,
+            )
+            return result and os.path.exists(out_path)
+        except Exception as e:
+            print(f"  FLF2V异常: {e}")
             return False
 
     def _build_jianying(self, sb: Storyboard, video_clips: List[str],
