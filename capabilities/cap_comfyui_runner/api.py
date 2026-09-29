@@ -2236,3 +2236,260 @@ def batch_generate_motion_assets(
     success = sum(1 for v in results.values() if v)
     print(f"\n批量动效素材生成完成: {success}/{len(motion_types)} 成功")
     return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 视频帧提取（从视频中提取关键帧/全部帧）
+# ═══════════════════════════════════════════════════════════════
+
+def extract_frames_from_video(
+    video_path: str,
+    output_dir: str,
+    fps: float = 1.0,
+    max_frames: int = 0,
+    frame_format: str = "png",
+    ffmpeg_path: str = "ffmpeg",
+) -> List[str]:
+    """
+    从视频中提取帧图片（用于图生视频/首尾帧/素材分析）
+
+    Args:
+        video_path: 输入视频路径
+        output_dir: 输出目录
+        fps: 提取帧率（1.0=每秒1帧，0=按原始帧率提取全部帧）
+        max_frames: 最大帧数（0=不限制）
+        frame_format: 输出格式 png/jpg
+        ffmpeg_path: ffmpeg可执行文件路径
+
+    Returns:
+        提取的帧图片路径列表
+    """
+    import subprocess
+
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"视频不存在: {video_path}")
+
+    os.makedirs(output_dir, exist_ok=True)
+    base = os.path.splitext(os.path.basename(video_path))[0]
+
+    # 构建ffmpeg命令
+    cmd = [ffmpeg_path, "-y", "-i", video_path]
+    if fps > 0:
+        cmd.extend(["-vf", f"fps={fps}"])
+    if max_frames > 0:
+        cmd.extend(["-frames:v", str(max_frames)])
+    out_pattern = os.path.join(output_dir, f"{base}_%04d.{frame_format}")
+    cmd.extend(["-q:v", "2", out_pattern])
+
+    print(f"  提取帧: {os.path.basename(video_path)} (fps={fps}, max={max_frames or '∞'})")
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        if result.returncode != 0:
+            # 尝试常见ffmpeg路径
+            for p in [r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"]:
+                if os.path.exists(p):
+                    return extract_frames_from_video(video_path, output_dir, fps, max_frames, frame_format, p)
+            raise RuntimeError(f"ffmpeg失败: {result.stderr[-200:]}")
+    except FileNotFoundError:
+        for p in [r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"]:
+            if os.path.exists(p):
+                return extract_frames_from_video(video_path, output_dir, fps, max_frames, frame_format, p)
+        raise RuntimeError("ffmpeg未找到")
+
+    # 收集输出文件
+    frames = sorted([
+        os.path.join(output_dir, f)
+        for f in os.listdir(output_dir)
+        if f.startswith(base) and f.endswith(f".{frame_format}")
+    ])
+    print(f"  ✅ 提取 {len(frames)} 帧")
+    return frames
+
+
+# ═══════════════════════════════════════════════════════════════
+# 视频逐帧抠像（生成透明背景视频/帧序列）
+# ═══════════════════════════════════════════════════════════════
+
+def matting_video(
+    video_path: str,
+    output_dir: str,
+    model_name: str = "BiRefNet-general",
+    fps: float = 0,
+    output_format: str = "png_sequence",
+    ffmpeg_path: str = "ffmpeg",
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_frame: int = 60,
+) -> Dict:
+    """
+    视频逐帧抠像：去除视频背景，生成透明帧序列或WebM视频
+
+    流程：ffmpeg拆帧 → BiRefNet逐帧抠图 → 输出PNG序列（或合成WebM）
+
+    Args:
+        video_path: 输入视频路径
+        output_dir: 输出目录
+        model_name: 抠图模型
+        fps: 提取帧率（0=原始帧率）
+        output_format: png_sequence / webm
+        ffmpeg_path: ffmpeg路径
+        server_addr: ComfyUI地址
+        timeout_per_frame: 单帧超时
+
+    Returns:
+        {"frames": [...], "output_dir": ..., "count": ...}
+    """
+    import subprocess
+
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"视频不存在: {video_path}")
+
+    # Step 1: 拆帧
+    frames_dir = os.path.join(output_dir, "_frames")
+    os.makedirs(frames_dir, exist_ok=True)
+    print(f"  [抠视频] Step1: 拆帧...")
+    frames = extract_frames_from_video(video_path, frames_dir, fps=fps, ffmpeg_path=ffmpeg_path)
+
+    if not frames:
+        raise RuntimeError("拆帧失败，无帧输出")
+
+    # Step 2: 逐帧抠图
+    matted_dir = os.path.join(output_dir, "matted_frames")
+    os.makedirs(matted_dir, exist_ok=True)
+    print(f"  [抠视频] Step2: 逐帧抠图 ({len(frames)}帧)...")
+
+    matted_frames = []
+    for i, frame in enumerate(frames):
+        out_path = os.path.join(matted_dir, os.path.basename(frame))
+        try:
+            matting_image(frame, output_path=out_path, model_name=model_name,
+                          server_addr=server_addr, timeout=timeout_per_frame)
+            matted_frames.append(out_path)
+            if (i + 1) % 5 == 0 or i == len(frames) - 1:
+                print(f"    [{i+1}/{len(frames)}] 完成")
+        except Exception as e:
+            print(f"    [{i+1}/{len(frames)}] ⚠️ 失败: {e}")
+
+    # Step 3: 可选合成WebM（带alpha通道）
+    result = {"frames": matted_frames, "output_dir": matted_dir, "count": len(matted_frames)}
+
+    if output_format == "webm" and matted_frames:
+        print(f"  [抠视频] Step3: 合成WebM...")
+        webm_path = os.path.join(output_dir, os.path.splitext(os.path.basename(video_path))[0] + "_matted.webm")
+        # 用ffmpeg合成带alpha的WebM
+        first_frame = matted_frames[0]
+        # 推断帧率
+        info = get_video_info(video_path, ffprobe_path=ffmpeg_path.replace("ffmpeg", "ffprobe"))
+        v_fps = info.get("video", {}).get("fps", 24) if info else 24
+        cmd = [ffmpeg_path, "-y", "-framerate", str(v_fps), "-i",
+               os.path.join(matted_dir, "%04d.png"),
+               "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p",
+               "-b:v", "2M", webm_path]
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if os.path.exists(webm_path):
+                result["webm_path"] = webm_path
+                print(f"  [抠视频] ✅ WebM: {webm_path}")
+        except Exception as e:
+            print(f"  [抠视频] ⚠️ WebM合成失败: {e}")
+
+    print(f"  [抠视频] 完成: {len(matted_frames)}/{len(frames)} 帧抠图成功")
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════
+# 视频超分（提升生成视频分辨率）
+# ═══════════════════════════════════════════════════════════════
+
+def upscale_video(
+    video_path: str,
+    output_path: str,
+    scale: int = 2,
+    model_name: str = "RealESRGAN_x4plus",
+    ffmpeg_path: str = "ffmpeg",
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_frame: int = 60,
+) -> str:
+    """
+    视频超分：逐帧超分后合成视频（提升生成视频质量）
+
+    流程：ffmpeg拆帧 → RealESRGAN逐帧超分 → ffmpeg合成（保留原音轨）
+
+    Args:
+        video_path: 输入视频路径
+        output_path: 输出视频路径
+        scale: 放大倍数 2/4
+        model_name: 超分模型
+        ffmpeg_path: ffmpeg路径
+        server_addr: ComfyUI地址
+        timeout_per_frame: 单帧超时
+
+    Returns:
+        输出视频路径
+    """
+    import subprocess
+    import shutil
+
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"视频不存在: {video_path}")
+
+    work_dir = os.path.join(os.path.dirname(output_path), "_tmp_upscale")
+    frames_dir = os.path.join(work_dir, "frames")
+    up_dir = os.path.join(work_dir, "upscaled")
+    os.makedirs(frames_dir, exist_ok=True)
+    os.makedirs(up_dir, exist_ok=True)
+
+    # Step 1: 拆帧（原始帧率）
+    print(f"  [超分] Step1: 拆帧...")
+    frames = extract_frames_from_video(video_path, frames_dir, fps=0, ffmpeg_path=ffmpeg_path)
+    print(f"  [超分] 共 {len(frames)} 帧")
+
+    # Step 2: 逐帧超分
+    print(f"  [超分] Step2: 逐帧超分 (x{scale}, {model_name})...")
+    up_frames = []
+    for i, frame in enumerate(frames):
+        out_path = os.path.join(up_dir, os.path.basename(frame))
+        try:
+            upscale_image(frame, output_path=out_path, scale=scale,
+                          model_name=model_name, server_addr=server_addr,
+                          timeout=timeout_per_frame)
+            up_frames.append(out_path)
+            if (i + 1) % 5 == 0 or i == len(frames) - 1:
+                print(f"    [{i+1}/{len(frames)}] 完成")
+        except Exception as e:
+            print(f"    [{i+1}/{len(frames)}] ⚠️ 失败: {e}")
+
+    if not up_frames:
+        raise RuntimeError("超分失败，无帧输出")
+
+    # Step 3: 合成视频（保留音轨）
+    print(f"  [超分] Step3: 合成视频...")
+    info = get_video_info(video_path, ffprobe_path=ffmpeg_path.replace("ffmpeg", "ffprobe"))
+    v_fps = info.get("video", {}).get("fps", 24) if info else 24
+    has_audio = info.get("audio") is not None if info else False
+
+    # 先合成无声视频
+    silent_path = os.path.join(work_dir, "silent.mp4")
+    cmd = [ffmpeg_path, "-y", "-framerate", str(v_fps), "-i",
+           os.path.join(up_dir, "%04d.png"),
+           "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18",
+           silent_path]
+    subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+    # 合并音轨
+    if has_audio and os.path.exists(silent_path):
+        cmd = [ffmpeg_path, "-y", "-i", silent_path, "-i", video_path,
+               "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0",
+               "-shortest", output_path]
+        subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    else:
+        shutil.move(silent_path, output_path)
+
+    # 清理临时文件
+    try:
+        shutil.rmtree(work_dir)
+    except Exception:
+        pass
+
+    print(f"  [超分] ✅ 完成: {output_path}")
+    return output_path
