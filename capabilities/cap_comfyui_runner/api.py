@@ -1989,3 +1989,250 @@ def generate_motion_asset(
         server_addr=server_addr,
         timeout=timeout,
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# 批量首尾帧视频（FLF2V批量）
+# ═══════════════════════════════════════════════════════════════
+
+def batch_flf2video_ltx25(
+    pairs: List[Dict],
+    output_dir: str,
+    default_prompt: str = "smooth transition, cinematic camera movement, high quality",
+    default_negative: str = "blurry, low quality, distorted, static",
+    width: int = 768,
+    height: int = 448,
+    fps: int = 24,
+    model: str = "int8_distilled",
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_video: int = 600,
+) -> List[Dict]:
+    """批量首尾帧视频：多组首尾帧图片→多个过渡视频"""
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(pairs)
+
+    for i, pair in enumerate(pairs):
+        first = pair.get("first", "")
+        last = pair.get("last", "")
+        if not first or not os.path.exists(first):
+            print(f"[{i+1}/{total}] ⚠️ 首帧不存在: {first}")
+            results.append({"pair_id": pair.get("pair_id", i), "video_path": None, "status": "missing_first"})
+            continue
+        if not last or not os.path.exists(last):
+            print(f"[{i+1}/{total}] ⚠️ 尾帧不存在: {last}")
+            results.append({"pair_id": pair.get("pair_id", i), "video_path": None, "status": "missing_last"})
+            continue
+
+        pair_id = pair.get("pair_id", f"pair_{i+1:02d}")
+        prompt = pair.get("prompt", default_prompt)
+        duration = pair.get("duration", 4.0)
+        frames = int(duration * fps)
+        frames = max(17, ((frames - 1) // 8) * 8 + 1)
+
+        out_path = os.path.join(output_dir, f"{pair_id}.mp4")
+        print(f"[{i+1}/{total}] 首尾帧{pair_id}: {os.path.basename(first)} → {os.path.basename(last)} ({duration}s)")
+
+        try:
+            result = flf2video_ltx25_v2(
+                first_image_path=first, last_image_path=last,
+                output_path=out_path, prompt=prompt, negative_prompt=default_negative,
+                width=width, height=height, frames=frames, fps=fps,
+                steps=42, cfg=1.0, model=model,
+                server_addr=server_addr, timeout=timeout_per_video,
+            )
+            results.append({"pair_id": pair_id, "video_path": result, "duration": frames/fps, "frames": frames, "status": "success"})
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append({"pair_id": pair_id, "video_path": None, "status": f"error: {e}"})
+
+    success = sum(1 for r in results if r["status"] == "success")
+    print(f"\n批量首尾帧视频完成: {success}/{total} 成功")
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 绿幕动效素材（纯色背景，方便剪映色度键抠像）
+# ═══════════════════════════════════════════════════════════════
+
+def generate_greenscreen_asset(
+    image_path: str, output_path: str,
+    motion_type: str = "float", duration: float = 4.0,
+    screen_color: str = "green",
+    width: int = 768, height: int = 448,
+    model: str = "int8_distilled",
+    server_addr: str = "127.0.0.1:8188", timeout: int = 600,
+) -> str:
+    """绿幕动效素材生成：主体在纯色背景上运动，方便剪映色度键抠像"""
+    from PIL import Image
+
+    SCREEN_COLORS = {
+        "green": (0, 177, 64), "blue": (0, 71, 187),
+        "red": (177, 0, 0), "black": (0, 0, 0), "white": (255, 255, 255),
+    }
+    bg_color = SCREEN_COLORS.get(screen_color, SCREEN_COLORS["green"])
+
+    tmp_dir = os.path.join(os.path.dirname(output_path), "_tmp_gs")
+    os.makedirs(tmp_dir, exist_ok=True)
+    matted_path = os.path.join(tmp_dir, os.path.splitext(os.path.basename(image_path))[0] + "_matted.png")
+
+    print(f"  [绿幕] Step1: 抠图...")
+    try:
+        matting_image(image_path, output_path=matted_path, model_name="BiRefNet-general",
+                      server_addr=server_addr, timeout=120)
+        print(f"  [绿幕] 抠图完成")
+    except Exception as e:
+        print(f"  [绿幕] ⚠️ 抠图失败，使用原图: {e}")
+        matted_path = image_path
+
+    composite_path = os.path.join(tmp_dir, os.path.splitext(os.path.basename(image_path))[0] + "_gs.png")
+    try:
+        fg = Image.open(matted_path).convert("RGBA")
+        bg = Image.new("RGBA", fg.size, bg_color + (255,))
+        bg.paste(fg, (0, 0), fg)
+        bg.convert("RGB").save(composite_path, quality=95)
+        print(f"  [绿幕] Step2: 合成到{screen_color}色背景")
+    except Exception as e:
+        print(f"  [绿幕] ⚠️ 合成失败: {e}")
+        composite_path = matted_path
+
+    print(f"  [绿幕] Step3: 生成动效 ({motion_type}, {duration}s)...")
+    result = generate_motion_asset(
+        image_path=composite_path, output_path=output_path,
+        motion_type=motion_type, duration=duration,
+        width=width, height=height, model=model,
+        remove_background=False, server_addr=server_addr, timeout=timeout,
+    )
+    print(f"  [绿幕] ✅ 完成: {output_path}")
+    print(f"  [绿幕] 提示: 在剪映中使用「色度键」去除{screen_color}色背景即可得到透明动效")
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════
+# 视频元信息获取（ffprobe封装）
+# ═══════════════════════════════════════════════════════════════
+
+def get_video_info(video_path: str, ffprobe_path: str = "ffprobe") -> Dict:
+    """获取视频元信息（分辨率/帧率/时长/码率/编码/音轨等）"""
+    import subprocess, json
+
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"视频不存在: {video_path}")
+
+    try:
+        result = subprocess.run(
+            [ffprobe_path, "-v", "quiet", "-print_format", "json",
+             "-show_format", "-show_streams", video_path],
+            capture_output=True, text=True, timeout=15
+        )
+        data = json.loads(result.stdout)
+    except FileNotFoundError:
+        for p in [r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"]:
+            if os.path.exists(p):
+                return get_video_info(video_path, p)
+        raise RuntimeError("ffprobe未找到，请安装ffmpeg或指定ffprobe_path")
+    except Exception as e:
+        raise RuntimeError(f"ffprobe执行失败: {e}")
+
+    format_info = data.get("format", {})
+    streams = data.get("streams", [])
+    video_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
+    audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), None)
+
+    info = {
+        "path": video_path, "filename": os.path.basename(video_path),
+        "size_bytes": int(format_info.get("size", 0)),
+        "size_mb": round(int(format_info.get("size", 0)) / (1024*1024), 2),
+        "duration_sec": float(format_info.get("duration", 0)),
+        "bitrate_kbps": round(int(format_info.get("bit_rate", 0)) / 1000, 1),
+        "format": format_info.get("format_name", "unknown"),
+        "video": None, "audio": None,
+    }
+
+    if video_stream:
+        rate_str = video_stream.get("r_frame_rate", "0/1")
+        try:
+            num, den = rate_str.split("/")
+            fps = round(float(num)/float(den), 2) if float(den) != 0 else 0
+        except Exception:
+            fps = 0
+        info["video"] = {
+            "codec": video_stream.get("codec_name", "unknown"),
+            "width": video_stream.get("width", 0), "height": video_stream.get("height", 0),
+            "fps": fps, "pix_fmt": video_stream.get("pix_fmt", "unknown"),
+            "duration_sec": float(video_stream.get("duration", 0)),
+            "nb_frames": int(video_stream.get("nb_frames", 0)),
+            "bitrate_kbps": round(int(video_stream.get("bit_rate", 0)) / 1000, 1),
+        }
+
+    if audio_stream:
+        info["audio"] = {
+            "codec": audio_stream.get("codec_name", "unknown"),
+            "sample_rate": int(audio_stream.get("sample_rate", 0)),
+            "channels": audio_stream.get("channels", 0),
+            "channel_layout": audio_stream.get("channel_layout", "unknown"),
+            "bitrate_kbps": round(int(audio_stream.get("bit_rate", 0)) / 1000, 1),
+        }
+    return info
+
+
+def batch_get_video_info(video_paths: List[str], ffprobe_path: str = "ffprobe") -> List[Dict]:
+    """批量获取视频元信息"""
+    results = []
+    for p in video_paths:
+        try:
+            results.append(get_video_info(p, ffprobe_path))
+        except Exception as e:
+            results.append({"path": p, "error": str(e)})
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 批量动效素材生成（一次生成多种运动类型）
+# ═══════════════════════════════════════════════════════════════
+
+def batch_generate_motion_assets(
+    image_path: str, output_dir: str,
+    motion_types: List[str] = None,
+    duration: float = 4.0, width: int = 768, height: int = 448,
+    model: str = "int8_distilled",
+    greenscreen: bool = False, screen_color: str = "green",
+    server_addr: str = "127.0.0.1:8188", timeout_per_asset: int = 600,
+) -> Dict[str, str]:
+    """批量动效素材生成：一张图片→多种运动类型的动效视频"""
+    if motion_types is None:
+        motion_types = ["float", "zoom", "pan", "pulse"]
+
+    os.makedirs(output_dir, exist_ok=True)
+    base = os.path.splitext(os.path.basename(image_path))[0]
+    results = {}
+
+    for i, mtype in enumerate(motion_types):
+        suffix = f"_gs_{screen_color}" if greenscreen else ""
+        out_path = os.path.join(output_dir, f"{base}_{mtype}{suffix}.mp4")
+        print(f"[{i+1}/{len(motion_types)}] 动效类型: {mtype}")
+        try:
+            if greenscreen:
+                result = generate_greenscreen_asset(
+                    image_path=image_path, output_path=out_path,
+                    motion_type=mtype, duration=duration, screen_color=screen_color,
+                    width=width, height=height, model=model,
+                    server_addr=server_addr, timeout=timeout_per_asset,
+                )
+            else:
+                result = generate_motion_asset(
+                    image_path=image_path, output_path=out_path,
+                    motion_type=mtype, duration=duration,
+                    width=width, height=height, model=model,
+                    server_addr=server_addr, timeout=timeout_per_asset,
+                )
+            results[mtype] = result
+            print(f"  ✅ {mtype}: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ {mtype} 失败: {e}")
+            results[mtype] = None
+
+    success = sum(1 for v in results.values() if v)
+    print(f"\n批量动效素材生成完成: {success}/{len(motion_types)} 成功")
+    return results
