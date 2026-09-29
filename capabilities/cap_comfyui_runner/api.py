@@ -338,6 +338,7 @@ def flf2video_ltx25(
     cfg: float = 1.0,
     first_strength: float = 1.0,
     last_strength: float = 1.0,
+    middle_guides: list = None,
     model: str = "int8_distilled",
     lora_strength: float = 1.0,
     server_addr: str = "127.0.0.1:8188",
@@ -363,6 +364,7 @@ def flf2video_ltx25(
         cfg: CFG值
         first_strength: 首帧引导强度（1.0=完全遵循）
         last_strength: 尾帧引导强度
+        middle_guides: 中间帧引导列表 [(frame_idx, image_path, strength), ...]
         model: 模型版本 "int8_distilled" 或 "int8_dev_lora"
         lora_strength: LoRA强度
         server_addr: ComfyUI地址
@@ -412,6 +414,15 @@ def flf2video_ltx25(
     last_img = _upload_img(last_image_path)
     print(f"  首帧: {first_img}, 尾帧: {last_img}")
 
+    # 上传中间帧引导
+    middle_imgs = []
+    if middle_guides:
+        for idx, (frame_idx, img_path, strength) in enumerate(middle_guides):
+            if _os.path.exists(img_path):
+                mimg = _upload_img(img_path)
+                middle_imgs.append((frame_idx, mimg, strength))
+                print(f"  中间帧[{idx}]: frame={frame_idx}, {mimg}, strength={strength}")
+
     # 构建工作流
     if use_lora:
         base = {
@@ -444,12 +455,36 @@ def flf2video_ltx25(
             "8": {"class_type": "LTXVConditioning", "inputs": {"positive": ["6", 0], "negative": ["7", 0], "frame_rate": fps}},
             "9": {"class_type": "EmptyLTXVLatentVideo", "inputs": {"width": width, "height": height, "length": frames, "batch_size": 1}},
             "10": {"class_type": "LTXVAddGuide", "inputs": {"positive": ["8", 0], "negative": ["8", 1], "vae": ["3", 0], "latent": ["9", 0], "image": ["4", 0], "frame_idx": 0, "strength": first_strength}},
-            "11": {"class_type": "LTXVAddGuide", "inputs": {"positive": ["10", 0], "negative": ["10", 1], "vae": ["3", 0], "latent": ["10", 2], "image": ["5", 0], "frame_idx": frames - 1, "strength": last_strength}},
-            "12": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform", "denoise": 1.0, "model": ["1", 0], "positive": ["11", 0], "negative": ["11", 1], "latent_image": ["11", 2]}},
-            "13": {"class_type": "LTXVTiledVAEDecode", "inputs": {"latents": ["12", 0], "vae": ["3", 0], "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}},
-            "14": {"class_type": "CreateVideo", "inputs": {"images": ["13", 0], "fps": fps}},
-            "15": {"class_type": "SaveVideo", "inputs": {"video": ["14", 0], "filename_prefix": "ltx25_flf2v", "format": "auto", "codec": "auto"}},
         }
+        # 动态插入中间帧引导
+        prev_guide = "10"
+        next_id = 11
+        load_img_id = 6  # LoadImage节点从6开始（4=首帧, 5=尾帧）
+        for m_frame, m_img, m_strength in middle_imgs:
+            base["{}".format(load_img_id)] = {"class_type": "LoadImage", "inputs": {"image": m_img}}
+            base["{}".format(next_id)] = {"class_type": "LTXVAddGuide", "inputs": {
+                "positive": [prev_guide, 0], "negative": [prev_guide, 1],
+                "vae": ["3", 0], "latent": [prev_guide, 2],
+                "image": [str(load_img_id), 0],
+                "frame_idx": m_frame, "strength": m_strength}}
+            prev_guide = str(next_id)
+            next_id += 1
+            load_img_id += 1
+        # 尾帧引导
+        base["{}".format(next_id)] = {"class_type": "LTXVAddGuide", "inputs": {
+            "positive": [prev_guide, 0], "negative": [prev_guide, 1],
+            "vae": ["3", 0], "latent": [prev_guide, 2],
+            "image": ["5", 0], "frame_idx": frames - 1, "strength": last_strength}}
+        last_guide = str(next_id)
+        next_id += 1
+        # KSampler及后续节点
+        base["{}".format(next_id)] = {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral_cfg_pp", "scheduler": "sgm_uniform", "denoise": 1.0, "model": ["1", 0], "positive": [last_guide, 0], "negative": [last_guide, 1], "latent_image": [last_guide, 2]}}
+        next_id += 1
+        base["{}".format(next_id)] = {"class_type": "LTXVTiledVAEDecode", "inputs": {"latents": [str(next_id-1), 0], "vae": ["3", 0], "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}}
+        next_id += 1
+        base["{}".format(next_id)] = {"class_type": "CreateVideo", "inputs": {"images": [str(next_id-1), 0], "fps": fps}}
+        next_id += 1
+        base["{}".format(next_id)] = {"class_type": "SaveVideo", "inputs": {"video": [str(next_id-1), 0], "filename_prefix": "ltx25_flf2v", "format": "auto", "codec": "auto"}}
 
     prompt_id = _submit_workflow(base, server_addr)
     print(f"  任务已提交: {prompt_id}")
