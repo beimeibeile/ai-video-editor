@@ -857,6 +857,95 @@ def controlnet_generate(
     return output_path
 
 
+def controlnet_img2img(
+    input_image: str,
+    positive_prompt: str,
+    output_path: str = None,
+    control_image: str = None,
+    controlnet_model: str = "control_v11p_sd15_canny_fp16.safetensors",
+    strength: float = 0.85,
+    denoise: float = 0.65,
+    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    negative_prompt: str = "worst quality, low quality, deformed, ugly, blurry, watermark, text",
+    seed: int = None,
+    steps: int = 35,
+    cfg: float = 7.5,
+    sampler_name: str = "dpmpp_2m",
+    scheduler: str = "karras",
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 180,
+) -> str:
+    """
+    ControlNet图生图：用原图+控制图引导生成（风格迁移/图片修复/重绘）
+
+    Args:
+        input_image: 输入原图路径（作为img2img基底）
+        positive_prompt: 正面提示词
+        output_path: 输出路径
+        control_image: 控制图路径（None则用input_image作为控制图）
+        controlnet_model: ControlNet模型名
+        strength: 控制强度（0-1，越大越遵循控制图）
+        denoise: 重绘幅度（0-1，越小越接近原图，越大变化越大）
+        checkpoint: 底模
+        negative_prompt: 负面提示词
+        seed: 随机种子
+        steps/cfg: 采样参数
+        sampler_name/scheduler: 采样器
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        输出文件路径
+    """
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行")
+
+    if seed is None:
+        import random
+        seed = random.randint(0, 2**31 - 1)
+
+    if output_path is None:
+        output_path = os.path.join(os.path.dirname(input_image) or ".", "controlnet_img2img_output.png")
+
+    if control_image is None:
+        control_image = input_image
+
+    timestamp = int(time.time())
+    workflow = load_workflow_template(
+        os.path.join(TEMPLATE_DIR, "controlnet_img2img.json"),
+        checkpoint=checkpoint,
+        input_image=os.path.basename(input_image),
+        control_image=os.path.basename(control_image),
+        controlnet_model=controlnet_model,
+        positive_prompt=positive_prompt,
+        negative_prompt=negative_prompt,
+        strength=strength,
+        denoise=denoise,
+        seed=seed,
+        steps=steps,
+        cfg=cfg,
+        sampler_name=sampler_name,
+        scheduler=scheduler,
+        timestamp=timestamp,
+    )
+
+    input_images = {
+        os.path.basename(input_image): input_image,
+        os.path.basename(control_image): control_image,
+    }
+    output_dir = os.path.dirname(output_path) or "."
+    results = client.run_workflow(
+        workflow, input_images=input_images,
+        output_dir=output_dir, timeout=timeout
+    )
+
+    if results and os.path.exists(results[0]) and results[0] != output_path:
+        os.replace(results[0], output_path)
+
+    return output_path
+
+
 def generate_pose_skeleton(
     view: str = "front",
     output_path: str = None,
