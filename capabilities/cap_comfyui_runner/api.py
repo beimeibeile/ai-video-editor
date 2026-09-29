@@ -2493,3 +2493,242 @@ def upscale_video(
 
     print(f"  [超分] ✅ 完成: {output_path}")
     return output_path
+
+
+# ═══════════════════════════════════════════════════════════════
+# 批量文生视频（LTX-2.5）
+# ═══════════════════════════════════════════════════════════════
+
+def batch_txt2video_ltx25(
+    prompts: List[str],
+    output_dir: str,
+    width: int = 768,
+    height: int = 448,
+    frames: int = 97,
+    fps: float = 24.0,
+    steps: int = 42,
+    cfg: float = 1.0,
+    negative_prompt: str = "blurry, low quality, distorted, ugly, watermark, text",
+    model: str = "int8_distilled",
+    generate_audio: bool = False,
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_video: int = 600,
+) -> List[str]:
+    """
+    批量文生视频：多个提示词→多个视频（串行执行避免显存溢出）
+
+    用于批量生成创意素材/空镜/转场片段。
+
+    Args:
+        prompts: 提示词列表
+        output_dir: 输出目录
+        width/height: 分辨率
+        frames: 帧数（8n+1）
+        fps: 帧率
+        steps: 采样步数
+        cfg: CFG值
+        negative_prompt: 负向提示词
+        model: 模型版本
+        generate_audio: 是否生成音频
+        server_addr: ComfyUI地址
+        timeout_per_video: 单个视频超时
+
+    Returns:
+        输出视频路径列表（失败的为None）
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(prompts)
+
+    for i, prompt in enumerate(prompts):
+        out_path = os.path.join(output_dir, f"txt2vid_{i+1:03d}.mp4")
+        print(f"[{i+1}/{total}] 文生视频: {prompt[:60]}...")
+
+        try:
+            result = txt2video_ltx25(
+                prompt=prompt,
+                output_path=out_path,
+                width=width, height=height,
+                frames=frames, fps=fps,
+                steps=steps, cfg=cfg,
+                negative_prompt=negative_prompt,
+                model=model,
+                generate_audio=generate_audio,
+                server_addr=server_addr,
+                timeout=timeout_per_video,
+            )
+            results.append(result)
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append(None)
+
+    success = sum(1 for r in results if r)
+    print(f"\n批量文生视频完成: {success}/{total} 成功")
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 批量文生图（Z-Image-Turbo极速生成）
+# ═══════════════════════════════════════════════════════════════
+
+def batch_txt2img_zimage(
+    prompts: List[str],
+    output_dir: str,
+    width: int = 1024,
+    height: int = 1024,
+    steps: int = 4,
+    cfg: float = 1.0,
+    negative_prompt: str = "blurry, low quality, distorted, ugly, watermark",
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_image: int = 120,
+) -> List[str]:
+    """
+    批量文生图：Z-Image-Turbo极速生成，4步出图
+
+    用于批量生成素材图/占位图/分镜参考图。
+
+    Args:
+        prompts: 提示词列表
+        output_dir: 输出目录
+        width/height: 分辨率
+        steps: 采样步数（默认4步极速）
+        cfg: CFG值
+        negative_prompt: 负向提示词
+        server_addr: ComfyUI地址
+        timeout_per_image: 单张超时
+
+    Returns:
+        输出图片路径列表（失败的为None）
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(prompts)
+
+    for i, prompt in enumerate(prompts):
+        out_path = os.path.join(output_dir, f"zimage_{i+1:03d}.png")
+        print(f"[{i+1}/{total}] 文生图: {prompt[:60]}...")
+
+        try:
+            result = txt2img_zimage(
+                prompt=prompt,
+                output_path=out_path,
+                width=width, height=height,
+                steps=steps, cfg=cfg,
+                negative_prompt=negative_prompt,
+                server_addr=server_addr,
+                timeout=timeout_per_image,
+            )
+            results.append(result)
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append(None)
+
+    success = sum(1 for r in results if r)
+    print(f"\n批量文生图完成: {success}/{total} 成功")
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 素材生成流水线（文生图→图生视频 一键完成）
+# ═══════════════════════════════════════════════════════════════
+
+def generate_shot_assets(
+    theme: str,
+    output_dir: str,
+    shot_count: int = 5,
+    image_width: int = 768,
+    image_height: int = 448,
+    video_frames: int = 97,
+    video_fps: int = 24,
+    use_audio: bool = False,
+    server_addr: str = "127.0.0.1:8188",
+) -> Dict:
+    """
+    素材生成流水线：从主题一键生成"分镜图+动态视频"完整素材包
+
+    流程：
+    1. 根据主题生成shot_count个分镜提示词
+    2. Z-Image-Turbo批量生成静态分镜图
+    3. LTX-2.5批量图生视频动态化
+    4. 返回图片和视频路径
+
+    Args:
+        theme: 视频主题
+        output_dir: 输出目录
+        shot_count: 镜头数量
+        image_width/height: 图片分辨率
+        video_frames: 视频帧数
+        video_fps: 视频帧率
+        use_audio: 是否生成音频
+        server_addr: ComfyUI地址
+
+    Returns:
+        {"images": [...], "videos": [...], "prompts": [...]}
+    """
+    import random
+
+    os.makedirs(output_dir, exist_ok=True)
+    img_dir = os.path.join(output_dir, "images")
+    vid_dir = os.path.join(output_dir, "videos")
+    os.makedirs(img_dir, exist_ok=True)
+    os.makedirs(vid_dir, exist_ok=True)
+
+    # 1. 生成分镜提示词（基于主题的简单模板，后续可接入创意引擎）
+    shot_templates = [
+        f"wide establishing shot of {theme}, cinematic lighting, high detail",
+        f"medium shot of {theme}, emotional atmosphere, film grain",
+        f"close-up detail of {theme}, macro photography, sharp focus",
+        f"overhead view of {theme}, dramatic shadows, moody lighting",
+        f"low angle shot of {theme}, epic composition, golden hour",
+        f"tracking shot of {theme}, motion blur, dynamic composition",
+        f"static shot of {theme}, minimalist, negative space",
+        f"dutch angle of {theme}, tension, cinematic color grade",
+    ]
+    prompts = []
+    for i in range(shot_count):
+        if i < len(shot_templates):
+            prompts.append(shot_templates[i])
+        else:
+            prompts.append(f"cinematic shot of {theme}, scene {i+1}, high quality")
+
+    print(f"[素材流水线] 主题: {theme}, {shot_count}个镜头")
+    print(f"[1/2] 批量文生图 ({len(prompts)}张, 4步极速)...")
+
+    # 2. 批量文生图
+    images = batch_txt2img_zimage(
+        prompts=prompts,
+        output_dir=img_dir,
+        width=image_width, height=image_height,
+        steps=4, cfg=1.0,
+        server_addr=server_addr,
+    )
+
+    # 3. 批量图生视频
+    valid_images = [img for img in images if img]
+    print(f"\n[2/2] 批量图生视频 ({len(valid_images)}张, {video_frames}帧)...")
+
+    videos = batch_img2video_ltx25(
+        image_paths=valid_images,
+        output_dir=vid_dir,
+        prompt=f"{theme}, cinematic camera movement, high quality",
+        per_image_prompts=[p + ", smooth motion" for p in prompts[:len(valid_images)]],
+        width=image_width, height=image_height,
+        frames=video_frames, fps=video_fps,
+        steps=10, strength=0.7,
+        server_addr=server_addr,
+    )
+
+    result = {
+        "images": images,
+        "videos": videos,
+        "prompts": prompts,
+        "image_dir": img_dir,
+        "video_dir": vid_dir,
+    }
+
+    img_ok = sum(1 for i in images if i)
+    vid_ok = sum(1 for v in videos if v)
+    print(f"\n[素材流水线] 完成: 图片{img_ok}/{len(prompts)}, 视频{vid_ok}/{len(valid_images)}")
+    return result
