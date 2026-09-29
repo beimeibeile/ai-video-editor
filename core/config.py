@@ -1,4 +1,4 @@
-"""
+﻿"""
 统一配置管理模块
 优先级：环境变量 > .env文件 > 默认值
 所有敏感信息（API Key、路径等）不硬编码，支持开源部署
@@ -71,7 +71,7 @@ class Config:
     @property
     def anysearch_daily_limit(self) -> int:
         """每日调用上限（不同用户级别不同，可在.env配置）"""
-        return self.get_int("ANYSEARCH_DAILY_LIMIT", 100)
+        return self.get_int("ANYSEARCH_DAILY_LIMIT", 1000)
 
     @property
     def anysearch_warning_ratio(self) -> float:
