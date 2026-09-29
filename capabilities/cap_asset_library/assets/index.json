@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "updated_at": "2026-09-29T14:27:39.417458",
-  "total": 1,
+  "updated_at": "2026-09-29T14:32:46.367226",
+  "total": 17,
   "assets": {
     "075887caba58": {
       "id": "075887caba58",
@@ -21,6 +21,313 @@
       "description": "赛博朋克深色推镜背景",
       "usage_count": 2,
       "created_at": "2026-09-29T14:25:03.975244"
+    },
+    "2edaa8cd924f": {
+      "id": "2edaa8cd924f",
+      "name": "bg_impact_dark.mp4",
+      "path": "backgrounds\\bg_impact_dark.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "深色",
+        "推镜"
+      ],
+      "style": "impact",
+      "mood": "震撼",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 16048,
+      "description": "震撼型深色推镜背景",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:40.909527"
+    },
+    "6646dc10ee76": {
+      "id": "6646dc10ee76",
+      "name": "bg_cute_warm.mp4",
+      "path": "backgrounds\\bg_cute_warm.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "暖色",
+        "缩放"
+      ],
+      "style": "cute",
+      "mood": "欢快",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 9454,
+      "description": "可爱型暖色缩放背景",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:41.622768"
+    },
+    "1c758721e091": {
+      "id": "1c758721e091",
+      "name": "bg_funny_yellow.mp4",
+      "path": "backgrounds\\bg_funny_yellow.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "亮色",
+        "抖动"
+      ],
+      "style": "funny",
+      "mood": "搞笑",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 15088,
+      "description": "滑稽型亮色抖动背景",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:42.378761"
+    },
+    "8af6d7e28c43": {
+      "id": "8af6d7e28c43",
+      "name": "bg_minimal_white.mp4",
+      "path": "backgrounds\\bg_minimal_white.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "浅色",
+        "缓慢"
+      ],
+      "style": "minimal",
+      "mood": "平静",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 9504,
+      "description": "简约型浅色缓慢背景",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:43.100532"
+    },
+    "a988d44aa408": {
+      "id": "a988d44aa408",
+      "name": "bg_suspense_navy.mp4",
+      "path": "backgrounds\\bg_suspense_navy.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "深蓝",
+        "渐显"
+      ],
+      "style": "suspense",
+      "mood": "神秘",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 9433,
+      "description": "悬念型深蓝渐显背景",
+      "usage_count": 1,
+      "created_at": "2026-09-29T14:32:43.844544"
+    },
+    "0d05b3b5acde": {
+      "id": "0d05b3b5acde",
+      "name": "bg_tech_blue.mp4",
+      "path": "backgrounds\\bg_tech_blue.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "科技",
+        "蓝色",
+        "粒子"
+      ],
+      "style": "tech",
+      "mood": "紧张",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 16048,
+      "description": "科技感蓝色粒子背景",
+      "usage_count": 1,
+      "created_at": "2026-09-29T14:32:44.598727"
+    },
+    "fa78f4424169": {
+      "id": "fa78f4424169",
+      "name": "bg_warm_gold.mp4",
+      "path": "backgrounds\\bg_warm_gold.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "暖色",
+        "金色",
+        "光晕"
+      ],
+      "style": "warm",
+      "mood": "温馨",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 9470,
+      "description": "温暖金色光晕背景",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:45.333158"
+    },
+    "6aaaf02f58a6": {
+      "id": "6aaaf02f58a6",
+      "name": "bg_epic_black.mp4",
+      "path": "backgrounds\\bg_epic_black.mp4",
+      "type": "background",
+      "tags": [
+        "动态背景",
+        "史诗",
+        "紫色",
+        "冲击"
+      ],
+      "style": "epic",
+      "mood": "燃",
+      "duration": 3.0,
+      "format": ".mp4",
+      "size_bytes": 16148,
+      "description": "史诗型紫色冲击背景",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:46.078938"
+    },
+    "18826c741db2": {
+      "id": "18826c741db2",
+      "name": "sfx_whoosh_01.wav",
+      "path": "sfx\\sfx_whoosh_01.wav",
+      "type": "sfx",
+      "tags": [
+        "whoosh",
+        "转场",
+        "运动"
+      ],
+      "style": "impact",
+      "mood": "紧张",
+      "duration": 0.5,
+      "format": ".wav",
+      "size_bytes": 44178,
+      "description": "嗖~转场音效",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:46.115415"
+    },
+    "a34240cf5e9d": {
+      "id": "a34240cf5e9d",
+      "name": "sfx_ding_01.wav",
+      "path": "sfx\\sfx_ding_01.wav",
+      "type": "sfx",
+      "tags": [
+        "叮",
+        "提示",
+        "清脆"
+      ],
+      "style": "cute",
+      "mood": "欢快",
+      "duration": 0.3,
+      "format": ".wav",
+      "size_bytes": 26538,
+      "description": "叮~提示音效",
+      "usage_count": 1,
+      "created_at": "2026-09-29T14:32:46.150033"
+    },
+    "123853b02bb6": {
+      "id": "123853b02bb6",
+      "name": "sfx_boom_01.wav",
+      "path": "sfx\\sfx_boom_01.wav",
+      "type": "sfx",
+      "tags": [
+        "boom",
+        "冲击",
+        "爆炸"
+      ],
+      "style": "impact",
+      "mood": "震撼",
+      "duration": 0.8,
+      "format": ".wav",
+      "size_bytes": 70638,
+      "description": "boom冲击音效",
+      "usage_count": 1,
+      "created_at": "2026-09-29T14:32:46.185943"
+    },
+    "572530750e3d": {
+      "id": "572530750e3d",
+      "name": "sfx_pop_01.wav",
+      "path": "sfx\\sfx_pop_01.wav",
+      "type": "sfx",
+      "tags": [
+        "pop",
+        "弹出",
+        "可爱"
+      ],
+      "style": "cute",
+      "mood": "欢快",
+      "duration": 0.15,
+      "format": ".wav",
+      "size_bytes": 13308,
+      "description": "pop弹出音效",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:46.223713"
+    },
+    "743caddd5457": {
+      "id": "743caddd5457",
+      "name": "sfx_click_01.wav",
+      "path": "sfx\\sfx_click_01.wav",
+      "type": "sfx",
+      "tags": [
+        "click",
+        "点击",
+        "清脆"
+      ],
+      "style": "minimal",
+      "mood": "平静",
+      "duration": 0.08,
+      "format": ".wav",
+      "size_bytes": 7134,
+      "description": "click点击音效",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:46.260282"
+    },
+    "34f345e6e159": {
+      "id": "34f345e6e159",
+      "name": "sfx_riser_01.wav",
+      "path": "sfx\\sfx_riser_01.wav",
+      "type": "sfx",
+      "tags": [
+        "riser",
+        "上升",
+        "悬念"
+      ],
+      "style": "suspense",
+      "mood": "紧张",
+      "duration": 1.5,
+      "format": ".wav",
+      "size_bytes": 132378,
+      "description": "riser上升悬念音效",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:46.295482"
+    },
+    "b56873daf00d": {
+      "id": "b56873daf00d",
+      "name": "sfx_heartbeat_01.wav",
+      "path": "sfx\\sfx_heartbeat_01.wav",
+      "type": "sfx",
+      "tags": [
+        "心跳",
+        "低频",
+        "悬念"
+      ],
+      "style": "suspense",
+      "mood": "紧张",
+      "duration": 0.6,
+      "format": ".wav",
+      "size_bytes": 52998,
+      "description": "心跳低频音效",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:46.329983"
+    },
+    "aee6b75cc4e9": {
+      "id": "aee6b75cc4e9",
+      "name": "sfx_sparkle_01.wav",
+      "path": "sfx\\sfx_sparkle_01.wav",
+      "type": "sfx",
+      "tags": [
+        "sparkle",
+        "闪烁",
+        "魔法"
+      ],
+      "style": "cute",
+      "mood": "欢快",
+      "duration": 0.4,
+      "format": ".wav",
+      "size_bytes": 35358,
+      "description": "sparkle闪烁音效",
+      "usage_count": 0,
+      "created_at": "2026-09-29T14:32:46.364668"
     }
   }
 }
