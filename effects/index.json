@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "last_updated": "2026-09-30",
   "effects": [
     {
@@ -25,11 +25,27 @@
       "description": "半透明渐变圆角矩形字幕条+高光+文字，6种预设样式，支持入场动画",
       "tags": ["字幕条", "文本框", "半透明", "渐变", "药丸", "标签"],
       "api": ["add_subtitle_bar", "add_subtitle_bars", "create_gradient_bar", "create_highlight_circle", "create_subtitle_bar_demo"]
+    },
+    {
+      "id": "intro_builder",
+      "name": "片头生成器",
+      "category": "combo",
+      "module": "scripts/intro_builder.py",
+      "source": "特效组合（蒙版快闪+字幕条）",
+      "difficulty": "easy",
+      "status": "verified",
+      "description": "组合特效生成短视频片头，5种模板：快闪标题/极简标题/温暖开场/赛博开场/标签开场",
+      "tags": ["片头", "开场", "标题", "组合", "模板"],
+      "api": ["create_intro", "create_intro_batch"]
     }
   ],
   "categories": {
     "transitions": "转场特效",
     "text": "文字特效",
-    "visual": "视觉特效"
+    "visual": "视觉特效",
+    "combo": "组合特效"
+  },
+  "tools": {
+    "effect_library": "scripts/effect_library.py - 特效库统一调用器（检索/搜索/应用）"
   }
 }
