@@ -241,16 +241,20 @@ def gate_edit_transition_alignment(data: Dict[str, Any]) -> GateResult:
     segments = data.get("segments", [])
     if not transitions:
         return GateResult.skip("E003", "转场对齐", "无转场")
+    # 计算片段边界时间点集合
+    boundaries = set()
+    for s in segments:
+        s_start = s.get("start", 0)
+        s_duration = s.get("duration", 0)
+        boundaries.add(round(s_start, 3))
+        boundaries.add(round(s_start + s_duration, 3))
     misaligned = []
     for i, t in enumerate(transitions):
         t_start = t.get("start", 0)
-        # 检查是否在某个片段边界
-        on_boundary = any(
-            abs(t_start - s.get("end", 0)) < 0.034  # 1帧容差(30fps)
-            for s in segments
-        )
+        # 检查是否在某个片段边界（转场重叠在两片段交界处）
+        on_boundary = any(abs(t_start - b) < 0.034 for b in boundaries)  # 1帧容差(30fps)
         if not on_boundary:
-            misaligned.append(f"转场#{i}@{t_start}s")
+            misaligned.append(f"转场#{i+1}@{t_start:.1f}s")
     if misaligned:
         return GateResult.fail("E003", "转场对齐", f"{len(misaligned)}个转场不在片段边界",
                                detail="; ".join(misaligned[:5]))

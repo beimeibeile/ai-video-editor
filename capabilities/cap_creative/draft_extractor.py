@@ -39,6 +39,17 @@ def extract_draft_data(draft_path: str) -> Dict[str, Any]:
     fps = data.get('fps', 30)
     total_duration = data.get('duration', 0) / 1e6  # 微秒转秒
 
+    # 构建转场映射 (id -> transition info)
+    materials = data.get('materials', {})
+    transition_map = {}
+    for trans in materials.get('transitions', []):
+        tid = trans.get('id', '')
+        if tid:
+            transition_map[tid] = {
+                'name': trans.get('name', ''),
+                'duration': trans.get('duration', 0) / 1e6 if isinstance(trans.get('duration'), (int, float)) else 0,
+            }
+
     # 提取视频片段
     segments = []
     transitions = []
@@ -76,14 +87,17 @@ def extract_draft_data(draft_path: str) -> Dict[str, Any]:
                     'track': track_type,
                 })
 
-                # 检测转场
-                if seg.get('transition'):
-                    trans = seg['transition']
-                    transitions.append({
-                        'start': start,
-                        'duration': trans.get('duration', 0) / 1e6 if isinstance(trans.get('duration'), (int, float)) else 0,
-                        'name': trans.get('name', ''),
-                    })
+                # 检测转场（通过 extra_material_refs 引用 materials.transitions）
+                refs = seg.get('extra_material_refs', [])
+                for ref in refs:
+                    if ref in transition_map:
+                        trans_info = transition_map[ref]
+                        transitions.append({
+                            'start': start,
+                            'duration': trans_info['duration'],
+                            'name': trans_info['name'],
+                        })
+                        break
 
             elif track_type == 'text':
                 subtitles.append({
