@@ -57,6 +57,20 @@ try:
 except ImportError:
     _CHARACTER_INTRO_AVAILABLE = False
 
+# 文字排版预设（特效库集成）
+try:
+    from text_layout import add_text_layout as _add_text_layout
+    _TEXT_LAYOUT_AVAILABLE = True
+except ImportError:
+    _TEXT_LAYOUT_AVAILABLE = False
+
+# 拍立得照片墙（特效库集成）
+try:
+    from polaroid_wall import add_polaroid_photos_to_project as _add_polaroid_photos
+    _POLAROID_WALL_AVAILABLE = True
+except ImportError:
+    _POLAROID_WALL_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -139,7 +153,9 @@ class E2EPipeline:
             pip_config: List[Dict] = None,
             auto_beat: bool = False,
             beat_threshold: float = 0.5,
-            character_intros: List[Dict] = None) -> Dict[str, Any]:
+            character_intros: List[Dict] = None,
+            text_layout_style: str = None,
+            photo_wall: List[str] = None) -> Dict[str, Any]:
         """
         执行端到端流程
 
@@ -161,6 +177,9 @@ class E2EPipeline:
             pip_config: 画中画配置列表，每项如 {"shots": [0,1], "layout": "split_h"}
             auto_beat: 是否启用自动卡点（根据BGM节拍调整切点）
             beat_threshold: 卡点能量阈值（0-1）
+            character_intros: 人物介绍列表，每项如 {"image": "path", "name": "张三", "subtitle": "主角"}
+            text_layout_style: 文字排版预设风格（vertical_stagger/horizontal_title/diagonal_cascade/left_align_stack/center_focus），用于钩子文案
+            photo_wall: 拍立得照片墙图片路径列表，用于结尾展示
 
         Returns:
             {"status": "success", "project_name": ..., "storyboard": ..., "video_clips": [...]}
@@ -228,6 +247,8 @@ class E2EPipeline:
             beat_threshold=beat_threshold,
             style=style,
             character_intros=character_intros,
+            text_layout_style=text_layout_style,
+            photo_wall=photo_wall,
         )
 
         print(f"\n[4/4] {'片头已集成' if add_intro else '跳过片头'}")
@@ -587,7 +608,9 @@ class E2EPipeline:
                         auto_beat: bool = False,
                         beat_threshold: float = 0.5,
                         style: str = "cinematic",
-                        character_intros: List[Dict] = None) -> Dict:
+                        character_intros: List[Dict] = None,
+                        text_layout_style: str = None,
+                        photo_wall: List[str] = None) -> Dict:
         """剪映合成（含片头集成）"""
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
         from jy_wrapper import JyProject
@@ -672,9 +695,28 @@ class E2EPipeline:
             else:
                 print(f"  人物介绍失败: {char_result.get('reason')}")
 
-        # 2. 添加视频片段（从片头+人物介绍后开始）
+        # 1.6 文字排版钩子文案（特效库集成）
+        text_layout_duration = 0.0
+        if text_layout_style and _TEXT_LAYOUT_AVAILABLE and sb.hook_text:
+            try:
+                layout_texts = [sb.hook_text]
+                if sb.theme and len(sb.theme) < 15:
+                    layout_texts.append(sb.theme)
+                _add_text_layout(
+                    project,
+                    texts=layout_texts,
+                    layout=text_layout_style,
+                    start_time=intro_offset + char_intro_duration,
+                    duration=3.0,
+                )
+                text_layout_duration = 3.0
+                print(f"  文字排版: {text_layout_style} ({text_layout_duration}s)")
+            except Exception as e:
+                print(f"  文字排版失败: {e}")
+
+        # 2. 添加视频片段（从片头+人物介绍+文字排版后开始）
         segments = []
-        current_time = intro_offset + char_intro_duration
+        current_time = intro_offset + char_intro_duration + text_layout_duration
 
         # 画中画配置：标记哪些镜头已被画中画组合消耗
         pip_consumed = set()
@@ -887,6 +929,22 @@ class E2EPipeline:
                 print(f"  BGM: {sb.bgm_mood} ({total_dur:.1f}s)")
             except Exception as e:
                 print(f"  BGM失败: {e}")
+
+        # 6. 拍立得照片墙结尾（特效库集成）
+        if photo_wall and _POLAROID_WALL_AVAILABLE:
+            try:
+                wall_start = intro_offset + char_intro_duration + text_layout_duration + sb.total_duration
+                _add_polaroid_photos(
+                    project,
+                    photos=photo_wall,
+                    start_time=wall_start,
+                    duration=4.0,
+                    stagger=0.6,
+                    output_dir=os.path.join(self.work_dir, "output", "polaroid_assets"),
+                )
+                print(f"  拍立得照片墙: {len(photo_wall)}张 (起始{wall_start:.1f}s)")
+            except Exception as e:
+                print(f"  拍立得照片墙失败: {e}")
 
         # 保存
         result = project.save()
