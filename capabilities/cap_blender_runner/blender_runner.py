@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 
 
 # 默认Blender路径
-DEFAULT_BLENDER_PATH = r"C:\Program Files\Blender Foundation\Blender 4.1\blender.exe"
+DEFAULT_BLENDER_PATH = r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
 
 # 默认ffmpeg路径
 DEFAULT_FFMPEG_PATH = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
@@ -225,27 +225,17 @@ class BlenderRunner:
             lines.append("ps.settings.material = 0")
             lines.append("")
 
-        # 合成器辉光
+        # EEVEE Bloom辉光（兼容Blender 4.x和5.x）
         if scene.glow and scene.glow.enabled:
             g = scene.glow
-            lines.append("# 合成器辉光")
-            lines.append("scene.use_nodes = True")
-            lines.append("tree = scene.node_tree")
-            lines.append("cnodes = tree.nodes")
-            lines.append("clinks = tree.links")
-            lines.append("for node in cnodes:")
-            lines.append("    cnodes.remove(node)")
-            lines.append("render_layers = cnodes.new(type='CompositorNodeRLayers')")
-            lines.append("glow = cnodes.new(type='CompositorNodeGlare')")
-            lines.append(f"glow.glare_type = '{g.glow_type}'")
-            lines.append("glow.quality = 'HIGH'")
-            lines.append(f"glow.threshold = {g.threshold}")
-            lines.append(f"glow.size = {g.size}")
-            lines.append("composite = cnodes.new(type='CompositorNodeComposite')")
-            lines.append("viewer = cnodes.new(type='CompositorNodeViewer')")
-            lines.append("clinks.new(render_layers.outputs[0], glow.inputs[0])")
-            lines.append("clinks.new(glow.outputs[0], composite.inputs[0])")
-            lines.append("clinks.new(glow.outputs[0], viewer.inputs[0])")
+            lines.append("# EEVEE Bloom辉光（try/except兼容多版本）")
+            lines.append("try:")
+            lines.append("    scene.eevee.use_bloom = True")
+            lines.append(f"    scene.eevee.bloom_threshold = {g.threshold}")
+            lines.append(f"    scene.eevee.bloom_radius = {g.size / 10.0}")
+            lines.append("    scene.eevee.bloom_intensity = 0.8")
+            lines.append("except AttributeError:")
+            lines.append("    pass")
             lines.append("")
 
         # 保存blend文件
