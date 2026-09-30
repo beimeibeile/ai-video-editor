@@ -20,6 +20,13 @@ sys.path.insert(0, SKILL_ROOT)
 from cap_storyboard_engine import generate_storyboard, Storyboard
 from cap_asset_library import get_library
 
+# 环境检测（首次运行时检查依赖）
+try:
+    from cap_env_checker import check_environment as _check_env
+    _ENV_CHECKER_AVAILABLE = True
+except ImportError:
+    _ENV_CHECKER_AVAILABLE = False
+
 # 创意引擎（可选，用于自动生成创意字幕）
 try:
     from cap_creative_engine import CreativeEngine
@@ -210,6 +217,9 @@ class E2EPipeline:
         Returns:
             {"status": "success", "project_name": ..., "storyboard": ..., "video_clips": [...]}
         """
+        # ==================== 环境检测（首次运行） ====================
+        self._run_env_check()
+
         if project_name is None:
             project_name = f"E2E_{theme}_{style}"
 
@@ -392,6 +402,57 @@ class E2EPipeline:
             print(f"  特效自动选用: {flash_count}个高潮镜头→蒙版快闪v4, 其余→{default_trans}")
         else:
             print(f"  特效自动选用: 全部→{default_trans}")
+
+    def _run_env_check(self):
+        """运行环境检测，缺失组件时警告但不阻断流程
+
+        关键依赖（剪映、ffmpeg）缺失时警告；
+        可选依赖（ComfyUI、DaVinci Resolve）缺失时提示但继续。
+        """
+        if not _ENV_CHECKER_AVAILABLE:
+            return
+
+        try:
+            report = _check_env()
+
+            # 关键依赖检查
+            critical_missing = []
+            optional_missing = []
+            for r in report.results:
+                if not r.available:
+                    if r.name in ["剪映", "ffmpeg", "Python 依赖"]:
+                        critical_missing.append(r.name)
+                    else:
+                        optional_missing.append(r.name)
+
+            if critical_missing:
+                print(f"\n⚠️  关键依赖缺失: {', '.join(critical_missing)}")
+                print("   部分功能可能无法正常工作，建议安装后重试。")
+                for r in report.results:
+                    if not r.available and r.name in critical_missing:
+                        print(f"   - {r.name}: {r.install_hint}")
+                        if r.install_url:
+                            print(f"     下载: {r.install_url}")
+
+            if optional_missing:
+                print(f"\nℹ️  可选依赖缺失: {', '.join(optional_missing)}")
+                print("   以下功能将不可用，但不影响基础流程:")
+                for r in report.results:
+                    if not r.available and r.name in optional_missing:
+                        print(f"   - {r.name}: {r.install_hint[:60]}...")
+
+            # 保存环境报告
+            try:
+                report_path = os.path.join(self.work_dir, "env_report.json")
+                os.makedirs(os.path.dirname(report_path), exist_ok=True)
+                import json as _json
+                with open(report_path, 'w', encoding='utf-8') as f:
+                    _json.dump(report.to_dict(), f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
+        except Exception as e:
+            print(f"\n⚠️  环境检测跳过: {e}")
 
     def _run_storyboard_quality_gates(self, sb: Storyboard) -> Optional[Dict]:
         """运行分镜质量门检查
