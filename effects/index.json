@@ -61,8 +61,8 @@
     "effect_library": "scripts/effect_library.py - 特效库统一调用器（检索/搜索/应用）"
   },
   "pipeline_integration": {
-    "intro_builder": "已集成到E2EPipeline（add_intro=True时使用特效库片头）",
-    "subtitle_bar": "待集成（字幕部分）",
-    "mask_flash_transition": "待集成（转场部分）"
+    "intro_builder": "已集成到E2EPipeline（add_intro=True时使用特效库片头，5种风格映射）",
+    "subtitle_bar": "已集成到E2EPipeline（字幕部分，cinema→rect_dark, vlog→pill_warm, tech→pill_cyber等）",
+    "mask_flash_transition": "已集成到E2EPipeline（转场部分，transition_in='蒙版快闪'时触发，3色块赛博朋克配色）"
   }
 }

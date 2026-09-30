@@ -36,6 +36,20 @@ try:
 except ImportError:
     _INTRO_BUILDER_AVAILABLE = False
 
+# 半透明字幕条（特效库集成）
+try:
+    from subtitle_bar import add_subtitle_bar as _add_subtitle_bar_effect
+    _SUBTITLE_BAR_AVAILABLE = True
+except ImportError:
+    _SUBTITLE_BAR_AVAILABLE = False
+
+# 蒙版展开快闪（特效库集成）
+try:
+    from mask_flash_transition import create_solid_color_image, add_expand_animation as _add_expand_anim
+    _MASK_FLASH_AVAILABLE = True
+except ImportError:
+    _MASK_FLASH_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -43,6 +57,27 @@ _INTRO_STYLE_MAP = {
     "funny": "tag_intro",
     "minimal": "minimal_title",
     "suspense": "cyber_intro",
+}
+
+# 字幕风格→字幕条样式映射
+_SUBTITLE_BAR_STYLE_MAP = {
+    "cinema": "rect_dark",
+    "vlog": "pill_warm",
+    "news": "pill_cool",
+    "tech": "pill_cyber",
+    "bar_cyber": "pill_cyber",
+    "bar_warm": "pill_warm",
+    "bar_cool": "pill_cool",
+    "bar_dark": "rect_dark",
+    "bar_minimal": "rect_minimal",
+}
+
+# 蒙版快闪配色预设
+_MASK_FLASH_PRESETS = {
+    "cyberpunk": [(0, 200, 255), (255, 0, 200), (200, 255, 0)],
+    "warm": [(255, 100, 50), (255, 200, 50), (255, 50, 100)],
+    "cool": [(50, 100, 255), (50, 200, 255), (100, 255, 200)],
+    "neon": [(255, 0, 100), (0, 255, 200), (255, 255, 0)],
 }
 
 
@@ -676,12 +711,52 @@ class E2EPipeline:
 
         print(f"  添加 {len(segments)} 个视频片段 + {len(pip_consumed)}个画中画 (偏移{intro_offset}s, 运镜+调色已应用)")
 
-        # 2. 转场（加在前一个片段末尾）
+        # 2. 转场（加在前一个片段末尾）—— 支持蒙版快闪特效
         trans_count = 0
+        flash_count = 0
+        flash_assets_dir = os.path.join(self.work_dir, "output", "mask_flash_assets")
         for i in range(1, len(segments)):
             shot = sb.shots[i]
             if shot.transition_in == "无":
                 continue
+
+            # 蒙版快闪特效（特效库集成）
+            if shot.transition_in == "蒙版快闪" and _MASK_FLASH_AVAILABLE:
+                try:
+                    trans_start = intro_offset + sum(s.duration for s in sb.shots[:i]) - shot.transition_duration
+                    colors = _MASK_FLASH_PRESETS.get("cyberpunk", [(0, 200, 255), (255, 0, 200), (200, 255, 0)])
+                    directions = ["center", "left", "right"]
+                    stagger = shot.transition_duration / len(colors) * 0.5
+
+                    for j, (color, direction) in enumerate(zip(colors, directions)):
+                        block_path = os.path.join(flash_assets_dir, f"flash_{i}_{j}.png")
+                        os.makedirs(flash_assets_dir, exist_ok=True)
+                        create_solid_color_image(color, width, height, block_path)
+
+                        seg_start = trans_start + j * stagger
+                        flash_seg = project.add_media_safe(
+                            block_path,
+                            start_time=f"{seg_start:.2f}s",
+                            duration=f"{shot.transition_duration:.2f}s",
+                            track_name=f"MaskFlash_{i}_{j}",
+                        )
+                        if flash_seg:
+                            _add_expand_anim(
+                                flash_seg,
+                                direction=direction,
+                                duration_us=int(shot.transition_duration * 1e6 * 0.8),
+                                start_us=0,
+                            )
+                            # 淡出
+                            end_us = int(shot.transition_duration * 1e6)
+                            flash_seg.add_keyframe(draft.KeyframeProperty.alpha, int(end_us * 0.7), 1.0, **draft.Keyframe.EASE_OUT)
+                            flash_seg.add_keyframe(draft.KeyframeProperty.alpha, end_us, 0.0, **draft.Keyframe.EASE_OUT)
+                    flash_count += 1
+                    continue
+                except Exception as e:
+                    print(f"  蒙版快闪{i}失败，回退普通转场: {e}")
+
+            # 普通转场
             try:
                 trans_map = {
                     "叠化": "叠化", "快切": "闪黑", "闪白": "闪白",
@@ -695,9 +770,9 @@ class E2EPipeline:
                 trans_count += 1
             except Exception as e:
                 print(f"  转场{i}失败: {e}")
-        print(f"  添加 {trans_count} 个转场")
+        print(f"  添加 {trans_count} 个普通转场 + {flash_count} 个蒙版快闪")
 
-        # 3. 字幕（从片头后开始）—— 优先使用enhanced_subtitle半透明字幕条
+        # 3. 字幕（从片头后开始）—— 优先使用特效库字幕条
         sub_count = 0
         current_time = intro_offset
         # 分镜风格→字幕风格映射
@@ -706,10 +781,25 @@ class E2EPipeline:
             "thriller": "tech", "emotional": "vlog",
         }
         sub_style = style_map.get(style, "cinema")
+        # 检查是否使用特效库字幕条
+        use_bar = _SUBTITLE_BAR_AVAILABLE and sub_style in _SUBTITLE_BAR_STYLE_MAP
+        bar_style = _SUBTITLE_BAR_STYLE_MAP.get(sub_style, "rect_dark") if use_bar else None
 
         for i, shot in enumerate(sb.shots):
             if shot.subtitle:
-                if _ENHANCED_SUBTITLE_AVAILABLE:
+                if use_bar:
+                    # 特效库半透明字幕条
+                    _add_subtitle_bar_effect(
+                        project,
+                        text=shot.subtitle,
+                        start_time=f"{current_time + 0.2:.2f}s",
+                        duration=f"{max(shot.duration - 0.4, 0.5):.2f}s",
+                        style=bar_style,
+                        position_y=0.6,
+                        anim_in="pop",
+                        output_dir=os.path.join(self.work_dir, "output", "subtitle_bar_assets"),
+                    )
+                elif _ENHANCED_SUBTITLE_AVAILABLE:
                     add_styled_subtitle(
                         project,
                         text=shot.subtitle,
@@ -727,7 +817,7 @@ class E2EPipeline:
                     )
                 sub_count += 1
             current_time += shot.duration
-        print(f"  添加 {sub_count} 个字幕 ({sub_style}风格)")
+        print(f"  添加 {sub_count} 个字幕 ({'字幕条:'+bar_style if use_bar else sub_style+'风格'})")
 
         # 4. 音效（从片头后开始）
         sfx_count = 0
