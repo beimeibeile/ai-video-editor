@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>导演工作台 - AI Video Editor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a0f;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #2a2a4a;
+}
+.header h1 { font-size: 20px; color: #fff; }
+.header h1 span { color: #00d4ff; }
+.status { font-size: 13px; color: #888; }
+.status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4caf50; margin-right: 6px; }
+
+.container { display: grid; grid-template-columns: 280px 1fr 320px; gap: 16px; padding: 16px; height: calc(100vh - 60px); }
+
+.panel {
+  background: #12121a;
+  border: 1px solid #2a2a4a;
+  border-radius: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+.panel h2 { font-size: 14px; color: #00d4ff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* 特效库 */
+.effect-card {
+  background: #1a1a28;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.effect-card:hover { border-color: #00d4ff; transform: translateX(4px); }
+.effect-card.selected { border-color: #00d4ff; background: #1a2a3a; }
+.effect-card .name { font-size: 14px; font-weight: 600; color: #fff; }
+.effect-card .cat { font-size: 11px; color: #888; margin-top: 4px; }
+.effect-card .stars { color: #ffc107; font-size: 12px; margin-top: 4px; }
+.effect-card .badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #00d4ff22; color: #00d4ff; margin-left: 6px; }
+
+/* 中间预览区 */
+.preview-area {
+  display: flex;
+  flex-direction: column;
+}
+.preview-frame {
+  background: #000;
+  border-radius: 12px;
+  aspect-ratio: 9/16;
+  max-height: 60vh;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #2a2a4a;
+  position: relative;
+  overflow: hidden;
+}
+.preview-frame .placeholder { color: #444; font-size: 14px; text-align: center; }
+.preview-frame .placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+
+.timeline {
+  margin-top: 16px;
+  background: #1a1a28;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 120px;
+}
+.timeline-track {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.timeline-clip {
+  background: linear-gradient(135deg, #00d4ff44, #00d4ff22);
+  border: 1px solid #00d4ff66;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #00d4ff;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* 右侧参数面板 */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  background: #1a1a28;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 13px;
+}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #00d4ff; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #000; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 20px #00d4ff44; }
+.btn-secondary { background: #2a2a4a; color: #aaa; margin-top: 8px; }
+.btn-secondary:hover { background: #3a3a5a; }
+
+.upload-zone {
+  border: 2px dashed #2a2a4a;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.upload-zone:hover { border-color: #00d4ff; background: #00d4ff11; }
+.upload-zone .icon { font-size: 32px; color: #444; }
+.upload-zone .text { font-size: 12px; color: #666; margin-top: 8px; }
+
+.material-list { margin-top: 10px; }
+.material-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  background: #1a1a28;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+.material-item .name { flex: 1; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.material-item .remove { color: #ff6b6b; cursor: pointer; margin-left: 8px; }
+
+.preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.preset-btn {
+  padding: 8px;
+  background: #1a1a28;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #aaa;
+  cursor: pointer;
+  text-align: center;
+}
+.preset-btn:hover, .preset-btn.active { border-color: #00d4ff; color: #00d4ff; background: #00d4ff11; }
+
+.task-log {
+  background: #0a0a0f;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #4caf50;
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.task-log .line { margin-bottom: 2px; }
+.task-log .line.info { color: #00d4ff; }
+.task-log .line.error { color: #ff6b6b; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎬 导演<span>工作台</span></h1>
+  <div class="status"><span class="dot"></span>AI Video Editor v1.2 | 特效库: 4个 | 待执行: 0</div>
+</div>
+
+<div class="container">
+  <!-- 左侧：特效库 -->
+  <div class="panel">
+    <h2>特效库</h2>
+    <div id="effectList"></div>
+  </div>
+
+  <!-- 中间：预览+时间线 -->
+  <div class="panel preview-area">
+    <h2>预览 / 分镜</h2>
+    <div class="preview-frame">
+      <div class="placeholder">
+        <div class="icon">🎥</div>
+        <div>选择特效并配置参数<br>点击"生成任务"开始</div>
+      </div>
+    </div>
+    <div class="timeline">
+      <div style="font-size:11px;color:#666;margin-bottom:8px;">时间线预览</div>
+      <div class="timeline-track" id="timelineTrack">
+        <div class="timeline-clip">片头 3s</div>
+        <div class="timeline-clip">正片 10s</div>
+        <div class="timeline-clip">结尾 2s</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧：参数配置 -->
+  <div class="panel">
+    <h2>任务配置</h2>
+
+    <div class="form-group">
+      <label>工程名称</label>
+      <input type="text" id="projectName" value="我的视频" placeholder="输入工程名称">
+    </div>
+
+    <div class="form-group">
+      <label>视频比例</label>
+      <div class="preset-grid">
+        <div class="preset-btn active" data-ratio="9:16">9:16 竖屏</div>
+        <div class="preset-btn" data-ratio="16:9">16:9 横屏</div>
+        <div class="preset-btn" data-ratio="1:1">1:1 方形</div>
+        <div class="preset-btn" data-ratio="4:3">4:3</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>素材上传</label>
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📁</div>
+        <div class="text">点击或拖拽上传素材<br>(图片/视频)</div>
+      </div>
+      <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none" onchange="handleFiles(this.files)">
+      <div class="material-list" id="materialList"></div>
+    </div>
+
+    <div class="form-group">
+      <label>片头风格</label>
+      <select id="introStyle">
+        <option value="none">无片头</option>
+        <option value="flash_title">快闪标题 (炫酷)</option>
+        <option value="minimal_title">极简标题 (文艺)</option>
+        <option value="warm_intro">温暖开场 (情感)</option>
+        <option value="cyber_intro">赛博开场 (科技)</option>
+        <option value="tag_intro">标签开场 (钩子)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>主标题</label>
+      <input type="text" id="mainTitle" placeholder="输入主标题文字">
+    </div>
+
+    <div class="form-group">
+      <label>副标题</label>
+      <input type="text" id="subTitle" placeholder="输入副标题文字（可选）">
+    </div>
+
+    <div class="form-group">
+      <label>字幕样式</label>
+      <select id="subtitleStyle">
+        <option value="none">无字幕</option>
+        <option value="pill_warm">暖色药丸条</option>
+        <option value="pill_cool">冷色药丸条</option>
+        <option value="pill_cyber">赛博药丸条</option>
+        <option value="rect_dark">深色矩形</option>
+        <option value="rect_minimal">极简矩形</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>转场效果</label>
+      <select id="transitionStyle">
+        <option value="none">无转场</option>
+        <option value="叠化">叠化</option>
+        <option value="mask_flash">蒙版快闪</option>
+        <option value="闪黑">闪黑</option>
+        <option value="向左滑动">向左滑动</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" onclick="generateTask()">🚀 生成任务</button>
+    <button class="btn btn-secondary" onclick="resetForm()">重置配置</button>
+
+    <div class="task-log" id="taskLog">
+      <div class="line info">[系统] 工作台就绪，等待任务...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 特效库数据（从index.json加载）
+const effects = [
+  { id: 'mask_flash_transition', name: '蒙版展开快闪', cat: '转场特效', stars: 3, integrated: false },
+  { id: 'subtitle_bar', name: '半透明字幕条', cat: '文字特效', stars: 4, integrated: false },
+  { id: 'intro_builder', name: '片头生成器', cat: '组合特效', stars: 5, integrated: true },
+  { id: 'character_intro', name: '人物介绍卡片', cat: '组合特效', stars: 3, integrated: false },
+];
+
+let selectedEffect = null;
+let materials = [];
+
+// 渲染特效库
+function renderEffects() {
+  const list = document.getElementById('effectList');
+  list.innerHTML = effects.map(e => `
+    <div class="effect-card ${selectedEffect === e.id ? 'selected' : ''}" onclick="selectEffect('${e.id}')">
+      <div class="name">${e.name} ${e.integrated ? '<span class="badge">已集成</span>' : ''}</div>
+      <div class="cat">${e.cat}</div>
+      <div class="stars">${'⭐'.repeat(e.stars)}${'☆'.repeat(5-e.stars)}</div>
+    </div>
+  `).join('');
+}
+
+function selectEffect(id) {
+  selectedEffect = id;
+  renderEffects();
+  log(`已选择特效: ${effects.find(e => e.id === id).name}`);
+}
+
+// 比例选择
+document.querySelectorAll('.preset-btn[data-ratio]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.preset-btn[data-ratio]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+
+// 文件处理
+function handleFiles(files) {
+  for (let f of files) {
+    materials.push({ name: f.name, size: f.size, type: f.type });
+  }
+  renderMaterials();
+  log(`已添加 ${files.length} 个素材`);
+}
+
+function renderMaterials() {
+  const list = document.getElementById('materialList');
+  list.innerHTML = materials.map((m, i) => `
+    <div class="material-item">
+      <span class="name">${m.type.startsWith('video') ? '🎬' : '🖼️'} ${m.name}</span>
+      <span class="remove" onclick="removeMaterial(${i})">✕</span>
+    </div>
+  `).join('');
+}
+
+function removeMaterial(i) {
+  materials.splice(i, 1);
+  renderMaterials();
+}
+
+// 生成任务
+function generateTask() {
+  const ratio = document.querySelector('.preset-btn[data-ratio].active').dataset.ratio;
+  const [w, h] = ratio.split(':').map(Number);
+  const task = {
+    task_id: 'task_' + Date.now(),
+    created_at: new Date().toISOString(),
+    status: 'pending',
+    config: {
+      project_name: document.getElementById('projectName').value,
+      width: ratio === '9:16' ? 1080 : ratio === '16:9' ? 1920 : 1080,
+      height: ratio === '9:16' ? 1920 : ratio === '16:9' ? 1080 : 1080,
+      ratio: ratio,
+      intro_style: document.getElementById('introStyle').value,
+      main_title: document.getElementById('mainTitle').value,
+      sub_title: document.getElementById('subTitle').value,
+      subtitle_style: document.getElementById('subtitleStyle').value,
+      transition_style: document.getElementById('transitionStyle').value,
+      selected_effect: selectedEffect,
+    },
+    materials: materials.map(m => m.name),
+  };
+
+  log(`任务已生成: ${task.task_id}`);
+  log(`工程: ${task.config.project_name} (${ratio})`);
+  log(`素材: ${materials.length}个 | 片头: ${task.config.intro_style}`);
+  log(`特效: ${selectedEffect || '无'}`);
+  log('');
+  log('[提示] 将task.json保存到项目目录，豆包检测后自动执行');
+
+  // 下载JSON
+  const blob = new Blob([JSON.stringify(task, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'task.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetForm() {
+  document.getElementById('projectName').value = '我的视频';
+  document.getElementById('mainTitle').value = '';
+  document.getElementById('subTitle').value = '';
+  materials = [];
+  selectedEffect = null;
+  renderMaterials();
+  renderEffects();
+  log('配置已重置');
+}
+
+function log(msg, type = 'info') {
+  const logEl = document.getElementById('taskLog');
+  const line = document.createElement('div');
+  line.className = 'line ' + type;
+  line.textContent = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// 初始化
+renderEffects();
+</script>
+
+</body>
+</html>
