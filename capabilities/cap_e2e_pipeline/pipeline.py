@@ -179,6 +179,8 @@ class E2EPipeline:
             ltx_shots: List[int] = None,
             use_flf2v: bool = False,
             flf2v_shots: List[int] = None,
+            use_hunyuan: bool = False,
+            hunyuan_shots: List[int] = None,
             add_bgm: bool = True,
             add_intro: bool = False,
             pip_config: List[Dict] = None,
@@ -204,6 +206,10 @@ class E2EPipeline:
             input_images: 用户素材图片路径列表
             use_ltx: 是否使用LTX-2.5 I2V（需要ComfyUI运行）
             ltx_shots: 使用LTX的镜头索引列表（默认[0]，即第一个镜头）
+            use_flf2v: 是否使用FLF2V首尾帧（需要首尾帧图片）
+            flf2v_shots: 使用FLF2V的镜头索引列表
+            use_hunyuan: 是否使用混元视频1.5 I2V（需要ComfyUI运行，动作控制更精准）
+            hunyuan_shots: 使用混元I2V的镜头索引列表
             add_bgm: 是否添加BGM
             add_intro: 是否添加片头
             pip_config: 画中画配置列表，每项如 {"shots": [0,1], "layout": "split_h"}
@@ -227,6 +233,8 @@ class E2EPipeline:
             ltx_shots = [0] if use_ltx else []
         if flf2v_shots is None:
             flf2v_shots = []
+        if hunyuan_shots is None:
+            hunyuan_shots = [] if not use_hunyuan else [0]
 
         print(f"{'='*60}")
         print(f"端到端视频生成: {theme}")
@@ -275,7 +283,8 @@ class E2EPipeline:
         print("\n[2/4] 素材加工")
         video_clips = self._prepare_materials(
             sb, input_images, width, height, use_ltx, ltx_shots,
-            use_flf2v, flf2v_shots, project_name
+            use_flf2v, flf2v_shots, project_name,
+            use_hunyuan=use_hunyuan, hunyuan_shots=hunyuan_shots,
         )
 
         # ==================== 步骤3：剪映合成（含片头） ====================
@@ -591,9 +600,12 @@ class E2EPipeline:
     def _prepare_materials(self, sb: Storyboard, input_images: List[str],
                            width: int, height: int, use_ltx: bool,
                            ltx_shots: List[int], use_flf2v: bool = False,
-                           flf2v_shots: List[int] = None, project_name: str = "") -> List[str]:
+                           flf2v_shots: List[int] = None, project_name: str = "",
+                           use_hunyuan: bool = False, hunyuan_shots: List[int] = None) -> List[str]:
         if flf2v_shots is None:
             flf2v_shots = []
+        if hunyuan_shots is None:
+            hunyuan_shots = []
         """素材加工：生成/动态化每个镜头的视频"""
         from cap_ffmpeg_motion.ffmpeg_motion import FFmpegMotion
         fm = FFmpegMotion(ffmpeg_path=self.ffmpeg)
@@ -671,6 +683,16 @@ class E2EPipeline:
                             move_type=move_type, intensity=shot.move_intensity,
                             width=width, height=height, fps=30
                         )
+            elif use_hunyuan and i in hunyuan_shots:
+                # 混元视频1.5 I2V（动作控制更精准，需要ComfyUI运行）
+                hunyuan_success = self._try_hunyuan_i2v(img_path, out_path, shot, width, height)
+                if not hunyuan_success:
+                    print(f"  镜头{i}: 混元I2V失败，降级Ken Burns")
+                    fm.image_to_ken_burns(
+                        img_path, out_path, duration=shot.duration,
+                        move_type=move_type, intensity=shot.move_intensity,
+                        width=width, height=height, fps=30
+                    )
             else:
                 fm.image_to_ken_burns(
                     img_path, out_path, duration=shot.duration,
@@ -786,8 +808,8 @@ class E2EPipeline:
             if not check_comfyui_ready(self.comfyui_addr):
                 return False
 
-            # LTX-2.5参数优化：帧数对齐8n+1，分辨率限制768x432（12GB显存安全），步数20
-            max_ltx_w, max_ltx_h = 768, 432
+            # LTX-2.5参数优化：帧数对齐8n+1，分辨率限制768x448（12GB显存安全，height需被32整除），步数20
+            max_ltx_w, max_ltx_h = 768, 448
             ltx_w = min((width // 32) * 32, max_ltx_w)
             ltx_h = min((height // 32) * 32, max_ltx_h)
             raw_frames = max(int(shot.duration * 24), 17)
@@ -809,6 +831,36 @@ class E2EPipeline:
             print(f"  LTX I2V异常: {e}")
             return False
 
+    def _try_hunyuan_i2v(self, img_path: str, out_path: str, shot,
+                          width: int, height: int) -> bool:
+        """尝试混元视频1.5 I2V，失败返回False"""
+        try:
+            from cap_comfyui_runner.api import hunyuan_i2v, check_comfyui_ready
+            if not check_comfyui_ready(self.comfyui_addr):
+                return False
+
+            # 混元视频1.5参数：640x360（12GB显存安全），33帧@16fps≈2秒
+            max_hw, max_hh = 640, 360
+            hunyuan_w = min((width // 16) * 16, max_hw)
+            hunyuan_h = min((height // 16) * 16, max_hh)
+            frames = 33  # 混元默认33帧
+
+            result = hunyuan_i2v(
+                image_path=img_path,
+                output_path=out_path,
+                prompt=f"{shot.subtitle}, {shot.emotion} atmosphere, {shot.shot_size}, cinematic, high quality",
+                negative_prompt="blurry, low quality, distorted, static, watermark, text",
+                width=hunyuan_w, height=hunyuan_h,
+                frames=frames, fps=16,
+                steps=20, cfg=6.0,
+                server_addr=self.comfyui_addr,
+                timeout=300,
+            )
+            return result and os.path.exists(out_path)
+        except Exception as e:
+            print(f"  混元I2V异常: {e}")
+            return False
+
     def _batch_ltx_i2v(self, sb: Storyboard, input_images: List[str],
                         shot_indices: List[int], width: int, height: int,
                         project_name: str) -> Dict[int, str]:
@@ -818,7 +870,7 @@ class E2EPipeline:
             if not check_comfyui_ready(self.comfyui_addr):
                 return {}
 
-            max_ltx_w, max_ltx_h = 768, 432
+            max_ltx_w, max_ltx_h = 768, 448
             ltx_w = min((width // 32) * 32, max_ltx_w)
             ltx_h = min((height // 32) * 32, max_ltx_h)
 
