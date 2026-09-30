@@ -1,4 +1,4 @@
-"""
+r"""
 cap_creative - 影视剧创作模块（阶段二预留）
 
 模块定位：
@@ -16,7 +16,6 @@ cap_creative - 影视剧创作模块（阶段二预留）
 """
 
 from .quality_gate import (
-    QualityGate,
     GateResult,
     GateReport,
     GateRegistry,
@@ -26,7 +25,6 @@ from .quality_gate import (
 )
 
 __all__ = [
-    "QualityGate",
     "GateResult",
     "GateReport",
     "GateRegistry",

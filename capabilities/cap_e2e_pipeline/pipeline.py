@@ -85,6 +85,13 @@ try:
 except ImportError:
     _MIX_MODE_AVAILABLE = False
 
+# 质量门框架（cap_creative）
+try:
+    from cap_creative import validate as qg_validate, GateReport
+    _QUALITY_GATE_AVAILABLE = True
+except ImportError:
+    _QUALITY_GATE_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -240,6 +247,9 @@ class E2EPipeline:
 
         print(sb.summary())
 
+        # 分镜质量门检查
+        qg_report = self._run_storyboard_quality_gates(sb)
+
         # 保存分镜
         sb_path = os.path.join(self.work_dir, f"{project_name}_storyboard.json")
         with open(sb_path, 'w', encoding='utf-8') as f:
@@ -282,6 +292,50 @@ class E2EPipeline:
             "video_clips": video_clips,
             "work_dir": self.work_dir,
         }
+
+    def _run_storyboard_quality_gates(self, sb: Storyboard) -> Optional[Dict]:
+        """运行分镜质量门检查
+
+        将 Storyboard 转换为质量门数据格式，运行 storyboard 类别检查。
+        返回质量门报告字典，失败时返回 None。
+
+        检查项：
+        - S001: 单镜头时长 2-15秒
+        - S002: 首镜头有钩子（前3秒）
+        - S003: 节拍认领（当前分镜无节拍概念，跳过）
+        """
+        if not _QUALITY_GATE_AVAILABLE:
+            print("  ⚠️  质量门框架不可用，跳过检查")
+            return None
+
+        # 转换为质量门数据格式
+        qg_data = {
+            "shots": [{"duration": s.duration} for s in sb.shots],
+            "beats": [],  # 当前分镜无节拍概念
+            "hooks": [],
+        }
+
+        # 钩子检测：第一个镜头的 emotion 为 "钩子" 或有 hook_text
+        if sb.hook_text or (sb.shots and sb.shots[0].emotion == "钩子"):
+            # 钩子时间 = 第一个镜头的中间位置
+            hook_time = sb.shots[0].duration / 2 if sb.shots else 0
+            qg_data["hooks"].append({"time": hook_time, "type": "text"})
+
+        report = qg_validate("storyboard", qg_data)
+        print(f"\n  📋 分镜质量门: {report.passed}/{report.total} 通过")
+        for r in report.results:
+            if r.status.value != "pass":
+                print(f"    {r}")
+
+        # 保存质量门报告
+        qg_path = os.path.join(self.work_dir, f"{sb.theme}_quality_gate.json")
+        try:
+            with open(qg_path, 'w', encoding='utf-8') as f:
+                f.write(report.to_json())
+        except Exception:
+            pass
+
+        return report.to_dict()
 
     def _prepare_materials(self, sb: Storyboard, input_images: List[str],
                            width: int, height: int, use_ltx: bool,
