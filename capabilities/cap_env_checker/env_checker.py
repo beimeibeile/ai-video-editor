@@ -3,7 +3,7 @@
 检测 ai-video-editor 运行所需的所有外部依赖，首次使用时提示用户安装缺失组件。
 
 检测项：
-- DaVinci Resolve / Fusion（特效合成）
+- Blender（3D特效合成）
 - ComfyUI（AI算力）
 - 剪映（工程合成）
 - ffmpeg（视频处理）
@@ -74,16 +74,11 @@ class EnvReport:
 class EnvChecker:
     """环境检测器"""
 
-    # DaVinci Resolve 常见安装路径
-    DAVINCI_PATHS = [
-        r"C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe",
-        r"C:\Program Files (x86)\Blackmagic Design\DaVinci Resolve\Resolve.exe",
-    ]
-    DAVINCI_RENDER_PATHS = [
-        r"C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe",
-    ]
-    DAVINCI_FUSION_SCRIPT_PATHS = [
-        r"C:\Program Files\Blackmagic Design\DaVinci Resolve\Fusion\Scripts",
+    # Blender 常见安装路径
+    BLENDER_PATHS = [
+        r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
+        r"C:\Program Files\Blender Foundation\Blender 4.1\blender.exe",
+        r"C:\Program Files\Blender Foundation\Blender 4.0\blender.exe",
     ]
 
     # ComfyUI 常见路径
@@ -120,7 +115,7 @@ class EnvChecker:
         self.report = EnvReport(timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         # 按优先级检测
-        self.report.results.append(self._check_davinci())
+        self.report.results.append(self._check_blender())
         self.report.results.append(self._check_comfyui())
         self.report.results.append(self._check_jianying())
         self.report.results.append(self._check_ffmpeg())
@@ -132,46 +127,28 @@ class EnvChecker:
 
         return self.report
 
-    def check_davinci(self) -> EnvCheckResult:
-        """仅检测 DaVinci Resolve"""
-        return self._check_davinci()
+    def check_blender(self) -> EnvCheckResult:
+        """仅检测 Blender"""
+        return self._check_blender()
 
-    def _check_davinci(self) -> EnvCheckResult:
-        """检测 DaVinci Resolve / Fusion"""
-        for path in self.DAVINCI_PATHS:
+    def _check_blender(self) -> EnvCheckResult:
+        """检测 Blender（3D特效合成）"""
+        for path in self.BLENDER_PATHS:
             if os.path.exists(path):
                 version = self._get_file_version(path)
-                # 检测 Fusion 脚本目录
-                fusion_scripts = os.path.join(os.path.dirname(path), "Fusion", "Scripts")
-                fusion_ok = os.path.exists(fusion_scripts)
-                msg = f"已安装 (Fusion脚本: {'✅' if fusion_ok else '❌'})"
                 return EnvCheckResult(
-                    name="DaVinci Resolve",
+                    name="Blender",
                     available=True,
                     version=version,
                     path=path,
-                    message=msg,
+                    message="已安装",
                 )
-
-        # 检测注册表
-        reg_version = self._get_registry_value(
-            r"HKLM:\SOFTWARE\Blackmagic Design\DaVinci Resolve", "Version"
-        )
-        if reg_version:
-            return EnvCheckResult(
-                name="DaVinci Resolve",
-                available=True,
-                version=reg_version,
-                path="(注册表检测)",
-                message="已安装 (注册表检测)",
-            )
-
         return EnvCheckResult(
-            name="DaVinci Resolve",
+            name="Blender",
             available=False,
             message="未安装",
-            install_url="https://www.blackmagicdesign.com/cn/products/davinciresolve",
-            install_hint="下载免费版 DaVinci Resolve（不带 Studio），约 3.5GB，安装时全部默认即可。Fusion 页面用于粒子、文字动画、光效等高级特效合成。",
+            install_url="https://www.blender.org/download/",
+            install_hint="下载免费版 Blender（约350MB），用于3D文字动画、粒子特效、高级合成。",
         )
 
     def _check_comfyui(self) -> EnvCheckResult:
@@ -355,10 +332,10 @@ def check_environment(config: Optional[Dict[str, Any]] = None) -> EnvReport:
     return checker.check_all()
 
 
-def check_davinci_resolve() -> EnvCheckResult:
-    """便捷函数：仅检测 DaVinci Resolve"""
+def check_blender() -> EnvCheckResult:
+    """便捷函数：仅检测 Blender"""
     checker = EnvChecker()
-    return checker.check_davinci()
+    return checker.check_blender()
 
 
 @dataclass
@@ -409,8 +386,8 @@ class EnvStrategyGenerator:
         "剪映工程合成": ["剪映", "ffmpeg"],
         "AI视频生成(LTX/混元)": ["ComfyUI"],
         "AI图片生成": ["ComfyUI"],
-        "Fusion高级特效(粒子/光效)": ["DaVinci Resolve"],
-        "Fusion文字动画": ["DaVinci Resolve"],
+        "Blender 3D特效(粒子/文字)": ["Blender"],
+        "Blender片头生成": ["Blender"],
         "ffmpeg动效(Ken Burns/转场)": ["ffmpeg"],
         "素材处理(格式转换/抽帧)": ["ffmpeg"],
         "图片处理(轮廓/渐变生成)": ["Python 依赖"],
@@ -428,7 +405,7 @@ class EnvStrategyGenerator:
             description = "全部依赖已安装，所有功能可用"
         elif "剪映" not in missing and "ffmpeg" not in missing and "Python 依赖" not in missing:
             mode = "standard"
-            description = "核心剪辑功能可用，AI/Fusion特效需安装对应依赖"
+            description = "核心剪辑功能可用，AI/Blender特效需安装对应依赖"
         elif "剪映" not in missing and "ffmpeg" not in missing:
             mode = "minimal"
             description = "基础剪辑可用，图片处理和AI特效受限"
@@ -450,8 +427,8 @@ class EnvStrategyGenerator:
         warnings = []
         if "ComfyUI" in missing:
             warnings.append("未安装ComfyUI，AI视频/图片生成功能不可用。可使用剪映内置特效和ffmpeg动效替代。")
-        if "DaVinci Resolve" in missing:
-            warnings.append("未安装DaVinci Resolve，Fusion高级特效（粒子/光效/文字动画）不可用。可使用剪映内置特效替代。")
+        if "Blender" in missing:
+            warnings.append("未安装Blender，3D文字动画、粒子特效、高级合成等功能不可用。可使用剪映内置特效替代。")
         if "剪映" in missing:
             warnings.append("未安装剪映，无法进行工程合成和导出。仅能进行创意规划、分镜设计和素材准备。")
         if "ffmpeg" in missing:
@@ -469,8 +446,8 @@ class EnvStrategyGenerator:
                     install_commands[r.name] = "安装剪映5.9"
                 elif r.name == "ComfyUI":
                     install_commands[r.name] = "安装ComfyUI"
-                elif r.name == "DaVinci Resolve":
-                    install_commands[r.name] = "安装DaVinci Resolve"
+                elif r.name == "Blender":
+                    install_commands[r.name] = "安装Blender"
 
         return EnvStrategy(
             mode=mode,
@@ -525,8 +502,8 @@ def generate_detailed_report(report: EnvReport, strategy: EnvStrategy) -> str:
     lines.append("- 影响：AI视频生成（LTX-2.5/混元）、AI图片生成、图生视频、首尾帧视频")
     lines.append("- 替代：使用用户提供的素材图片/视频，或使用ffmpeg动效")
     lines.append("")
-    lines.append("### DaVinci Resolve（可选依赖）")
-    lines.append("- 影响：Fusion粒子特效、镜头光晕、辉光、专业文字动画器、高级合成")
+    lines.append("### Blender（可选依赖）")
+    lines.append("- 影响：3D文字动画、粒子特效、高级合成、Blender 3D片头")
     lines.append("- 替代：剪映内置特效（粒子/光效/文字动画），效果略逊但够用")
     lines.append("")
     lines.append("### Python 依赖（核心依赖）")
