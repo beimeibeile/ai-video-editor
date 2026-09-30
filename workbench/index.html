@@ -185,7 +185,7 @@ body {
 
 <div class="header">
   <h1>🎬 导演<span>工作台</span></h1>
-  <div class="status"><span class="dot"></span>AI Video Editor v1.2 | 特效库: 4个 | 待执行: 0</div>
+  <div class="status"><span class="dot"></span>AI Video Editor v1.5 | 特效库: 11个 | ComfyUI: 6项实测 | Fusion: 4特效</div>
 </div>
 
 <div class="container">
@@ -300,10 +300,17 @@ body {
 <script>
 // 特效库数据（从index.json加载）
 const effects = [
-  { id: 'mask_flash_transition', name: '蒙版展开快闪', cat: '转场特效', stars: 3, integrated: false },
-  { id: 'subtitle_bar', name: '半透明字幕条', cat: '文字特效', stars: 4, integrated: false },
+  { id: 'mask_flash_transition', name: '蒙版展开快闪', cat: '转场特效', stars: 4, integrated: true },
+  { id: 'subtitle_bar', name: '半透明字幕条', cat: '文字特效', stars: 4, integrated: true },
   { id: 'intro_builder', name: '片头生成器', cat: '组合特效', stars: 5, integrated: true },
-  { id: 'character_intro', name: '人物介绍卡片', cat: '组合特效', stars: 3, integrated: false },
+  { id: 'character_intro', name: '人物介绍卡片', cat: '组合特效', stars: 4, integrated: true },
+  { id: 'glow_outline', name: '动态发光轮廓', cat: '视觉特效', stars: 4, integrated: true },
+  { id: 'text_layout', name: '文字排版艺术', cat: '文字特效', stars: 4, integrated: true },
+  { id: 'polaroid_wall', name: '拍立得照片墙', cat: '组合特效', stars: 4, integrated: true },
+  { id: 'mix_mode', name: '混合模式(10种)', cat: '视觉特效', stars: 3, integrated: true },
+  { id: 'ltx_i2v', name: 'LTX图生视频', cat: 'AI视频生成', stars: 5, integrated: true },
+  { id: 'hunyuan_i2v', name: '混元视频I2V', cat: 'AI视频生成', stars: 5, integrated: true },
+  { id: 'fusion_particle', name: 'Fusion粒子特效', cat: 'Fusion合成', stars: 4, integrated: false },
 ];
 
 let selectedEffect = null;
