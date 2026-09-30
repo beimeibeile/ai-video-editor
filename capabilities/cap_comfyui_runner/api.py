@@ -3738,3 +3738,100 @@ def batch_txt2img_zimage(
     success = sum(1 for r in results if r)
     print(f"\n批量文生图完成: {success}/{total} 成功")
     return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 视频帧提取与素材预处理
+# ═══════════════════════════════════════════════════════════════
+
+def extract_frames(
+    video_path: str,
+    output_dir: str,
+    fps: float = 0,
+    max_frames: int = 0,
+    ffmpeg_path: str = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
+) -> List[str]:
+    """
+    从视频中提取帧（用于首帧/关键帧素材准备）
+    """
+    import subprocess as _sp
+    import glob as _glob
+    os.makedirs(output_dir, exist_ok=True)
+    if not os.path.exists(video_path):
+        print(f"❌ 视频不存在: {video_path}")
+        return []
+    output_pattern = os.path.join(output_dir, "frame_%04d.png")
+    cmd = [ffmpeg_path, "-y", "-i", video_path]
+    if fps > 0:
+        cmd.extend(["-vf", f"fps={fps}"])
+    if max_frames > 0:
+        cmd.extend(["-frames:v", str(max_frames)])
+    cmd.append(output_pattern)
+    print(f"[帧提取] {os.path.basename(video_path)} → {output_dir}")
+    try:
+        _sp.run(cmd, capture_output=True, timeout=120)
+    except Exception as e:
+        print(f"❌ 帧提取失败: {e}")
+        return []
+    frames = sorted(_glob.glob(os.path.join(output_dir, "frame_*.png")))
+    print(f"  ✅ 提取 {len(frames)} 帧")
+    return frames
+
+
+def preprocess_images(
+    image_paths: List[str],
+    output_dir: str,
+    target_width: int = 1024,
+    target_height: int = 1024,
+    mode: str = "contain",
+    format: str = "png",
+    ffmpeg_path: str = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
+) -> List[str]:
+    """批量图片预处理：统一尺寸/格式（contain/cover/stretch）"""
+    import subprocess as _sp
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    if mode == "contain":
+        sf = f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:color=black"
+    elif mode == "cover":
+        sf = f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,crop={target_width}:{target_height}"
+    else:
+        sf = f"scale={target_width}:{target_height}"
+    for i, img_path in enumerate(image_paths):
+        if not os.path.exists(img_path):
+            results.append(None); continue
+        out_path = os.path.join(output_dir, f"processed_{i+1:04d}.{format}")
+        try:
+            _sp.run([ffmpeg_path, "-y", "-i", img_path, "-vf", sf, out_path], capture_output=True, timeout=30)
+            results.append(out_path if os.path.exists(out_path) else None)
+        except Exception as e:
+            print(f"  ❌ {os.path.basename(img_path)}: {e}"); results.append(None)
+    success = sum(1 for r in results if r)
+    print(f"[图片预处理] 完成: {success}/{len(image_paths)} ({mode} {target_width}x{target_height})")
+    return results
+
+
+def get_video_info(video_path: str, ffprobe_path: str = None) -> Dict[str, Any]:
+    """获取视频元信息（分辨率/帧率/时长/码率）"""
+    import subprocess as _sp, json as _json
+    if ffprobe_path is None:
+        ffprobe_path = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
+    if not os.path.exists(video_path):
+        return {"error": "文件不存在"}
+    try:
+        r = _sp.run([ffprobe_path, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", video_path],
+                    capture_output=True, text=True, timeout=10)
+        data = _json.loads(r.stdout)
+    except Exception as e:
+        return {"error": str(e)}
+    info = {"path": video_path}
+    fmt = data.get("format", {})
+    info["duration"] = float(fmt.get("duration", 0))
+    info["size"] = int(fmt.get("size", 0))
+    for s in data.get("streams", []):
+        if s.get("codec_type") == "video":
+            info["video"] = {"codec": s.get("codec_name",""), "width": s.get("width",0), "height": s.get("height",0),
+                             "fps": eval(s.get("r_frame_rate","0/1")), "frames": int(s.get("nb_frames",0))}
+        elif s.get("codec_type") == "audio":
+            info["audio"] = {"codec": s.get("codec_name",""), "channels": s.get("channels",0)}
+    return info
