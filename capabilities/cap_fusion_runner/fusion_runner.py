@@ -50,35 +50,44 @@ class FusionComp:
         return self
 
     def to_lua(self) -> str:
-        """生成 .comp 文件的 Lua 代码"""
+        """生成 .comp 文件的 Lua 代码（标准Fusion格式）"""
         lines = []
         lines.append("Composition {")
-        lines.append(f"  CurrentTime = 0,")
-        lines.append(f"  RenderRange = {{ 0, {self.duration} }},")
-        lines.append(f"  GlobalIn = 0,")
-        lines.append(f"  GlobalOut = {self.duration},")
-        lines.append(f"  Playback = {{ }},")
-        lines.append(f"  Outputs = {{")
-        lines.append(f"    Output1 = Instance \"Output\" {{")
-        lines.append(f"      SourceOp = \"{self.output_node or self.nodes[-1].name}\",")
-        lines.append(f"      SourceOutput = 1,")
-        lines.append(f"    }},")
-        lines.append(f"  }},")
-        lines.append(f"  Tools = {{")
+        lines.append(f"\tCurrentTime = 0,")
+        lines.append(f"\tRenderRange = {{ 0, {self.duration} }},")
+        lines.append(f"\tGlobalIn = 0,")
+        lines.append(f"\tGlobalOut = {self.duration},")
+        lines.append(f"\tOutputs = {{")
+        lines.append(f"\t\tOutput1 = Instance \"Output\" {{")
+        lines.append(f"\t\t\tSourceOp = \"{self.output_node or self.nodes[-1].name}\",")
+        lines.append(f"\t\t\tSourceOutput = 1,")
+        lines.append(f"\t\t}},")
+        lines.append(f"\t}},")
+        lines.append(f"\tTools = {{")
 
-        for node in self.nodes:
-            lines.append(f"    {node.name} = Instance \"{node.node_type}\" {{")
+        for idx, node in enumerate(self.nodes):
+            pos_x = 100 + (idx % 4) * 200
+            pos_y = 100 + (idx // 4) * 150
+            lines.append(f"\t\t{node.name} = Instance \"{node.node_type}\" {{")
+            lines.append(f"\t\t\tCtrlWZoom = false,")
+            lines.append(f"\t\t\tInputs = {{")
+            # 节点参数
             for key, value in node.params.items():
                 lua_val = self._lua_value(value)
-                lines.append(f"      {key} = {lua_val},")
+                lines.append(f"\t\t\t\t{key} = Input {{ Value = {lua_val}, }},")
             # 输入连接
             if node.inputs:
                 for i, input_node in enumerate(node.inputs):
                     input_name = "Input" if i == 0 else f"Input{i+1}"
-                    lines.append(f"      {input_name} = Instance \"{input_node}\" {{ }},")
-            lines.append(f"    }},")
+                    lines.append(f"\t\t\t\t{input_name} = Input {{")
+                    lines.append(f"\t\t\t\t\tSourceOp = \"{input_node}\",")
+                    lines.append(f"\t\t\t\t\tSourceOutput = 1,")
+                    lines.append(f"\t\t\t\t}},")
+            lines.append(f"\t\t\t}},")
+            lines.append(f"\t\t\tViewInfo = OperatorInfo {{ Pos = {{ {pos_x}, {pos_y} }} }},")
+            lines.append(f"\t\t}},")
 
-        lines.append(f"  }},")
+        lines.append(f"\t}},")
         lines.append(f"}}")
         return "\n".join(lines)
 
