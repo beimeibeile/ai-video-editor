@@ -61,6 +61,18 @@
       "description": "多轨道文字叠加排版，5种预设（竖排错落/横排标题/斜向层叠/左对齐堆叠/居中聚焦）",
       "tags": ["文字排版", "竖排", "错落", "标题", "多轨道"],
       "api": ["add_text_layout", "create_text_layout_demo"]
+    },
+    {
+      "id": "polaroid_wall",
+      "name": "拍立得照片墙",
+      "category": "visual",
+      "module": "scripts/polaroid_wall.py",
+      "source": "抖音教程-关键帧练习",
+      "difficulty": "medium",
+      "status": "verified",
+      "description": "多张照片带拍立得边框旋转散落，入场动画旋转+缩放，适合古风/旅行/回忆类视频",
+      "tags": ["拍立得", "照片墙", "旋转", "散落", "回忆", "古风"],
+      "api": ["create_polaroid_wall", "create_polaroid_frame", "add_polaroid_photos_to_project"]
     }
   ],
   "categories": {
