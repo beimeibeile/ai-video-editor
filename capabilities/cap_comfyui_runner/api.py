@@ -3393,3 +3393,127 @@ def process_assets_batch(
 
     print(f"\n[素材加工] ✅ 完成: 动态化{result['summary']['motion_success']}, 超分{result['summary']['upscale_success']}, 抠像{result['summary']['matting_success']}")
     return result
+
+
+def multi_shot_smart(
+    shots: List[Dict],
+    output_dir: str,
+    model: str = "ltx25",
+    default_prompt: str = "smooth camera movement, cinematic, high quality",
+    default_negative: str = "blurry, low quality, distorted, static",
+    width: int = None,
+    height: int = None,
+    fps: int = None,
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_shot: int = 600,
+) -> List[Dict]:
+    """
+    通用多镜头批量生成器：支持LTX-2.5和混元视频双模型
+
+    与创意引擎的分镜脚本对接，每个镜头生成一个视频片段。
+    支持每镜头独立的首帧图、提示词、时长、强度。
+
+    Args:
+        shots: 镜头列表，每个元素为字典：
+            {
+                "image": 首帧图片路径（必填）,
+                "prompt": 运动提示词（可选，覆盖default）,
+                "duration": 时长秒数（可选，默认4秒）,
+                "shot_id": 镜头编号（可选，用于命名）,
+            }
+        output_dir: 输出目录
+        model: 视频生成模型 - "ltx25" / "hunyuan"
+        default_prompt: 默认运动提示词
+        default_negative: 默认负向提示词
+        width/height: 分辨率（None则用模型默认）
+        fps: 帧率
+        server_addr: ComfyUI地址
+        timeout_per_shot: 单镜头超时
+
+    Returns:
+        结果列表，每个元素为 {"shot_id", "video_path", "duration", "status", "model"}
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(shots)
+
+    # 模型默认参数
+    if model == "hunyuan":
+        def_w, def_h, def_fps, def_frames = 640, 360, 16, 33
+        def_steps = 20
+        def_cfg = 6.0
+    else:
+        def_w, def_h, def_fps, def_frames = 768, 448, 24, 97
+        def_steps = 20
+        def_cfg = 1.0
+
+    width = width or def_w
+    height = height or def_h
+    fps = fps or def_fps
+
+    print(f"[多镜头生成] 模型={model}, 分辨率={width}x{height}, {total}个镜头")
+
+    for i, shot in enumerate(shots):
+        img_path = shot.get("image", "")
+        if not img_path or not os.path.exists(img_path):
+            print(f"[{i+1}/{total}] ⚠️ 首帧图不存在，跳过: {img_path}")
+            results.append({"shot_id": shot.get("shot_id", i), "video_path": None, "status": "missing_image", "model": model})
+            continue
+
+        shot_id = shot.get("shot_id", f"shot_{i+1:02d}")
+        prompt = shot.get("prompt", default_prompt)
+        duration = shot.get("duration", 4.0)
+
+        # 时长→帧数
+        if model == "ltx25":
+            frames = int(duration * fps)
+            frames = max(17, ((frames - 1) // 8) * 8 + 1)  # LTX要求8n+1
+        else:
+            frames = int(duration * fps)
+            frames = max(17, ((frames - 1) // 4) * 4 + 1)  # 混元要求4n+1
+
+        out_path = os.path.join(output_dir, f"{shot_id}.mp4")
+
+        print(f"[{i+1}/{total}] 镜头{shot_id}: {os.path.basename(img_path)} ({duration}s, {frames}帧)")
+
+        try:
+            if model == "hunyuan":
+                result = hunyuan_i2v(
+                    image_path=img_path,
+                    output_path=out_path,
+                    prompt=prompt,
+                    negative_prompt=default_negative,
+                    width=width, height=height,
+                    frames=frames, fps=fps,
+                    steps=def_steps, cfg=def_cfg,
+                    server_addr=server_addr,
+                    timeout=timeout_per_shot,
+                )
+            else:
+                result = img2video_ltx25(
+                    image_path=img_path,
+                    output_path=out_path,
+                    prompt=prompt,
+                    negative_prompt=default_negative,
+                    width=width, height=height,
+                    frames=frames, fps=fps,
+                    steps=def_steps, cfg=def_cfg,
+                    model="int8_distilled",
+                    server_addr=server_addr,
+                    timeout=timeout_per_shot,
+                )
+            results.append({
+                "shot_id": shot_id,
+                "video_path": result,
+                "duration": frames / fps,
+                "status": "success",
+                "model": model,
+            })
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append({"shot_id": shot_id, "video_path": None, "status": f"error: {e}", "model": model})
+
+    success = sum(1 for r in results if r["status"] == "success")
+    print(f"\n[多镜头生成] 完成: {success}/{total} 成功 (模型: {model})")
+    return results
