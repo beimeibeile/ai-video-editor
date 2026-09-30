@@ -3116,3 +3116,280 @@ def hunyuan_batch_i2v(
     success = sum(1 for r in results if r)
     print(f"\n混元批量I2V完成: {success}/{total} 成功")
     return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 智能模型选择器
+# ═══════════════════════════════════════════════════════════════
+
+def generate_video_smart(
+    output_path: str,
+    prompt: str = "",
+    image_path: str = None,
+    first_image: str = None,
+    last_image: str = None,
+    quality_priority: str = "balanced",
+    motion_control: bool = False,
+    width: int = None,
+    height: int = None,
+    frames: int = None,
+    fps: int = None,
+    steps: int = None,
+    generate_audio: bool = False,
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 600,
+) -> Dict[str, Any]:
+    """
+    智能视频生成：根据输入类型和需求自动选择最佳模型
+
+    模型选择策略：
+    - 文本输入 → LTX-2.5 文生视频（唯一支持T2V的模型）
+    - 单张图片输入：
+      - quality_priority="cinematic" → 混元视频I2V（电影级画质）
+      - motion_control=True → LTX-2.5 I2V（精准动作控制）
+      - 默认 → LTX-2.5 I2V（速度快、稳定）
+    - 首尾帧输入 → LTX-2.5 FLF2V（唯一支持首尾帧过渡）
+
+    Args:
+        output_path: 输出视频路径
+        prompt: 运动/内容描述提示词
+        image_path: 单张输入图片（图生视频）
+        first_image: 首帧图片（FLF2V）
+        last_image: 尾帧图片（FLF2V）
+        quality_priority: 画质优先级 - "speed"/"balanced"/"cinematic"
+        motion_control: 是否需要精准动作控制（快慢变速等）
+        width/height: 分辨率（None则用模型默认）
+        frames: 帧数（None则用模型默认）
+        fps: 帧率
+        steps: 采样步数
+        generate_audio: 是否同时生成音频（仅LTX文生视频支持）
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        {"video_path", "model_used", "params", "status"}
+    """
+    result = {
+        "video_path": None,
+        "model_used": "",
+        "params": {},
+        "status": "pending",
+    }
+
+    # 1. 判断输入类型，选择模型
+    if first_image and last_image:
+        # 首尾帧 → LTX-2.5 FLF2V
+        model_used = "ltx25_flf2v"
+        print(f"[智能选择] 首尾帧输入 → LTX-2.5 FLF2V")
+        kwargs = dict(
+            first_image_path=first_image,
+            last_image_path=last_image,
+            output_path=output_path,
+            prompt=prompt or "smooth transition, cinematic camera movement",
+            width=width or 768,
+            height=height or 448,
+            frames=frames or 97,
+            fps=fps or 24,
+            steps=steps or 20,
+            model="int8_distilled",
+            server_addr=server_addr,
+            timeout=timeout,
+        )
+        video = flf2video_ltx25_v2(**kwargs)
+
+    elif image_path:
+        # 单张图片 → 根据需求选择混元或LTX
+        if quality_priority == "cinematic" and not motion_control:
+            model_used = "hunyuan_i2v"
+            print(f"[智能选择] 单图输入 + 电影级画质 → 混元视频I2V")
+            kwargs = dict(
+                image_path=image_path,
+                output_path=output_path,
+                prompt=prompt or "smooth camera movement, cinematic, high quality",
+                width=width or 640,
+                height=height or 360,
+                frames=frames or 33,
+                fps=fps or 16,
+                steps=steps or 20,
+                cfg=6.0,
+                server_addr=server_addr,
+                timeout=timeout,
+            )
+            video = hunyuan_i2v(**kwargs)
+        else:
+            model_used = "ltx25_i2v"
+            print(f"[智能选择] 单图输入 → LTX-2.5 I2V（动作控制/速度优先）")
+            kwargs = dict(
+                image_path=image_path,
+                output_path=output_path,
+                prompt=prompt or "smooth camera movement, cinematic",
+                width=width or 768,
+                height=height or 448,
+                frames=frames or 97,
+                fps=fps or 24,
+                steps=steps or 20,
+                model="int8_distilled",
+                server_addr=server_addr,
+                timeout=timeout,
+            )
+            video = img2video_ltx25(**kwargs)
+
+    else:
+        # 文本输入 → LTX-2.5 文生视频
+        model_used = "ltx25_t2v"
+        print(f"[智能选择] 文本输入 → LTX-2.5 文生视频")
+        kwargs = dict(
+            prompt=prompt or "a beautiful scene, cinematic",
+            output_path=output_path,
+            width=width or 768,
+            height=height or 448,
+            frames=frames or 97,
+            fps=fps or 24,
+            steps=steps or 20,
+            model="int8_distilled",
+            generate_audio=generate_audio,
+            server_addr=server_addr,
+            timeout=timeout,
+        )
+        video = txt2video_ltx25(**kwargs)
+
+    result["video_path"] = video
+    result["model_used"] = model_used
+    result["params"] = {k: v for k, v in kwargs.items() if k not in ["server_addr", "timeout"]}
+    result["status"] = "success" if video and os.path.exists(video) else "failed"
+    return result
+
+
+def process_assets_batch(
+    image_paths: List[str],
+    output_dir: str,
+    model: str = "ltx25",
+    prompt: str = "slow cinematic zoom, smooth motion",
+    width: int = None,
+    height: int = None,
+    frames: int = None,
+    fps: int = None,
+    steps: int = None,
+    upscale: bool = False,
+    upscale_model: str = "4x-UltraSharp.pth",
+    matting: bool = False,
+    ffmpeg_path: str = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_video: int = 600,
+) -> Dict[str, Any]:
+    """
+    批量素材一键加工器：图片→动态视频→可选超分→可选抠像
+
+    素材加工统一入口，一次调用完成动态化+质量增强+背景去除。
+
+    Args:
+        image_paths: 输入图片路径列表
+        output_dir: 输出目录
+        model: 视频生成模型 - "ltx25" / "hunyuan"
+        prompt: 运动描述提示词
+        width/height: 分辨率（None则用模型默认）
+        frames: 帧数（None则用模型默认）
+        fps: 帧率
+        steps: 采样步数
+        upscale: 是否进行4x超分
+        upscale_model: 超分模型
+        matting: 是否进行视频抠像（输出透明背景WebM）
+        ffmpeg_path: ffmpeg路径
+        server_addr: ComfyUI地址
+        timeout_per_video: 单个视频超时
+
+    Returns:
+        {"videos": [...], "upscaled": [...], "matted": [...], "summary": {...}}
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    motion_dir = os.path.join(output_dir, "motion")
+    os.makedirs(motion_dir, exist_ok=True)
+
+    result = {
+        "videos": [],
+        "upscaled": [],
+        "matted": [],
+        "summary": {"total": len(image_paths), "motion_success": 0, "upscale_success": 0, "matting_success": 0},
+    }
+
+    # Step 1: 批量生成动态视频
+    print(f"[素材加工] Step1: 批量动态化 ({model}, {len(image_paths)}张)")
+    if model == "hunyuan":
+        videos = hunyuan_batch_i2v(
+            image_paths=image_paths,
+            output_dir=motion_dir,
+            prompt=prompt,
+            width=width or 640,
+            height=height or 360,
+            frames=frames or 33,
+            fps=fps or 16,
+            steps=steps or 20,
+            server_addr=server_addr,
+            timeout_per_video=timeout_per_video,
+        )
+    else:
+        videos = batch_img2video_ltx25(
+            image_paths=image_paths,
+            output_dir=motion_dir,
+            prompt=prompt,
+            width=width or 768,
+            height=height or 448,
+            frames=frames or 97,
+            fps=fps or 24,
+            steps=steps or 20,
+            model="int8_distilled",
+            server_addr=server_addr,
+            timeout_per_video=timeout_per_video,
+        )
+
+    result["videos"] = [v for v in videos if v]
+    result["summary"]["motion_success"] = len(result["videos"])
+    print(f"  动态化完成: {result['summary']['motion_success']}/{len(image_paths)}")
+
+    # Step 2: 可选超分
+    if upscale and result["videos"]:
+        print(f"[素材加工] Step2: 4x超分 ({len(result['videos'])}个视频)")
+        upscale_dir = os.path.join(output_dir, "upscaled")
+        os.makedirs(upscale_dir, exist_ok=True)
+        for video in result["videos"]:
+            try:
+                out_path = os.path.join(upscale_dir, os.path.basename(video))
+                up = upscale_video(
+                    video_path=video,
+                    output_path=out_path,
+                    model_name=upscale_model,
+                    ffmpeg_path=ffmpeg_path,
+                    server_addr=server_addr,
+                    timeout_per_frame=60,
+                )
+                result["upscaled"].append(up)
+                result["summary"]["upscale_success"] += 1
+            except Exception as e:
+                print(f"  ⚠️ 超分失败: {os.path.basename(video)}: {e}")
+        print(f"  超分完成: {result['summary']['upscale_success']}/{len(result['videos'])}")
+
+    # Step 3: 可选抠像
+    if matting and result["videos"]:
+        print(f"[素材加工] Step3: 视频抠像 ({len(result['videos'])}个视频)")
+        matting_dir = os.path.join(output_dir, "matted")
+        os.makedirs(matting_dir, exist_ok=True)
+        for video in result["videos"]:
+            try:
+                base = os.path.splitext(os.path.basename(video))[0]
+                out_dir = os.path.join(matting_dir, base)
+                m = matting_video(
+                    video_path=video,
+                    output_dir=out_dir,
+                    model_name="BiRefNet-general",
+                    ffmpeg_path=ffmpeg_path,
+                    server_addr=server_addr,
+                    timeout_per_frame=60,
+                )
+                result["matted"].append(m)
+                result["summary"]["matting_success"] += 1
+            except Exception as e:
+                print(f"  ⚠️ 抠像失败: {os.path.basename(video)}: {e}")
+        print(f"  抠像完成: {result['summary']['matting_success']}/{len(result['videos'])}")
+
+    print(f"\n[素材加工] ✅ 完成: 动态化{result['summary']['motion_success']}, 超分{result['summary']['upscale_success']}, 抠像{result['summary']['matting_success']}")
+    return result
