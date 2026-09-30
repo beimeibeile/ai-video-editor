@@ -49,6 +49,18 @@
       "description": "人物照片+边框依次入场，名字标签带颜色区分，4种预设风格",
       "tags": ["人物介绍", "卡片", "角色", "入场", "名单"],
       "api": ["create_character_intro", "create_framed_portrait", "add_card_entrance_animation", "add_character_intro_to_project"]
+    },
+    {
+      "id": "text_layout",
+      "name": "文字排版预设",
+      "category": "text",
+      "module": "scripts/text_layout.py",
+      "source": "抖音教程-文字排版常用技巧",
+      "difficulty": "easy",
+      "status": "verified",
+      "description": "多轨道文字叠加排版，5种预设（竖排错落/横排标题/斜向层叠/左对齐堆叠/居中聚焦）",
+      "tags": ["文字排版", "竖排", "错落", "标题", "多轨道"],
+      "api": ["add_text_layout", "create_text_layout_demo"]
     }
   ],
   "categories": {
