@@ -308,9 +308,17 @@ class E2EPipeline:
             print("  ⚠️  质量门框架不可用，跳过检查")
             return None
 
-        # 转换为质量门数据格式
+        # 转换为质量门数据格式（传递完整分镜信息）
         qg_data = {
-            "shots": [{"duration": s.duration} for s in sb.shots],
+            "total_duration": sb.total_duration,
+            "shots": [{
+                "duration": s.duration,
+                "shot_size": s.shot_size,
+                "camera_move": s.camera_move,
+                "emotion": s.emotion,
+                "subtitle": s.subtitle,
+                "transition_in": s.transition_in,
+            } for s in sb.shots],
             "beats": [],  # 当前分镜无节拍概念
             "hooks": [],
         }

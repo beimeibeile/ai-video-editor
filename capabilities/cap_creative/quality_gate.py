@@ -371,6 +371,98 @@ def gate_storyboard_beat_coverage(data: Dict[str, Any]) -> GateResult:
     return GateResult.pass_("S003", "节拍认领", f"全部{len(beats)}个节拍已认领")
 
 
+def gate_storyboard_shot_size_diversity(data: Dict[str, Any]) -> GateResult:
+    """S004: 景别多样性（不能全是同一种景别，至少2种）"""
+    shots = data.get("shots", [])
+    if not shots:
+        return GateResult.fail("S004", "景别多样性", "无镜头数据")
+    sizes = set(s.get("shot_size", "") for s in shots if s.get("shot_size"))
+    if len(sizes) < 2:
+        return GateResult.warn("S004", "景别多样性", f"仅{len(sizes)}种景别，建议至少2种",
+                               detail=f"当前景别: {', '.join(sizes) if sizes else '无'}")
+    return GateResult.pass_("S004", "景别多样性", f"{len(sizes)}种景别: {', '.join(sizes)}")
+
+
+def gate_storyboard_camera_move_diversity(data: Dict[str, Any]) -> GateResult:
+    """S005: 运镜多样性（不能全是固定镜头，动态镜头占比≥30%）"""
+    shots = data.get("shots", [])
+    if not shots:
+        return GateResult.fail("S005", "运镜多样性", "无镜头数据")
+    static_moves = {"固定", "static", "fixed", ""}
+    dynamic_count = sum(1 for s in shots if s.get("camera_move", "") not in static_moves)
+    ratio = dynamic_count / len(shots)
+    if ratio < 0.3:
+        return GateResult.warn("S005", "运镜多样性", f"动态镜头仅{ratio:.0%}，建议≥30%",
+                               detail=f"动态{dynamic_count}/{len(shots)}")
+    return GateResult.pass_("S005", "运镜多样性", f"动态镜头{ratio:.0%} ({dynamic_count}/{len(shots)})")
+
+
+def gate_storyboard_emotion_rhythm(data: Dict[str, Any]) -> GateResult:
+    """S006: 情绪节奏（应包含钩子→展开→高潮→收束的节奏变化）"""
+    shots = data.get("shots", [])
+    if not shots:
+        return GateResult.fail("S006", "情绪节奏", "无镜头数据")
+    emotions = set(s.get("emotion", "") for s in shots if s.get("emotion"))
+    required = {"钩子", "高潮", "收束"}
+    missing = required - emotions
+    if missing:
+        return GateResult.warn("S006", "情绪节奏", f"缺少关键情绪: {', '.join(missing)}",
+                               detail=f"当前情绪: {', '.join(emotions) if emotions else '无'}")
+    return GateResult.pass_("S006", "情绪节奏", f"情绪完整: {', '.join(sorted(emotions))}")
+
+
+def gate_storyboard_first_shot_closeup(data: Dict[str, Any]) -> GateResult:
+    """S007: 首镜头景别（短视频首镜头建议特写/近景，增强代入感）"""
+    shots = data.get("shots", [])
+    if not shots:
+        return GateResult.fail("S007", "首镜头景别", "无镜头数据")
+    first_size = shots[0].get("shot_size", "")
+    closeup_sizes = {"特写", "近景", "closeup", "close_up", "medium_close"}
+    if first_size not in closeup_sizes:
+        return GateResult.warn("S007", "首镜头景别", f"首镜头为'{first_size}'，建议特写/近景",
+                               detail="短视频首镜头用近景可增强代入感")
+    return GateResult.pass_("S007", "首镜头景别", f"首镜头为'{first_size}'，符合短视频习惯")
+
+
+def gate_storyboard_duration_sum(data: Dict[str, Any]) -> GateResult:
+    """S008: 时长合计一致（各镜头时长合计与总时长误差≤0.5秒）"""
+    shots = data.get("shots", [])
+    total = data.get("total_duration", 0)
+    if not shots or total <= 0:
+        return GateResult.skip("S008", "时长合计", "无总时长数据")
+    shot_sum = sum(s.get("duration", 0) for s in shots)
+    diff = abs(shot_sum - total)
+    if diff > 0.5:
+        return GateResult.fail("S008", "时长合计", f"镜头合计{shot_sum:.1f}s与总时长{total:.1f}s差{diff:.1f}s",
+                               detail="误差超过0.5秒阈值")
+    return GateResult.pass_("S008", "时长合计", f"合计{shot_sum:.1f}s≈总时长{total:.1f}s（差{diff:.2f}s）")
+
+
+def gate_storyboard_subtitle_nonempty(data: Dict[str, Any]) -> GateResult:
+    """S009: 字幕非空（每个镜头应有字幕，空字幕镜头≤20%）"""
+    shots = data.get("shots", [])
+    if not shots:
+        return GateResult.fail("S009", "字幕覆盖", "无镜头数据")
+    empty_count = sum(1 for s in shots if not s.get("subtitle", "").strip())
+    ratio = empty_count / len(shots)
+    if ratio > 0.2:
+        return GateResult.warn("S009", "字幕覆盖", f"{empty_count}个镜头无字幕（{ratio:.0%}）",
+                               detail="建议空字幕镜头≤20%")
+    return GateResult.pass_("S009", "字幕覆盖", f"字幕完整{len(shots)-empty_count}/{len(shots)}")
+
+
+def gate_storyboard_first_shot_no_transition(data: Dict[str, Any]) -> GateResult:
+    """S010: 首镜头转场（首镜头不应有入场转场，因为前面没有画面）"""
+    shots = data.get("shots", [])
+    if not shots:
+        return GateResult.fail("S010", "首镜头转场", "无镜头数据")
+    first_trans = shots[0].get("transition_in", "无")
+    if first_trans not in ("无", "", "none", "cut"):
+        return GateResult.warn("S010", "首镜头转场", f"首镜头入场转场为'{first_trans}'，建议为'无'",
+                               detail="首镜头前面没有画面，入场转场无意义")
+    return GateResult.pass_("S010", "首镜头转场", "首镜头无入场转场，正确")
+
+
 # ──────────────────────────────────────────────
 # 全局注册表实例
 # ──────────────────────────────────────────────
@@ -393,6 +485,13 @@ _global_registry.register_many("storyboard", [
     gate_storyboard_shot_duration,
     gate_storyboard_hook_first,
     gate_storyboard_beat_coverage,
+    gate_storyboard_shot_size_diversity,
+    gate_storyboard_camera_move_diversity,
+    gate_storyboard_emotion_rhythm,
+    gate_storyboard_first_shot_closeup,
+    gate_storyboard_duration_sum,
+    gate_storyboard_subtitle_nonempty,
+    gate_storyboard_first_shot_no_transition,
 ])
 
 
