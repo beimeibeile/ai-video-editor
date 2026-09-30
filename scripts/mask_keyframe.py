@@ -24,9 +24,11 @@ import shutil
 from typing import Optional, List, Tuple, Dict, Any, Literal
 
 # 蒙版关键帧属性类型映射（注意Postion拼写）
+# KFTypeMaskSizeX=剪映面板"长"=人眼视角宽(水平)，全屏=canvas_w/canvas_h
+# KFTypeMaskSizeY=剪映面板"宽"=人眼视角高(垂直)，全屏=1.0
 MASK_KF_TYPES = {
-    "size_x": "KFTypeMaskSizeX",       # 长度(垂直, 比例)
-    "size_y": "KFTypeMaskSizeY",       # 宽度(水平, 比例)
+    "size_x": "KFTypeMaskSizeX",       # 水平宽度(比例)
+    "size_y": "KFTypeMaskSizeY",       # 垂直高度(比例)
     "position_x": "KFTypeMaskPostionX",  # 水平位置(剪映拼写错误Postion)
     "position_y": "KFTypeMaskPostionY",  # 垂直位置
     "rotation": "KFTypeMaskRotation",    # 旋转角度
@@ -119,56 +121,61 @@ def apply_mask_expand(
     """
     end_us = start_us + duration_us
 
+    # 注意：KFTypeMaskSizeX=水平宽度，全屏=1.0
+    #       KFTypeMaskSizeY=垂直高度，全屏=1.0
+    full_w = 1.0  # 水平全屏
+    full_h = 1.0  # 垂直全屏
+
     if direction in ("left", "right"):
-        # 横向展开：宽度(size_y)从窄→全屏
-        apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
-        apply_mask_keyframe(project, segment, "size_y", end_us, canvas_w / canvas_h, curve)
-        # 长度(size_x)保持全屏
-        apply_mask_keyframe(project, segment, "size_x", start_us, 1.0, curve)
-        apply_mask_keyframe(project, segment, "size_x", end_us, 1.0, curve)
-        # 位置调整
+        # 横向展开：水平宽度(size_x)从0→全屏，垂直高度(size_y)保持全屏
+        apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
+        apply_mask_keyframe(project, segment, "size_y", start_us, full_h, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
+        # 位置：边缘固定，中心从边缘→中心
+        # position_x单位：半个画布宽，-1=左边缘，0=中心，1=右边缘
         if direction == "left":
-            apply_mask_keyframe(project, segment, "position_x", start_us, -0.5, curve)
+            apply_mask_keyframe(project, segment, "position_x", start_us, -1.0, curve)
             apply_mask_keyframe(project, segment, "position_x", end_us, 0.0, curve)
         else:
-            apply_mask_keyframe(project, segment, "position_x", start_us, 0.5, curve)
+            apply_mask_keyframe(project, segment, "position_x", start_us, 1.0, curve)
             apply_mask_keyframe(project, segment, "position_x", end_us, 0.0, curve)
 
     elif direction in ("top", "bottom"):
-        # 纵向展开：长度(size_x)从窄→全屏
-        apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
-        apply_mask_keyframe(project, segment, "size_x", end_us, 1.0, curve)
-        # 宽度(size_y)保持全屏
-        apply_mask_keyframe(project, segment, "size_y", start_us, canvas_w / canvas_h, curve)
-        apply_mask_keyframe(project, segment, "size_y", end_us, canvas_w / canvas_h, curve)
-        # 位置调整
+        # 纵向展开：垂直高度(size_y)从0→全屏，水平宽度(size_x)保持全屏
+        apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
+        apply_mask_keyframe(project, segment, "size_x", start_us, full_w, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
+        # 位置：边缘固定，中心从边缘→中心
+        # position_y单位：半个画布高，-1=上边缘，0=中心，1=下边缘
         if direction == "top":
-            apply_mask_keyframe(project, segment, "position_y", start_us, -0.5, curve)
+            apply_mask_keyframe(project, segment, "position_y", start_us, -1.0, curve)
             apply_mask_keyframe(project, segment, "position_y", end_us, 0.0, curve)
         else:
-            apply_mask_keyframe(project, segment, "position_y", start_us, 0.5, curve)
+            apply_mask_keyframe(project, segment, "position_y", start_us, 1.0, curve)
             apply_mask_keyframe(project, segment, "position_y", end_us, 0.0, curve)
 
     elif direction == "center":
         # 中心展开：宽高同时从0→全屏
         apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
-        apply_mask_keyframe(project, segment, "size_x", end_us, 1.0, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
         apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
-        apply_mask_keyframe(project, segment, "size_y", end_us, canvas_w / canvas_h, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
 
     elif direction == "horizontal":
         # 水平双向展开：宽度从0→全屏，中心固定
-        apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
-        apply_mask_keyframe(project, segment, "size_y", end_us, canvas_w / canvas_h, curve)
-        apply_mask_keyframe(project, segment, "size_x", start_us, 1.0, curve)
-        apply_mask_keyframe(project, segment, "size_x", end_us, 1.0, curve)
+        apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
+        apply_mask_keyframe(project, segment, "size_y", start_us, full_h, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
 
     elif direction == "vertical":
-        # 垂直双向展开：长度从0→全屏，中心固定
-        apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
-        apply_mask_keyframe(project, segment, "size_x", end_us, 1.0, curve)
-        apply_mask_keyframe(project, segment, "size_y", start_us, canvas_w / canvas_h, curve)
-        apply_mask_keyframe(project, segment, "size_y", end_us, canvas_w / canvas_h, curve)
+        # 垂直双向展开：高度从0→全屏，中心固定
+        apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
+        apply_mask_keyframe(project, segment, "size_x", start_us, full_w, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
 
     return True
 

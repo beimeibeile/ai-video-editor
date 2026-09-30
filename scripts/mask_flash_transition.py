@@ -83,8 +83,8 @@ def create_solid_color_image(
 def add_rect_mask_to_segment(segment, canvas_w: int = 1080, canvas_h: int = 1920):
     """
     给片段添加矩形蒙版（全屏初始状态）
-    pyJianYingDraft的Mask类生成的height是像素值，
-    剪映期望比例值，需要在保存时转换。
+    pyJianYingDraft的Mask类：center_x/y以半素材宽/高为单位，中心=0,0
+    size=蒙版高度(像素)，rect_width=蒙版宽度(像素)
 
     Args:
         segment: VideoSegment实例
@@ -94,10 +94,10 @@ def add_rect_mask_to_segment(segment, canvas_w: int = 1080, canvas_h: int = 1920
     try:
         segment.add_mask(
             draft.MaskType.矩形,
-            center_x=canvas_w / 2,
-            center_y=canvas_h / 2,
-            size=canvas_h,
-            rect_width=canvas_w,
+            center_x=0.0,   # 画面中心（半素材宽为单位）
+            center_y=0.0,   # 画面中心（半素材高为单位）
+            size=canvas_h,  # 蒙版高度=画布高度
+            rect_width=canvas_w,  # 蒙版宽度=画布宽度
             rotation=0,
             feather=0,
             round_corner=0
