@@ -3624,3 +3624,117 @@ def check_vram_available(server_addr: str = "127.0.0.1:8188", min_free_gb: float
     ok = free >= min_free_gb
     print(f"[显存检查] 空闲{free}GB / 需求{min_free_gb}GB → {'✅ 满足' if ok else '❌ 不足'}")
     return ok
+
+
+def batch_txt2video_ltx25(
+    prompts: List[str],
+    output_dir: str,
+    width: int = 768,
+    height: int = 448,
+    frames: int = 97,
+    fps: float = 24.0,
+    steps: int = 20,
+    model: str = "int8_distilled",
+    negative_prompt: str = "blurry, low quality, distorted, ugly, watermark, text",
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_video: int = 600,
+) -> List[str]:
+    """
+    LTX-2.5 批量文生视频：多个提示词→多个视频（串行执行避免显存溢出）
+
+    Args:
+        prompts: 提示词列表
+        output_dir: 输出目录
+        width/height: 分辨率
+        frames: 帧数
+        fps: 帧率
+        steps: 采样步数
+        model: 模型模式
+        negative_prompt: 负向提示词
+        server_addr: ComfyUI地址
+        timeout_per_video: 单个视频超时
+
+    Returns:
+        输出视频路径列表（失败的为None）
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(prompts)
+
+    for i, prompt in enumerate(prompts):
+        out_path = os.path.join(output_dir, f"t2v_{i+1:03d}.mp4")
+        print(f"[{i+1}/{total}] 文生视频: {prompt[:50]}...")
+
+        try:
+            result = txt2video_ltx25(
+                prompt=prompt,
+                output_path=out_path,
+                width=width, height=height,
+                frames=frames, fps=fps,
+                steps=steps, model=model,
+                negative_prompt=negative_prompt,
+                server_addr=server_addr,
+                timeout=timeout_per_video,
+            )
+            results.append(result)
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append(None)
+
+    success = sum(1 for r in results if r)
+    print(f"\n批量文生视频完成: {success}/{total} 成功")
+    return results
+
+
+def batch_txt2img_zimage(
+    prompts: List[str],
+    output_dir: str,
+    width: int = 1024,
+    height: int = 1024,
+    steps: int = 4,
+    cfg: float = 1.0,
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_image: int = 120,
+) -> List[str]:
+    """
+    Z-Image-Turbo 批量文生图：多个提示词→多张图片（极速生成）
+
+    Args:
+        prompts: 提示词列表
+        output_dir: 输出目录
+        width/height: 分辨率
+        steps: 采样步数（Turbo模型4步即可）
+        cfg: CFG值
+        server_addr: ComfyUI地址
+        timeout_per_image: 单张图片超时
+
+    Returns:
+        输出图片路径列表（失败的为None）
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(prompts)
+
+    for i, prompt in enumerate(prompts):
+        out_path = os.path.join(output_dir, f"t2i_{i+1:03d}.png")
+        print(f"[{i+1}/{total}] 文生图: {prompt[:50]}...")
+
+        try:
+            result = txt2img_zimage(
+                prompt=prompt,
+                output_path=out_path,
+                width=width, height=height,
+                steps=steps, cfg=cfg,
+                server_addr=server_addr,
+                timeout=timeout_per_image,
+            )
+            results.append(result)
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append(None)
+
+    success = sum(1 for r in results if r)
+    print(f"\n批量文生图完成: {success}/{total} 成功")
+    return results
