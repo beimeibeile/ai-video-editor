@@ -278,6 +278,28 @@ class E2EPipeline:
             glow_outline_shots=glow_outline_shots,
         )
 
+        # ==================== 步骤3.5：剪辑质量门检查 ====================
+        edit_report = None
+        edit_report_html = None
+        draft_path = result.get("draft_path", "")
+        if draft_path and os.path.exists(draft_path):
+            edit_report = self._run_edit_quality_gates(draft_path, sb)
+            if edit_report:
+                # 生成 HTML 报告
+                try:
+                    from cap_creative.report_renderer import render_html_report
+                    edit_data = edit_report.get('source_data', {})
+                    edit_report_html = os.path.join(self.work_dir, f"{project_name}_edit_report.html")
+                    render_html_report(
+                        edit_report,
+                        title=f"{project_name} - 剪辑质量门报告",
+                        category="edit",
+                        source_data=edit_data,
+                        output_path=edit_report_html,
+                    )
+                except Exception as e:
+                    print(f"  ⚠️  HTML报告生成失败: {e}")
+
         print(f"\n[4/4] {'片头已集成' if add_intro else '跳过片头'}")
 
         print(f"\n{'='*60}")
@@ -291,6 +313,9 @@ class E2EPipeline:
             "storyboard_path": sb_path,
             "video_clips": video_clips,
             "work_dir": self.work_dir,
+            "draft_path": draft_path,
+            "edit_quality_gate": edit_report,
+            "edit_report_html": edit_report_html,
         }
 
     def _run_storyboard_quality_gates(self, sb: Storyboard) -> Optional[Dict]:
@@ -344,6 +369,56 @@ class E2EPipeline:
             pass
 
         return report.to_dict()
+
+    def _run_edit_quality_gates(self, draft_path: str, sb: Storyboard) -> Optional[Dict]:
+        """运行剪辑质量门检查
+
+        从剪映工程提取数据，运行 edit 类别检查。
+        返回质量门报告字典，失败时返回 None。
+
+        检查项：
+        - E001: 总时长不超过上限
+        - E002: 片段数量合理
+        - E003: 转场对齐
+        - E004: 字幕覆盖率
+        - E005: 画幅一致
+        - E006: 帧对齐
+        - E007: 黑屏检测
+        """
+        try:
+            from cap_creative import validate as qg_validate
+            from cap_creative.draft_extractor import extract_draft_data
+        except ImportError:
+            print("  ⚠️  质量门框架不可用，跳过剪辑检查")
+            return None
+
+        try:
+            # 从剪映工程提取数据
+            edit_data = extract_draft_data(draft_path)
+            # 用分镜的总时长覆盖默认上限
+            edit_data['max_duration'] = sb.total_duration + 5.0  # 允许5秒误差
+
+            report = qg_validate("edit", edit_data)
+            print(f"\n  📋 剪辑质量门: {report.passed}/{report.total} 通过")
+            for r in report.results:
+                if r.status.value != "pass":
+                    print(f"    {r}")
+
+            # 保存质量门报告
+            qg_path = os.path.join(self.work_dir, f"{sb.theme}_edit_quality_gate.json")
+            try:
+                with open(qg_path, 'w', encoding='utf-8') as f:
+                    f.write(report.to_json())
+            except Exception:
+                pass
+
+            result = report.to_dict()
+            result['source_data'] = edit_data
+            return result
+
+        except Exception as e:
+            print(f"  ⚠️  剪辑质量门检查失败: {e}")
+            return None
 
     def _prepare_materials(self, sb: Storyboard, input_images: List[str],
                            width: int, height: int, use_ltx: bool,
@@ -1073,7 +1148,8 @@ class E2EPipeline:
             result = save_with_mix_modes(project)
         else:
             result = project.save()
-        return {"status": "success", "segments": len(segments), "transitions": trans_count}
+        draft_path = os.path.join(getattr(project, 'root', ''), getattr(project, 'name', project_name))
+        return {"status": "success", "segments": len(segments), "transitions": trans_count, "draft_path": draft_path}
 
 
 # ==================== 便捷函数 ====================
