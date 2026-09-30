@@ -59,41 +59,43 @@ def scan_all_drafts(drafts_root: str = None) -> Dict[str, Dict[str, Any]]:
     扫描所有草稿，提取混合模式映射表
 
     Args:
-        drafts_root: 草稿根目录
+        drafts_root: 草稿根目录（单个路径或None自动扫描所有候选目录）
 
     Returns:
         混合模式映射表 {name: {effect_id, resource_id, path}}
     """
+    all_modes = {}
+
     if drafts_root is None:
+        # 自动扫描所有候选目录
         candidates = [
             r"C:\Users\Administrator\AppData\Local\JianyingPro\User Data\Projects\com.lveditor.draft",
             r"D:\JianyingProDrafts\JianyingPro Drafts",
         ]
-        for path in candidates:
-            if os.path.exists(path):
-                drafts_root = path
-                break
+        roots_to_scan = [p for p in candidates if os.path.exists(p)]
+    else:
+        roots_to_scan = [drafts_root]
 
-    if not drafts_root or not os.path.exists(drafts_root):
-        print(f"❌ 草稿目录不存在: {drafts_root}")
+    if not roots_to_scan:
+        print(f"❌ 没有找到草稿目录")
         return {}
 
-    print(f"扫描草稿目录: {drafts_root}")
+    for root in roots_to_scan:
+        print(f"扫描草稿目录: {root}")
+        draft_dirs = [d for d in glob.glob(os.path.join(root, "*")) if os.path.isdir(d)]
 
-    all_modes = {}
-    draft_dirs = [d for d in glob.glob(os.path.join(drafts_root, "*")) if os.path.isdir(d)]
-
-    for draft_dir in draft_dirs:
-        modes = scan_draft_for_mix_modes(draft_dir)
-        for mode in modes:
-            name = mode["name"]
-            if name and name not in all_modes:
-                all_modes[name] = {
-                    "effect_id": mode["effect_id"],
-                    "resource_id": mode["resource_id"],
-                    "path": mode["path"],
-                    "source_draft": mode["draft"],
-                }
+        for draft_dir in draft_dirs:
+            modes = scan_draft_for_mix_modes(draft_dir)
+            for mode in modes:
+                name = mode["name"]
+                if name and name not in all_modes:
+                    all_modes[name] = {
+                        "effect_id": mode["effect_id"],
+                        "resource_id": mode["resource_id"],
+                        "path": mode["path"],
+                        "source_draft": mode["draft"],
+                    }
+                    print(f"  ✅ 发现混合模式: {name} (effect_id={mode['effect_id']})")
                 print(f"  ✅ 发现混合模式: {name} (effect_id={mode['effect_id']})")
 
     print(f"\n共发现 {len(all_modes)} 种混合模式")

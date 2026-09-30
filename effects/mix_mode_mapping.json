@@ -4,5 +4,59 @@
     "resource_id": "6758325895519277582",
     "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\8001e07eefc5d8b69572b977ca14bef9",
     "source_draft": "GlowOutline_Test"
+  },
+  "滤色": {
+    "effect_id": "871339",
+    "resource_id": "6758325170760323597",
+    "path": "C:\\Users\\Administrator\\AppData\\Local\\JianyingPro\\Apps\\4.9.0.10872\\Resources\\MixMode\\d9c1d4ca7ab91df4f48d12b339f2da88",
+    "source_draft": "11月24日"
+  },
+  "变亮": {
+    "effect_id": "871341",
+    "resource_id": "6758324919789949453",
+    "path": "C:/Users/Administrator/Downloads/JianyingPro_5.9（windows版本）/5.9.0.11632/Resources/MixMode/b0e90c43dc266a317b05b0cd3ca5bfba",
+    "source_draft": "9月30日"
+  },
+  "变暗": {
+    "effect_id": "871342",
+    "resource_id": "6758324839670354445",
+    "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\420c92a2b480dc8e402d9269a5f83515",
+    "source_draft": "变暗"
+  },
+  "叠加": {
+    "effect_id": "871340",
+    "resource_id": "6758324989931295240",
+    "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\e6a48579910dfe831ba53a6acc6737f9",
+    "source_draft": "叠加"
+  },
+  "强光": {
+    "effect_id": "871338",
+    "resource_id": "6758325264670790152",
+    "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\840ca85a1a33e6fc3ea78bbdb2db8f60",
+    "source_draft": "强光"
+  },
+  "柔光": {
+    "effect_id": "871337",
+    "resource_id": "6758325439212556814",
+    "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\042aa15b71b1e17bca0bd928eec6fba7",
+    "source_draft": "柔光"
+  },
+  "线性加深": {
+    "effect_id": "871336",
+    "resource_id": "6758325619253056013",
+    "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\655f3590dd07ece41209fb312348ffe9",
+    "source_draft": "线性加深"
+  },
+  "颜色减淡": {
+    "effect_id": "871334",
+    "resource_id": "6758325800031752712",
+    "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\f979dd10def50fad3ffb77c7f0df3db7",
+    "source_draft": "颜色减淡"
+  },
+  "颜色加深": {
+    "effect_id": "871335",
+    "resource_id": "6758325724848853518",
+    "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\Resources\\MixMode\\b76087cda4833f553cf09e82fb81c463",
+    "source_draft": "颜色加深"
   }
 }

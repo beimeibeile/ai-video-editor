@@ -26,6 +26,60 @@ MIX_MODES = {
         "resource_id": "6758325895519277582",
         "path_hash": "8001e07eefc5d8b69572b977ca14bef9",
     },
+    "screen": {
+        "name": "滤色",
+        "effect_id": "871339",
+        "resource_id": "6758325170760323597",
+        "path_hash": "d9c1d4ca7ab91df4f48d12b339f2da88",
+    },
+    "lighten": {
+        "name": "变亮",
+        "effect_id": "871341",
+        "resource_id": "6758324919789949453",
+        "path_hash": "b0e90c43dc266a317b05b0cd3ca5bfba",
+    },
+    "darken": {
+        "name": "变暗",
+        "effect_id": "871342",
+        "resource_id": "6758324839670354445",
+        "path_hash": "420c92a2b480dc8e402d9269a5f83515",
+    },
+    "overlay": {
+        "name": "叠加",
+        "effect_id": "871340",
+        "resource_id": "6758324989931295240",
+        "path_hash": "e6a48579910dfe831ba53a6acc6737f9",
+    },
+    "hard_light": {
+        "name": "强光",
+        "effect_id": "871338",
+        "resource_id": "6758325264670790152",
+        "path_hash": "840ca85a1a33e6fc3ea78bbdb2db8f60",
+    },
+    "soft_light": {
+        "name": "柔光",
+        "effect_id": "871337",
+        "resource_id": "6758325439212556814",
+        "path_hash": "042aa15b71b1e17bca0bd928eec6fba7",
+    },
+    "线性加深": {
+        "name": "线性加深",
+        "effect_id": "871336",
+        "resource_id": "6758325619253056013",
+        "path_hash": "655f3590dd07ece41209fb312348ffe9",
+    },
+    "color_dodge": {
+        "name": "颜色减淡",
+        "effect_id": "871334",
+        "resource_id": "6758325800031752712",
+        "path_hash": "f979dd10def50fad3ffb77c7f0df3db7",
+    },
+    "color_burn": {
+        "name": "颜色加深",
+        "effect_id": "871335",
+        "resource_id": "6758325724848853518",
+        "path_hash": "b76087cda4833f553cf09e82fb81c463",
+    },
 }
 
 
