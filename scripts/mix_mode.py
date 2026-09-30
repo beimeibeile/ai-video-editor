@@ -26,17 +26,6 @@ MIX_MODES = {
         "resource_id": "6758325895519277582",
         "path_hash": "8001e07eefc5d8b69572b977ca14bef9",
     },
-    # 以下模式待逆向补充
-    "screen": {"name": "滤色", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "overlay": {"name": "叠加", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "darken": {"name": "变暗", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "lighten": {"name": "变亮", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "color_dodge": {"name": "颜色减淡", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "color_burn": {"name": "颜色加深", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "hard_light": {"name": "强光", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "soft_light": {"name": "柔光", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "difference": {"name": "差值", "effect_id": "", "resource_id": "", "path_hash": ""},
-    "exclusion": {"name": "排除", "effect_id": "", "resource_id": "", "path_hash": ""},
 }
 
 
