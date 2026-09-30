@@ -311,6 +311,8 @@ class E2EPipeline:
             "project_name": project_name,
             "storyboard": sb.to_dict(),
             "storyboard_path": sb_path,
+            "storyboard_quality_gate": qg_report,
+            "storyboard_report_html": os.path.join(self.work_dir, f"{sb.theme}_storyboard_report.html") if qg_report else None,
             "video_clips": video_clips,
             "work_dir": self.work_dir,
             "draft_path": draft_path,
@@ -360,7 +362,7 @@ class E2EPipeline:
             if r.status.value != "pass":
                 print(f"    {r}")
 
-        # 保存质量门报告
+        # 保存质量门报告(JSON)
         qg_path = os.path.join(self.work_dir, f"{sb.theme}_quality_gate.json")
         try:
             with open(qg_path, 'w', encoding='utf-8') as f:
@@ -368,7 +370,23 @@ class E2EPipeline:
         except Exception:
             pass
 
-        return report.to_dict()
+        # 生成HTML报告
+        report_dict = report.to_dict()
+        html_path = os.path.join(self.work_dir, f"{sb.theme}_storyboard_report.html")
+        try:
+            from cap_creative.report_renderer import render_html_report
+            render_html_report(
+                report_dict,
+                title=f"{sb.theme} - 分镜质量门报告",
+                category="storyboard",
+                source_data=qg_data,
+                output_path=html_path,
+            )
+            print(f"  [报告] 分镜HTML已生成: {html_path}")
+        except Exception as e:
+            print(f"  ⚠️  分镜HTML报告生成失败: {e}")
+
+        return report_dict
 
     def _run_edit_quality_gates(self, draft_path: str, sb: Storyboard) -> Optional[Dict]:
         """运行剪辑质量门检查

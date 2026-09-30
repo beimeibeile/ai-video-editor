@@ -445,17 +445,281 @@ COLOR_PRESETS = {
 }
 
 
+# ──────────────────────────────────────────────
+# v4: 四角汇聚快闪（双轴向对角线展开+旋转）
+# ──────────────────────────────────────────────
+
+def create_mask_flash_v4(
+    project_name: str,
+    colors: List[Tuple[int, int, int]] = None,
+    width: int = 1080,
+    height: int = 1920,
+    block_duration: float = 1.2,
+    stagger_delay: float = 0.08,
+    expand_duration: float = 0.4,
+    mode: str = "diagonal",  # diagonal / rotate / mixed
+    output_dir: str = None,
+) -> Dict[str, Any]:
+    """
+    创建v4蒙版快闪工程：四角汇聚+双轴向展开
+
+    4个色块从四个角落同时/错峰向中心对角线展开，
+    最终汇聚成完整画面。比单轴向展开更有视觉冲击力。
+
+    Args:
+        project_name: 工程名
+        colors: 4个颜色，None则用cyberpunk预设
+        width/height: 画布尺寸
+        block_duration: 每个色块持续时长
+        stagger_delay: 相邻色块起始时间差
+        expand_duration: 展开动画时长
+        mode: diagonal(对角线展开) / rotate(旋转展开) / mixed(混合)
+        output_dir: 素材输出目录
+
+    Returns:
+        工程信息字典
+    """
+    if colors is None:
+        colors = COLOR_PRESETS["cyberpunk"]
+    colors = colors[:4]  # 最多4个色块
+
+    if output_dir is None:
+        output_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "mask_flash_assets"
+        )
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 四角展开方向映射
+    corner_directions = ["diagonal_tl", "diagonal_tr", "diagonal_bl", "diagonal_br"]
+    if mode == "rotate":
+        corner_directions = ["rotate", "rotate", "rotate", "rotate"]
+    elif mode == "mixed":
+        corner_directions = ["diagonal_tl", "rotate", "diagonal_br", "center_rotate"]
+
+    # 1. 生成纯色素材
+    print(f"[1/4] 生成 {len(colors)} 个纯色素材")
+    color_images = []
+    for i, color in enumerate(colors):
+        img_path = os.path.join(output_dir, f"v4_block_{i}.png")
+        create_solid_color_image(color, width, height, img_path)
+        color_images.append(img_path)
+
+    # 2. 创建工程
+    print(f"[2/4] 创建工程: {project_name} ({width}x{height}, mode={mode})")
+    project = JyProject(project_name, width=width, height=height, overwrite=True)
+
+    # 3. 添加画中画轨道 + 蒙版 + 双轴向展开关键帧
+    print(f"[3/4] 添加 {len(colors)} 个画中画轨道 + 四角汇聚展开")
+    segments = []
+    total_duration = (len(colors) - 1) * stagger_delay + block_duration
+    expand_us = int(expand_duration * 1e6)
+
+    for i, (img_path, direction) in enumerate(zip(color_images, corner_directions)):
+        start_time = i * stagger_delay
+        track_name = f"V4Block_{i}"
+
+        seg = project.add_media_safe(
+            img_path,
+            start_time=f"{start_time}s",
+            duration=f"{block_duration}s",
+            track_name=track_name
+        )
+
+        if seg:
+            # 添加矩形蒙版
+            add_rect_mask_to_segment(seg, width, height)
+
+            # 添加蒙版展开关键帧（双轴向对角线展开）
+            if _MASK_KF_AVAILABLE:
+                apply_mask_expand(
+                    project, seg,
+                    start_us=0,
+                    duration_us=expand_us,
+                    direction=direction,
+                    canvas_w=width,
+                    canvas_h=height,
+                    curve="EASE_OUT"
+                )
+            else:
+                _add_scale_expand(seg, 0, expand_us, "center", width, height)
+
+            # 出场淡出
+            fade_start_us = int((block_duration - 0.15) * 1e6)
+            if fade_start_us > expand_us:
+                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start_us, 1.0)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
+
+            segments.append(seg)
+            corner_name = ["左上", "右上", "左下", "右下"][i]
+            print(f"  ✅ 色块 {i}({corner_name}): 方向={direction}, 起始={start_time:.2f}s")
+
+    # 4. 保存
+    print(f"[4/4] 保存工程")
+    if _MASK_KF_AVAILABLE:
+        result = save_with_mask_keyframes(project)
+    else:
+        result = project.save()
+
+    draft_dir = os.path.join(project.root, project.name)
+    return {
+        "project_name": project_name,
+        "draft_path": draft_dir,
+        "segments_count": len(segments),
+        "total_duration": total_duration,
+        "colors": colors,
+        "mode": mode,
+        "directions": corner_directions,
+        "version": "v4",
+    }
+
+
+# ──────────────────────────────────────────────
+# v5: 网格错峰快闪（2x2网格，每格从中心展开）
+# ──────────────────────────────────────────────
+
+def create_mask_flash_v5(
+    project_name: str,
+    colors: List[Tuple[int, int, int]] = None,
+    width: int = 1080,
+    height: int = 1920,
+    block_duration: float = 1.0,
+    stagger_delay: float = 0.06,
+    expand_duration: float = 0.35,
+    output_dir: str = None,
+) -> Dict[str, Any]:
+    """
+    创建v5网格错峰快闪：2x2网格，每格从自身中心展开
+
+    4个色块占据画面四分之一区域，从各自中心向四周展开，
+    错峰时序形成波浪式展开效果。
+
+    Args:
+        project_name: 工程名
+        colors: 4个颜色
+        width/height: 画布尺寸
+        block_duration: 持续时长
+        stagger_delay: 错峰延迟
+        expand_duration: 展开时长
+        output_dir: 素材目录
+
+    Returns:
+        工程信息字典
+    """
+    if colors is None:
+        colors = COLOR_PRESETS["neon"]
+    colors = colors[:4]
+
+    if output_dir is None:
+        output_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "mask_flash_assets"
+        )
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 2x2网格位置（position_x/y单位：半个画布，-1~1）
+    # 左上(-0.5,-0.5) 右上(0.5,-0.5) 左下(-0.5,0.5) 右下(0.5,0.5)
+    grid_positions = [(-0.5, -0.5), (0.5, -0.5), (-0.5, 0.5), (0.5, 0.5)]
+    # 展开顺序：左上→右下→右上→左下（对角线波浪）
+    expand_order = [0, 3, 1, 2]
+
+    # 1. 生成纯色素材
+    print(f"[1/4] 生成 {len(colors)} 个纯色素材")
+    color_images = []
+    for i, color in enumerate(colors):
+        img_path = os.path.join(output_dir, f"v5_block_{i}.png")
+        create_solid_color_image(color, width, height, img_path)
+        color_images.append(img_path)
+
+    # 2. 创建工程
+    print(f"[2/4] 创建工程: {project_name} (2x2网格错峰)")
+    project = JyProject(project_name, width=width, height=height, overwrite=True)
+
+    # 3. 添加轨道 + 网格位置 + 中心展开
+    print(f"[3/4] 添加 {len(colors)} 个网格色块 + 错峰展开")
+    segments = []
+    total_duration = (len(colors) - 1) * stagger_delay + block_duration
+    expand_us = int(expand_duration * 1e6)
+
+    for order_idx, color_idx in enumerate(expand_order):
+        img_path = color_images[color_idx]
+        px, py = grid_positions[color_idx]
+        start_time = order_idx * stagger_delay
+        track_name = f"V5Grid_{color_idx}"
+
+        seg = project.add_media_safe(
+            img_path,
+            start_time=f"{start_time}s",
+            duration=f"{block_duration}s",
+            track_name=track_name
+        )
+
+        if seg:
+            # 设置初始位置（网格四分之一）
+            seg.clip_settings = draft.ClipSettings(
+                transform_x=px,
+                transform_y=py,
+                scale_x=0.5,
+                scale_y=0.5,
+            )
+            seg.uniform_scale = False
+
+            # 添加矩形蒙版
+            add_rect_mask_to_segment(seg, width, height)
+
+            # 蒙版从中心展开（size_x/size_y同时0→1）
+            if _MASK_KF_AVAILABLE:
+                apply_mask_expand(
+                    project, seg,
+                    start_us=0,
+                    duration_us=expand_us,
+                    direction="center",
+                    canvas_w=width,
+                    canvas_h=height,
+                    curve="EASE_OUT"
+                )
+
+            # 出场淡出
+            fade_start_us = int((block_duration - 0.15) * 1e6)
+            if fade_start_us > expand_us:
+                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start_us, 1.0)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
+
+            segments.append(seg)
+            corner = ["左上", "右上", "左下", "右下"][color_idx]
+            print(f"  ✅ 网格{corner}: 起始={start_time:.2f}s, 顺序={order_idx+1}")
+
+    # 4. 保存
+    print(f"[4/4] 保存工程")
+    if _MASK_KF_AVAILABLE:
+        result = save_with_mask_keyframes(project)
+    else:
+        result = project.save()
+
+    draft_dir = os.path.join(project.root, project.name)
+    return {
+        "project_name": project_name,
+        "draft_path": draft_dir,
+        "segments_count": len(segments),
+        "total_duration": total_duration,
+        "colors": colors,
+        "version": "v5",
+        "grid": "2x2",
+    }
+
+
 if __name__ == "__main__":
     print("=" * 60)
-    print("蒙版展开快闪特效模块 v3（真正蒙版关键帧版）")
+    print("蒙版展开快闪特效模块 v5")
     print("=" * 60)
     print(f"\n蒙版关键帧工具: {'✅ 可用' if _MASK_KF_AVAILABLE else '❌ 不可用(回退scale模拟)'}")
     print("\n核心函数:")
     print("  create_solid_color_image(color, w, h, path) - 生成纯色图片")
-    print("  create_mask_flash_basic(name, colors, ...) - 基础版快闪工程")
-    print("  create_stripe_flash(name, colors, ...) - 条纹扫描快闪工程")
-    print("  apply_expand_to_segments(project, segs, ...) - 给现有片段加效果")
+    print("  create_mask_flash_basic(name, colors, ...) - v3基础版快闪(单轴向)")
+    print("  create_mask_flash_v4(name, colors, mode=...) - v4四角汇聚(双轴向对角线/旋转)")
+    print("  create_mask_flash_v5(name, colors, ...) - v5网格错峰(2x2中心展开)")
+    print("  create_stripe_flash(name, colors, ...) - 条纹扫描快闪")
+    print("\nv4模式: diagonal(对角线) / rotate(旋转) / mixed(混合)")
     print("\n预设配色:")
     for name in COLOR_PRESETS:
         print(f"  {name}")
-    print("\n展开方向: left / right / top / bottom / center / horizontal / vertical")

@@ -1,0 +1,150 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-09-30",
+  "total_effects": 8,
+  "categories": {
+    "transition": {
+      "name": "转场特效",
+      "effects": ["mask_flash"]
+    },
+    "visual": {
+      "name": "视觉特效",
+      "effects": ["glow_outline", "mix_mode"]
+    },
+    "text": {
+      "name": "文字字幕",
+      "effects": ["artistic_subtitle", "intro_builder", "character_intro"]
+    },
+    "tool": {
+      "name": "工具组件",
+      "effects": ["mask_keyframe", "compound_segment"]
+    }
+  },
+  "effects": {
+    "mask_flash": {
+      "name": "蒙版展开快闪",
+      "module": "mask_flash_transition.py",
+      "versions": ["v3基础版", "v4四角汇聚", "v5网格错峰"],
+      "description": "多色块通过蒙版关键帧实现展开快闪效果，v4支持双轴向对角线展开和旋转展开，v5支持2x2网格错峰展开",
+      "tutorial_source": "抖音《剪映怎么制作蒙版展开快闪》",
+      "status": "verified",
+      "params": {
+        "colors": "颜色列表，每个颜色对应一个色块",
+        "block_duration": "每个色块持续时长(秒)",
+        "stagger_delay": "相邻色块起始时间差(秒)",
+        "expand_duration": "展开动画时长(秒)",
+        "mode": "v4模式: diagonal/rotate/mixed"
+      },
+      "usage": "create_mask_flash_v4(project_name='测试', colors=[(0,255,255),(255,0,255)], mode='diagonal')",
+      "key_tech": ["蒙版关键帧注入", "双轴向同时展开", "四角位置汇聚", "旋转展开"]
+    },
+    "glow_outline": {
+      "name": "动态发光轮廓",
+      "module": "glow_outline.py",
+      "versions": ["v1.0"],
+      "description": "基于轮廓图+正片叠底混合模式+梦幻辉光特效实现动态发光轮廓效果",
+      "tutorial_source": "抖音《剪映进阶篇--制作动态发光轮廓效果》",
+      "status": "verified",
+      "params": {
+        "base_image": "底层彩色素材图片路径",
+        "outline_image": "上层轮廓图路径(None则自动生成)",
+        "duration": "持续时长(秒)",
+        "glow_effect": "辉光特效名称(默认梦幻辉光)",
+        "dream_effect": "梦境特效名称(默认梦境)"
+      },
+      "usage": "create_glow_outline(project_name='测试', base_image='photo.jpg', duration=5.0)",
+      "key_tech": ["Pillow轮廓提取", "正片叠底混合模式", "梦幻辉光特效", "梦境全局特效"]
+    },
+    "artistic_subtitle": {
+      "name": "动态艺术组合式字幕",
+      "module": "artistic_subtitle.py",
+      "versions": ["v1.0"],
+      "description": "4种风格预设的动态艺术字幕，支持Ken Burns运镜效果，多轨字幕组合",
+      "tutorial_source": "内部设计",
+      "status": "verified",
+      "params": {
+        "style": "字幕风格: epic/warm/minimal/cyber",
+        "text_lines": "字幕文本列表",
+        "duration": "总时长(秒)",
+        "ken_burns": "是否启用Ken Burns运镜"
+      },
+      "usage": "create_artistic_subtitle(lines=['标题','副标题'], style='epic', duration=5.0)",
+      "key_tech": ["多轨字幕组合", "Ken Burns运镜", "4种风格预设", "文字动画"]
+    },
+    "intro_builder": {
+      "name": "片头生成器",
+      "module": "intro_builder.py",
+      "versions": ["v1.0"],
+      "description": "多种片头模板，支持标题/副标题/项目名，快速生成短视频片头",
+      "tutorial_source": "内部设计",
+      "status": "verified",
+      "params": {
+        "template": "片头模板: flash_title/slide_in/zoom_reveal等",
+        "title": "主标题",
+        "subtitle": "副标题(可选)",
+        "project_name": "项目名"
+      },
+      "usage": "create_intro(template='flash_title', title='标题', subtitle='副标题')",
+      "key_tech": ["多模板预设", "标题动画", "批量创建"]
+    },
+    "character_intro": {
+      "name": "人物介绍卡片",
+      "module": "character_intro.py",
+      "versions": ["v1.0"],
+      "description": "人物头像+名字+身份的介绍卡片特效，支持多种预设风格",
+      "tutorial_source": "内部设计",
+      "status": "verified",
+      "params": {
+        "characters": "人物列表，每个含image/name/subtitle",
+        "preset": "预设风格: red_drama/cool_tech/warm_minimal",
+        "duration": "每人展示时长(秒)"
+      },
+      "usage": "create_character_intro(characters=[{'image':'p.jpg','name':'张三','subtitle':'主角'}], preset='red_drama')",
+      "key_tech": ["人物卡片布局", "多预设风格", "批量人物展示"]
+    },
+    "mix_mode": {
+      "name": "混合模式",
+      "module": "mix_mode.py",
+      "versions": ["v1.0"],
+      "description": "10种混合模式已逆向，通过直接修改draft_content.json实现正片叠底/滤色/叠加等",
+      "tutorial_source": "剪映5.9资源目录逆向",
+      "status": "verified",
+      "params": {
+        "mode": "混合模式: multiply/screen/overlay/hard_light/soft_light等10种",
+        "intensity": "强度(0-1)"
+      },
+      "usage": "apply_mix_mode(project, segment, mode='multiply', intensity=1.0)",
+      "key_tech": ["draft_content.json直接修改", "10种混合模式逆向", "effect_id/resource_id映射"]
+    },
+    "mask_keyframe": {
+      "name": "蒙版关键帧工具",
+      "module": "mask_keyframe.py",
+      "versions": ["v1.0"],
+      "description": "蒙版大小/位置/旋转/羽化关键帧注入工具，支持10种展开方向",
+      "tutorial_source": "剪映5.9工程逆向",
+      "status": "verified",
+      "params": {
+        "size_x/size_y": "蒙版大小(0-1比例)",
+        "position_x/position_y": "蒙版位置(-1到1)",
+        "rotation": "旋转角度",
+        "feather": "羽化程度"
+      },
+      "usage": "apply_mask_expand(project, segment, direction='diagonal_tl', duration_us=400000)",
+      "key_tech": ["KFTypeMaskSizeX/Y关键帧", "KFTypeMaskPostionX/Y(剪映拼写错误)", "KFTypeMaskRotation", "保存时注入draft_content.json"]
+    },
+    "compound_segment": {
+      "name": "复合片段工具",
+      "module": "compound_segment.py",
+      "versions": ["v1.0"],
+      "description": "创建和管理复合片段，支持多轨道合并为复合片段",
+      "tutorial_source": "剪映5.9工程逆向",
+      "status": "verified",
+      "params": {
+        "segments": "要合并的片段列表",
+        "name": "复合片段名称"
+      },
+      "usage": "create_compound_segment(project, segments=[seg1, seg2], name='复合')",
+      "key_tech": ["子草稿创建", "复合片段引用", "多轨道合并"]
+    }
+  }
+}

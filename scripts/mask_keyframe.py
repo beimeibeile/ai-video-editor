@@ -177,6 +177,38 @@ def apply_mask_expand(
         apply_mask_keyframe(project, segment, "size_x", start_us, full_w, curve)
         apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
 
+    elif direction in ("diagonal_tl", "diagonal_tr", "diagonal_bl", "diagonal_br"):
+        # 对角线展开：宽高同时从0→全屏，位置从角落→中心
+        apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
+        apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
+        # 位置：从角落→中心
+        px_start = -1.0 if "tl" in direction or "bl" in direction else 1.0
+        py_start = -1.0 if "tl" in direction or "tr" in direction else 1.0
+        apply_mask_keyframe(project, segment, "position_x", start_us, px_start, curve)
+        apply_mask_keyframe(project, segment, "position_x", end_us, 0.0, curve)
+        apply_mask_keyframe(project, segment, "position_y", start_us, py_start, curve)
+        apply_mask_keyframe(project, segment, "position_y", end_us, 0.0, curve)
+
+    elif direction == "rotate":
+        # 旋转展开：宽高同时从0→全屏，同时旋转
+        apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
+        apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
+        apply_mask_keyframe(project, segment, "rotation", start_us, 90.0, curve)
+        apply_mask_keyframe(project, segment, "rotation", end_us, 0.0, curve)
+
+    elif direction == "center_rotate":
+        # 中心旋转展开：从中心展开同时旋转
+        apply_mask_keyframe(project, segment, "size_x", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_x", end_us, full_w, curve)
+        apply_mask_keyframe(project, segment, "size_y", start_us, 0.001, curve)
+        apply_mask_keyframe(project, segment, "size_y", end_us, full_h, curve)
+        apply_mask_keyframe(project, segment, "rotation", start_us, -45.0, curve)
+        apply_mask_keyframe(project, segment, "rotation", end_us, 0.0, curve)
+
     return True
 
 
