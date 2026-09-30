@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>特效库 - ai-video-editor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; }
+.header { background: linear-gradient(135deg, #161b22, #0d1117); padding: 40px; border-bottom: 1px solid #30363d; }
+.header h1 { font-size: 32px; margin-bottom: 8px; }
+.header p { color: #8b949e; font-size: 14px; }
+.stats { display: flex; gap: 24px; margin-top: 20px; }
+.stat { background: #161b22; padding: 16px 24px; border-radius: 8px; border: 1px solid #30363d; }
+.stat .num { font-size: 28px; font-weight: bold; color: #58a6ff; }
+.stat .label { font-size: 12px; color: #8b949e; }
+.container { max-width: 1400px; margin: 0 auto; padding: 40px; }
+.filters { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.filter-btn { padding: 8px 16px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.filter-btn:hover, .filter-btn.active { background: #1f6feb; border-color: #1f6feb; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; overflow: hidden; transition: transform 0.2s, border-color 0.2s; }
+.card:hover { transform: translateY(-4px); border-color: #58a6ff; }
+.card-header { padding: 20px; border-bottom: 1px solid #30363d; }
+.card-header .category { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+.cat-transitions { background: #1f6feb22; color: #58a6ff; }
+.cat-text { background: #3fb95022; color: #3fb950; }
+.cat-visual { background: #d2992222; color: #d29922; }
+.cat-combo { background: #a371f722; color: #a371f7; }
+.card-header h3 { font-size: 18px; margin-bottom: 6px; }
+.card-header .desc { font-size: 13px; color: #8b949e; line-height: 1.5; }
+.card-body { padding: 20px; }
+.card-body .meta { display: flex; gap: 16px; margin-bottom: 12px; font-size: 12px; color: #8b949e; }
+.card-body .meta span { display: flex; align-items: center; gap: 4px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.tag { padding: 3px 8px; background: #21262d; border-radius: 4px; font-size: 11px; color: #8b949e; }
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.status.verified { background: #3fb95022; color: #3fb950; }
+.status.pending { background: #d2992222; color: #d29922; }
+.status.integrated { background: #1f6feb22; color: #58a6ff; }
+.api-list { font-size: 12px; color: #8b949e; }
+.api-list code { background: #0d1117; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', monospace; }
+.rating { color: #d29922; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>特效库 Showcase</h1>
+  <p>ai-video-editor 剪辑特效库 - 从抖音教程自动学习并封装的可复用特效</p>
+  <div class="stats">
+    <div class="stat"><div class="num" id="totalCount">0</div><div class="label">特效总数</div></div>
+    <div class="stat"><div class="num" id="verifiedCount">0</div><div class="label">已验证</div></div>
+    <div class="stat"><div class="num" id="integratedCount">0</div><div class="label">已集成Pipeline</div></div>
+    <div class="stat"><div class="num" id="categoryCount">0</div><div class="label">分类</div></div>
+  </div>
+</div>
+<div class="container">
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-cat="all">全部</button>
+    <button class="filter-btn" data-cat="transitions">转场特效</button>
+    <button class="filter-btn" data-cat="text">文字特效</button>
+    <button class="filter-btn" data-cat="visual">视觉特效</button>
+    <button class="filter-btn" data-cat="combo">组合特效</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+<script>
+const effects = [
+  {id:"mask_flash_transition",name:"蒙版展开快闪",category:"transitions",desc:"多色块多轨道依次展开快闪，7种展开方向，6套预设配色",source:"抖音教程-李华Liha",difficulty:"medium",status:"verified",integrated:true,tags:["快闪","蒙版","转场","色块","卡点"],api:["create_mask_flash_basic","create_stripe_flash","add_expand_animation"],rating:4},
+  {id:"subtitle_bar",name:"半透明字幕条",category:"text",desc:"半透明渐变圆角矩形字幕条+高光+文字，6种预设样式",source:"抖音教程-剪辑进阶",difficulty:"easy",status:"verified",integrated:true,tags:["字幕条","文本框","半透明","渐变","药丸"],api:["add_subtitle_bar","add_subtitle_bars","create_gradient_bar"],rating:5},
+  {id:"intro_builder",name:"片头生成器",category:"combo",desc:"组合特效生成短视频片头，5种模板，支持在已有工程中添加",source:"特效组合",difficulty:"easy",status:"verified",integrated:true,tags:["片头","开场","标题","组合","模板"],api:["create_intro","create_intro_batch","add_intro_to_project"],rating:5},
+  {id:"character_intro",name:"人物介绍卡片",category:"combo",desc:"人物照片+边框依次入场，名字标签带颜色区分，4种预设风格",source:"抖音教程-狂飙人物介绍",difficulty:"medium",status:"verified",integrated:true,tags:["人物介绍","卡片","角色","入场","名单"],api:["create_character_intro","create_framed_portrait","add_character_intro_to_project"],rating:4},
+  {id:"text_layout",name:"文字排版预设",category:"text",desc:"多轨道文字叠加排版，5种预设（竖排错落/横排标题/斜向层叠/左对齐堆叠/居中聚焦）",source:"抖音教程-文字排版常用技巧",difficulty:"easy",status:"verified",integrated:false,tags:["文字排版","竖排","错落","标题","多轨道"],api:["add_text_layout","create_text_layout_demo"],rating:4},
+  {id:"polaroid_wall",name:"拍立得照片墙",category:"visual",desc:"多张照片带拍立得边框旋转散落，入场动画旋转+缩放，适合古风/旅行/回忆类",source:"抖音教程-关键帧练习",difficulty:"medium",status:"verified",integrated:false,tags:["拍立得","照片墙","旋转","散落","回忆","古风"],api:["create_polaroid_wall","create_polaroid_frame","add_polaroid_photos_to_project"],rating:4},
+  {id:"glow_outline",name:"动态发光轮廓",category:"visual",desc:"AI生成轮廓图+正片叠底混合模式+梦幻辉光+梦境特效，待混合模式逆向",source:"抖音教程-剪辑进阶",difficulty:"hard",status:"pending",integrated:false,tags:["发光","轮廓","混合模式","辉光","梦境"],api:["待封装"],rating:2},
+];
+const catNames = {transitions:"转场特效",text:"文字特效",visual:"视觉特效",combo:"组合特效"};
+function render(filter="all") {
+  const grid = document.getElementById("grid");
+  const filtered = filter==="all"?effects:effects.filter(e=>e.category===filter);
+  grid.innerHTML = filtered.map(e=>`
+    <div class="card">
+      <div class="card-header">
+        <span class="category cat-${e.category}">${catNames[e.category]||e.category}</span>
+        <h3>${e.name}</h3>
+        <p class="desc">${e.desc}</p>
+      </div>
+      <div class="card-body">
+        <div class="meta">
+          <span>📖 ${e.source}</span>
+          <span>⚡ ${e.difficulty}</span>
+          <span class="rating">${'⭐'.repeat(e.rating)}</span>
+        </div>
+        <div class="tags">${e.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <span class="status ${e.status}">${e.status==="verified"?"✅ 已验证":"🔧 待封装"}</span>
+          ${e.integrated?'<span class="status integrated">🔗 已集成Pipeline</span>':''}
+        </div>
+        <div class="api-list">
+          <strong>API:</strong> ${e.api.map(a=>`<code>${a}</code>`).join(" ")}
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+document.getElementById("totalCount").textContent = effects.length;
+document.getElementById("verifiedCount").textContent = effects.filter(e=>e.status==="verified").length;
+document.getElementById("integratedCount").textContent = effects.filter(e=>e.integrated).length;
+document.getElementById("categoryCount").textContent = new Set(effects.map(e=>e.category)).size;
+document.querySelectorAll(".filter-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    render(btn.dataset.cat);
+  });
+});
+render();
+</script>
+</body>
+</html>
