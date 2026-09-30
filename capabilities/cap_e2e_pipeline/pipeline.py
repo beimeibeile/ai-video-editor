@@ -71,6 +71,13 @@ try:
 except ImportError:
     _POLAROID_WALL_AVAILABLE = False
 
+# 发光轮廓效果（特效库集成）
+try:
+    from glow_outline import add_glow_outline_to_project as _add_glow_outline
+    _GLOW_OUTLINE_AVAILABLE = True
+except ImportError:
+    _GLOW_OUTLINE_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -155,7 +162,8 @@ class E2EPipeline:
             beat_threshold: float = 0.5,
             character_intros: List[Dict] = None,
             text_layout_style: str = None,
-            photo_wall: List[str] = None) -> Dict[str, Any]:
+            photo_wall: List[str] = None,
+            glow_outline_shots: List[int] = None) -> Dict[str, Any]:
         """
         执行端到端流程
 
@@ -180,6 +188,7 @@ class E2EPipeline:
             character_intros: 人物介绍列表，每项如 {"image": "path", "name": "张三", "subtitle": "主角"}
             text_layout_style: 文字排版预设风格（vertical_stagger/horizontal_title/diagonal_cascade/left_align_stack/center_focus），用于钩子文案
             photo_wall: 拍立得照片墙图片路径列表，用于结尾展示
+            glow_outline_shots: 使用发光轮廓效果的镜头索引列表，如 [0, 2]
 
         Returns:
             {"status": "success", "project_name": ..., "storyboard": ..., "video_clips": [...]}
@@ -249,6 +258,7 @@ class E2EPipeline:
             character_intros=character_intros,
             text_layout_style=text_layout_style,
             photo_wall=photo_wall,
+            glow_outline_shots=glow_outline_shots,
         )
 
         print(f"\n[4/4] {'片头已集成' if add_intro else '跳过片头'}")
@@ -610,7 +620,8 @@ class E2EPipeline:
                         style: str = "cinematic",
                         character_intros: List[Dict] = None,
                         text_layout_style: str = None,
-                        photo_wall: List[str] = None) -> Dict:
+                        photo_wall: List[str] = None,
+                        glow_outline_shots: List[int] = None) -> Dict:
         """剪映合成（含片头集成）"""
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
         from jy_wrapper import JyProject
@@ -773,6 +784,48 @@ class E2EPipeline:
                     color_style = color_style_map.get(shot.color_tone, "cinematic")
                     add_cinematic_color_grade(seg, duration_us, style=color_style)
             current_time += shot.duration
+
+        # 发光轮廓效果（特效库集成）—— 对指定镜头添加轮廓图层
+        glow_count = 0
+        if glow_outline_shots and _GLOW_OUTLINE_AVAILABLE:
+            glow_start_base = intro_offset + char_intro_duration + text_layout_duration
+            for shot_idx in glow_outline_shots:
+                if shot_idx >= len(sb.shots) or shot_idx >= len(video_clips):
+                    continue
+                shot = sb.shots[shot_idx]
+                base_img = video_clips[shot_idx]
+                # 如果是视频，提取第一帧作为轮廓底图
+                if base_img.lower().endswith(('.mp4', '.mov', '.avi')):
+                    frame_path = os.path.join(self.work_dir, "output", f"glow_frame_{shot_idx}.png")
+                    try:
+                        import subprocess
+                        subprocess.run([
+                            self.ffmpeg, "-y", "-i", base_img,
+                            "-vframes", "1", "-q:v", "2", frame_path
+                        ], capture_output=True, timeout=30)
+                        if os.path.exists(frame_path):
+                            base_img = frame_path
+                        else:
+                            continue
+                    except Exception:
+                        continue
+                # 计算该镜头的起始时间
+                shot_start = glow_start_base
+                for j in range(shot_idx):
+                    if j not in pip_consumed:
+                        shot_start += sb.shots[j].duration
+                try:
+                    _add_glow_outline(
+                        project,
+                        base_image=base_img,
+                        start_time=shot_start,
+                        duration=shot.duration,
+                        output_dir=os.path.join(self.work_dir, "output", "glow_outline_assets"),
+                    )
+                    glow_count += 1
+                    print(f"  发光轮廓: 镜头{shot_idx} ({shot.duration:.1f}s)")
+                except Exception as e:
+                    print(f"  发光轮廓镜头{shot_idx}失败: {e}")
 
         # 自动卡点：如果启用且有BGM，根据节拍调整切点
         if auto_beat and _AUTO_BEAT_AVAILABLE and add_bgm and sb.bgm_mood:

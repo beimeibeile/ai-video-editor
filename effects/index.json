@@ -116,6 +116,7 @@
     "mask_flash_transition": "已集成到E2EPipeline（转场部分，transition_in='蒙版快闪'时触发，3色块赛博朋克配色）",
     "character_intro": "已集成到E2EPipeline（character_intros参数传入人物列表，片头后自动添加，风格自动映射）",
     "text_layout": "已集成到E2EPipeline（text_layout_style参数，钩子文案使用文字排版预设，片头+人物介绍后显示3秒）",
-    "polaroid_wall": "已集成到E2EPipeline（photo_wall参数传入图片列表，正片结束后显示拍立得照片墙结尾）"
+    "polaroid_wall": "已集成到E2EPipeline（photo_wall参数传入图片列表，正片结束后显示拍立得照片墙结尾）",
+    "glow_outline": "已集成到E2EPipeline（glow_outline_shots参数指定镜头索引，自动生成轮廓图+正片叠底+梦幻辉光+梦境）"
   }
 }
