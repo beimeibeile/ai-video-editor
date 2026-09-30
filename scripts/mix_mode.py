@@ -62,7 +62,7 @@ MIX_MODES = {
         "resource_id": "6758325439212556814",
         "path_hash": "042aa15b71b1e17bca0bd928eec6fba7",
     },
-    "线性加深": {
+    "linear_burn": {
         "name": "线性加深",
         "effect_id": "871336",
         "resource_id": "6758325619253056013",
@@ -157,6 +157,7 @@ def apply_mix_mode(project, segment, mode: str = "multiply", intensity: float = 
         project._mix_mode_patches = []
     project._mix_mode_patches.append({
         "segment_id": segment.id if hasattr(segment, 'id') else str(id(segment)),
+        "segment_material_id": segment.material_id if hasattr(segment, 'material_id') else None,
         "effect": mix_effect,
     })
 
@@ -198,15 +199,29 @@ def inject_mix_modes_to_draft(draft_path: str, patches: list) -> bool:
             effects.append(effect)
 
             # 找到对应片段并添加extra_material_refs
+            # 匹配优先级：segment_material_id > segment_id > 索引位置
+            matched = False
             for track in data.get("tracks", []):
                 for seg in track.get("segments", []):
-                    seg_id = seg.get("id", "")
-                    # 匹配片段（通过material_id或位置）
+                    # 优先通过material_id匹配
                     if patch.get("segment_material_id") and seg.get("material_id") == patch["segment_material_id"]:
                         refs = seg.setdefault("extra_material_refs", [])
                         if effect["id"] not in refs:
                             refs.append(effect["id"])
+                        matched = True
                         break
+                    # 其次通过segment id匹配
+                    if patch.get("segment_id") and seg.get("id") == patch["segment_id"]:
+                        refs = seg.setdefault("extra_material_refs", [])
+                        if effect["id"] not in refs:
+                            refs.append(effect["id"])
+                        matched = True
+                        break
+                if matched:
+                    break
+
+            if not matched:
+                print(f"  ⚠️  未找到匹配片段: segment_id={patch.get('segment_id')}, material_id={patch.get('segment_material_id')}")
 
         with open(content_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -216,6 +231,29 @@ def inject_mix_modes_to_draft(draft_path: str, patches: list) -> bool:
     except Exception as e:
         print(f"❌ 注入混合模式失败: {e}")
         return False
+
+
+def save_with_mix_modes(project) -> dict:
+    """
+    保存工程并自动注入混合模式
+
+    Args:
+        project: JyProject 实例
+
+    Returns:
+        dict: 保存结果，包含draft_path和mix_mode_injected
+    """
+    result = project.save()
+    draft_path = result.get("draft_path", "")
+
+    patches = getattr(project, '_mix_mode_patches', [])
+    if patches and draft_path:
+        inject_mix_modes_to_draft(draft_path, patches)
+        result["mix_mode_injected"] = len(patches)
+    else:
+        result["mix_mode_injected"] = 0
+
+    return result
 
 
 def discover_mix_modes(resources_path: str = None) -> dict:
