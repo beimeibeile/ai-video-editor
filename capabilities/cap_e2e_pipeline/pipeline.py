@@ -50,6 +50,13 @@ try:
 except ImportError:
     _MASK_FLASH_AVAILABLE = False
 
+# 人物介绍卡片（特效库集成）
+try:
+    from character_intro import add_character_intro_to_project as _add_char_intro
+    _CHARACTER_INTRO_AVAILABLE = True
+except ImportError:
+    _CHARACTER_INTRO_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -131,7 +138,8 @@ class E2EPipeline:
             add_intro: bool = False,
             pip_config: List[Dict] = None,
             auto_beat: bool = False,
-            beat_threshold: float = 0.5) -> Dict[str, Any]:
+            beat_threshold: float = 0.5,
+            character_intros: List[Dict] = None) -> Dict[str, Any]:
         """
         执行端到端流程
 
@@ -219,6 +227,7 @@ class E2EPipeline:
             pip_config=pip_config, auto_beat=auto_beat,
             beat_threshold=beat_threshold,
             style=style,
+            character_intros=character_intros,
         )
 
         print(f"\n[4/4] {'片头已集成' if add_intro else '跳过片头'}")
@@ -577,7 +586,8 @@ class E2EPipeline:
                         pip_config: List[Dict] = None,
                         auto_beat: bool = False,
                         beat_threshold: float = 0.5,
-                        style: str = "cinematic") -> Dict:
+                        style: str = "cinematic",
+                        character_intros: List[Dict] = None) -> Dict:
         """剪映合成（含片头集成）"""
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
         from jy_wrapper import JyProject
@@ -636,9 +646,35 @@ class E2EPipeline:
                 )
                 print(f"  片头: {intro_duration}s ({intro_style}, 原生)")
 
-        # 1. 添加视频片段（从片头后开始）
+        # 1.5 人物介绍卡片（特效库集成）
+        char_intro_duration = 0.0
+        if character_intros and _CHARACTER_INTRO_AVAILABLE:
+            char_preset_map = {
+                "cinematic": "red_drama",
+                "thriller": "cyber_tech",
+                "vlog": "warm_friends",
+                "emotional": "warm_friends",
+                "tutorial": "minimal_white",
+            }
+            char_preset = char_preset_map.get(style, "red_drama")
+            char_result = _add_char_intro(
+                project,
+                characters=character_intros,
+                preset=char_preset,
+                start_time=intro_offset,
+                width=width,
+                height=height,
+                output_dir=os.path.join(self.work_dir, "output", "character_intro_assets"),
+            )
+            if char_result.get("status") == "success":
+                char_intro_duration = char_result.get("duration", 0)
+                print(f"  人物介绍: {char_result['character_count']}人 ({char_preset}, {char_intro_duration}s)")
+            else:
+                print(f"  人物介绍失败: {char_result.get('reason')}")
+
+        # 2. 添加视频片段（从片头+人物介绍后开始）
         segments = []
-        current_time = intro_offset
+        current_time = intro_offset + char_intro_duration
 
         # 画中画配置：标记哪些镜头已被画中画组合消耗
         pip_consumed = set()
@@ -709,7 +745,7 @@ class E2EPipeline:
                 beat_cuts.append(t)
             print(f"  卡点: {len(beat_cuts)}个切点 (均匀分布，BGM云端无法本地分析)")
 
-        print(f"  添加 {len(segments)} 个视频片段 + {len(pip_consumed)}个画中画 (偏移{intro_offset}s, 运镜+调色已应用)")
+        print(f"  添加 {len(segments)} 个视频片段 + {len(pip_consumed)}个画中画 (起始{intro_offset + char_intro_duration:.2f}s, 运镜+调色已应用)")
 
         # 2. 转场（加在前一个片段末尾）—— 支持蒙版快闪特效
         trans_count = 0

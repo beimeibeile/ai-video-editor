@@ -48,7 +48,7 @@
       "status": "verified",
       "description": "人物照片+边框依次入场，名字标签带颜色区分，4种预设风格",
       "tags": ["人物介绍", "卡片", "角色", "入场", "名单"],
-      "api": ["create_character_intro", "create_framed_portrait", "add_card_entrance_animation"]
+      "api": ["create_character_intro", "create_framed_portrait", "add_card_entrance_animation", "add_character_intro_to_project"]
     }
   ],
   "categories": {
@@ -63,6 +63,7 @@
   "pipeline_integration": {
     "intro_builder": "已集成到E2EPipeline（add_intro=True时使用特效库片头，5种风格映射）",
     "subtitle_bar": "已集成到E2EPipeline（字幕部分，cinema→rect_dark, vlog→pill_warm, tech→pill_cyber等）",
-    "mask_flash_transition": "已集成到E2EPipeline（转场部分，transition_in='蒙版快闪'时触发，3色块赛博朋克配色）"
+    "mask_flash_transition": "已集成到E2EPipeline（转场部分，transition_in='蒙版快闪'时触发，3色块赛博朋克配色）",
+    "character_intro": "已集成到E2EPipeline（character_intros参数传入人物列表，片头后自动添加，风格自动映射）"
   }
 }

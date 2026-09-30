@@ -810,5 +810,10 @@ Start-Sleep -Milliseconds 100
 | `scripts/clone_template.py` | 模式B仿制草稿创建脚本模板 |
 | `scripts/analyze_video.py` | 模式B视频分析脚本（镜头分割/抽帧/音轨探测） |
 | `scripts/artistic_subtitle.py` | 动态艺术组合式字幕工具函数（4种风格预设+Ken Burns，复制到项目目录import使用） |
+| `scripts/mask_flash_transition.py` | 蒙版展开快闪特效（多色块依次展开+条纹扫描，7种展开方向+6套配色，scale+transform关键帧模拟蒙版展开） |
+| `scripts/subtitle_bar.py` | 半透明字幕条特效（渐变圆角矩形+高光+文字三层叠加，6种预设样式，Pillow预生成素材） |
+| `scripts/effect_library.py` | 特效库统一调用器（检索/搜索/应用/注册，动态加载特效模块） |
+| `scripts/intro_builder.py` | 片头生成器（组合蒙版快闪+字幕条，5种模板：快闪/极简/温暖/赛博/标签） |
+| `effects/index.json` | 特效库索引v1.1（3个特效+1个工具，按transitions/text/visual/combo分类） |
 
 **脚本使用规范**：所有剪辑脚本必须放在用户当前项目根目录（或子目录），**禁止在 Skill 内部目录创建业务脚本**。复制脚本模板到项目目录后修改参数运行。

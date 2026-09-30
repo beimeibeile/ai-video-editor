@@ -321,6 +321,134 @@ def create_character_intro(
     }
 
 
+def add_character_intro_to_project(
+    project,
+    characters: List[Dict],
+    preset: str = "red_drama",
+    start_time: float = 0.0,
+    width: int = 1080,
+    height: int = 1920,
+    output_dir: str = None,
+) -> Dict:
+    """在已有剪映工程中添加人物介绍卡片
+
+    Args:
+        project: JyProject 实例（已有工程）
+        characters: 人物列表 [{"image": 路径, "name": 名字, "subtitle": 副标题(可选)}]
+        preset: 预设名称 red_drama/cyber_tech/warm_friends/minimal_white
+        start_time: 起始时间（秒）
+        width: 画布宽
+        height: 画布高
+        output_dir: 素材输出目录
+
+    Returns:
+        结果字典
+    """
+    cfg = CARD_PRESETS.get(preset, CARD_PRESETS["red_drama"]).copy()
+
+    if output_dir is None:
+        output_dir = os.path.join(MODULE_DIR, "character_intro_assets")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 1. 生成背景
+    bg_path = os.path.join(output_dir, f"bg_{preset}.png")
+    if not os.path.exists(bg_path):
+        create_gradient_background(cfg["bg_color"], cfg["bg_gradient"], width, height, bg_path)
+
+    # 2. 生成带框人物照
+    framed_images = []
+    for i, char in enumerate(characters):
+        if not os.path.exists(char.get("image", "")):
+            print(f"  ⚠️ 人物{i}图片不存在，跳过")
+            continue
+        framed_path = os.path.join(output_dir, f"framed_{i}.png")
+        create_framed_portrait(
+            char["image"], framed_path,
+            border_color=cfg["border_color"],
+            border_width=cfg["border_width"],
+        )
+        framed_images.append((framed_path, char))
+
+    if not framed_images:
+        return {"status": "failed", "reason": "无有效人物图片"}
+
+    # 3. 添加背景
+    total_duration = len(framed_images) * cfg["stagger"] + cfg["card_duration"]
+    project.add_media_safe(
+        bg_path,
+        start_time=f"{start_time:.2f}s",
+        duration=f"{total_duration:.2f}s",
+        track_name="CharBG",
+    )
+
+    # 4. 添加人物卡片+名字
+    directions = ["up", "down", "left", "right", "up", "down"]
+    rotations = [-5, 5, -3, 3, -8, 8]
+
+    for i, (img_path, char) in enumerate(framed_images):
+        card_start = start_time + i * cfg["stagger"]
+        card_dur = cfg["card_duration"]
+
+        # 人物卡片（画中画轨道）
+        seg = project.add_media_safe(
+            img_path,
+            start_time=f"{card_start:.2f}s",
+            duration=f"{card_dur:.2f}s",
+            track_name=f"CharCard_{i}",
+        )
+
+        if seg:
+            y_offset = (i - len(framed_images) / 2 + 0.5) * 0.35
+            seg.clip_settings = draft.ClipSettings(
+                transform_x=0.0,
+                transform_y=y_offset,
+            )
+            add_card_entrance_animation(
+                seg,
+                duration_us=int(card_dur * 1e6),
+                direction=directions[i % len(directions)],
+                rotation=rotations[i % len(rotations)],
+            )
+
+            # 名字文字
+            name_color = cfg["name_colors"][i % len(cfg["name_colors"])]
+            name_y = y_offset - 0.22
+            project.add_text_simple(
+                char.get("name", f"人物{i}"),
+                start_time=f"{card_start + 0.2:.2f}s",
+                duration=f"{card_dur - 0.2:.2f}s",
+                font_size=cfg["name_size"],
+                color_rgb=tuple(c / 255 for c in name_color),
+                style=draft.TextStyle(size=cfg["name_size"], bold=True),
+                border=draft.TextBorder(color=(0, 0, 0), width=40),
+                clip_settings=draft.ClipSettings(transform_y=name_y),
+                anim_in="弹入",
+                track_name=f"CharName_{i}",
+            )
+
+            # 副标题
+            if char.get("subtitle"):
+                project.add_text_simple(
+                    char["subtitle"],
+                    start_time=f"{card_start + 0.4:.2f}s",
+                    duration=f"{card_dur - 0.4:.2f}s",
+                    font_size=6.0,
+                    color_rgb=(200, 200, 200),
+                    style=draft.TextStyle(size=6.0),
+                    clip_settings=draft.ClipSettings(transform_y=name_y - 0.12),
+                    anim_in="渐显",
+                    track_name=f"CharSub_{i}",
+                )
+
+    return {
+        "status": "success",
+        "character_count": len(framed_images),
+        "duration": total_duration,
+        "preset": preset,
+        "start_time": start_time,
+    }
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("人物介绍卡片特效")
