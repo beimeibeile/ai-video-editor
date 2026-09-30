@@ -183,6 +183,8 @@ class E2EPipeline:
             hunyuan_shots: List[int] = None,
             add_bgm: bool = True,
             add_intro: bool = False,
+            use_blender_intro: bool = False,
+            blender_intro_style: str = "cinematic",
             pip_config: List[Dict] = None,
             auto_beat: bool = False,
             beat_threshold: float = 0.5,
@@ -212,6 +214,8 @@ class E2EPipeline:
             hunyuan_shots: 使用混元I2V的镜头索引列表
             add_bgm: 是否添加BGM
             add_intro: 是否添加片头
+            use_blender_intro: 是否使用Blender 3D片头（需要Blender安装，效果更炫）
+            blender_intro_style: Blender片头风格（cinematic/neon/minimal/epic）
             pip_config: 画中画配置列表，每项如 {"shots": [0,1], "layout": "split_h"}
             auto_beat: 是否启用自动卡点（根据BGM节拍调整切点）
             beat_threshold: 卡点能量阈值（0-1）
@@ -294,6 +298,8 @@ class E2EPipeline:
             sb, video_clips, project_name, width, height, add_bgm,
             add_intro=add_intro, intro_duration=intro_duration,
             intro_style=sb.intro_style,
+            use_blender_intro=use_blender_intro,
+            blender_intro_style=blender_intro_style,
             pip_config=pip_config, auto_beat=auto_beat,
             beat_threshold=beat_threshold,
             style=style,
@@ -978,6 +984,8 @@ class E2EPipeline:
                         add_bgm: bool, add_intro: bool = False,
                         intro_duration: float = 2.0,
                         intro_style: str = "impact",
+                        use_blender_intro: bool = False,
+                        blender_intro_style: str = "cinematic",
                         pip_config: List[Dict] = None,
                         auto_beat: bool = False,
                         beat_threshold: float = 0.5,
@@ -1020,29 +1028,67 @@ class E2EPipeline:
 
         project = JyProject(project_name, width=width, height=height, overwrite=True)
 
-        # 0. 片头（在正片之前）—— 使用特效库片头生成器
+        # 0. 片头（在正片之前）—— 使用特效库片头生成器或Blender 3D片头
         intro_offset = 0.0
         if add_intro:
-            if _INTRO_BUILDER_AVAILABLE:
-                intro_template = _INTRO_STYLE_MAP.get(intro_style, "flash_title")
-                intro_title = sb.hook_text or sb.theme or "精彩开始"
-                intro_sub = sb.ending_text if len(sb.ending_text) < 20 else None
-                intro_offset = _add_intro_effect(
-                    project,
-                    template=intro_template,
-                    title=intro_title,
-                    subtitle=intro_sub,
-                    start_time=0.0,
-                    width=width,
-                    height=height,
-                    output_dir=os.path.join(self.work_dir, "output", "intro_assets"),
-                )
-                print(f"  片头: {intro_offset}s ({intro_template}, 特效库)")
-            else:
-                intro_offset = self._add_intro_to_project(
-                    project, sb, intro_duration, intro_style, width, height, draft
-                )
-                print(f"  片头: {intro_duration}s ({intro_style}, 原生)")
+            if use_blender_intro:
+                # Blender 3D片头（更炫，需要Blender安装）
+                try:
+                    from blender_intro import create_blender_intro
+                    intro_title = sb.hook_text or sb.theme or "精彩开始"
+                    intro_sub = sb.ending_text if len(sb.ending_text) < 20 else ""
+                    blender_intro_dir = os.path.join(self.work_dir, "output", "blender_intro")
+                    blender_video = create_blender_intro(
+                        title=intro_title,
+                        subtitle=intro_sub,
+                        output_dir=blender_intro_dir,
+                        style=blender_intro_style,
+                        width=width,
+                        height=height,
+                        duration=intro_duration,
+                    )
+                    if blender_video and os.path.exists(blender_video):
+                        # 将Blender片头视频导入剪映工程
+                        intro_seg = project.add_media_safe(
+                            blender_video,
+                            start_time="0s",
+                            duration=f"{intro_duration}s",
+                            track_name="BlenderIntro",
+                        )
+                        if intro_seg:
+                            intro_offset = intro_duration
+                            print(f"  片头: {intro_duration}s (Blender 3D, {blender_intro_style})")
+                        else:
+                            print(f"  ⚠️  Blender片头导入剪映失败，回退特效库")
+                            use_blender_intro = False
+                    else:
+                        print(f"  ⚠️  Blender片头生成失败，回退特效库")
+                        use_blender_intro = False
+                except Exception as e:
+                    print(f"  ⚠️  Blender片头异常: {e}，回退特效库")
+                    use_blender_intro = False
+
+            if not use_blender_intro:
+                if _INTRO_BUILDER_AVAILABLE:
+                    intro_template = _INTRO_STYLE_MAP.get(intro_style, "flash_title")
+                    intro_title = sb.hook_text or sb.theme or "精彩开始"
+                    intro_sub = sb.ending_text if len(sb.ending_text) < 20 else None
+                    intro_offset = _add_intro_effect(
+                        project,
+                        template=intro_template,
+                        title=intro_title,
+                        subtitle=intro_sub,
+                        start_time=0.0,
+                        width=width,
+                        height=height,
+                        output_dir=os.path.join(self.work_dir, "output", "intro_assets"),
+                    )
+                    print(f"  片头: {intro_offset}s ({intro_template}, 特效库)")
+                else:
+                    intro_offset = self._add_intro_to_project(
+                        project, sb, intro_duration, intro_style, width, height, draft
+                    )
+                    print(f"  片头: {intro_duration}s ({intro_style}, 原生)")
 
         # 1.5 人物介绍卡片（特效库集成）
         char_intro_duration = 0.0
