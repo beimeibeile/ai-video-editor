@@ -3517,3 +3517,110 @@ def multi_shot_smart(
     success = sum(1 for r in results if r["status"] == "success")
     print(f"\n[多镜头生成] 完成: {success}/{total} 成功 (模型: {model})")
     return results
+
+
+# ═══════════════════════════════════════════════════════════════
+# 系统状态检测
+# ═══════════════════════════════════════════════════════════════
+
+def get_comfyui_status(server_addr: str = "127.0.0.1:8188") -> Dict[str, Any]:
+    """
+    获取ComfyUI系统状态：服务可用性、显存、队列、模型列表
+
+    Args:
+        server_addr: ComfyUI地址
+
+    Returns:
+        {"available", "system", "queue", "models", "error"}
+    """
+    result = {
+        "available": False,
+        "system": {},
+        "queue": {},
+        "models": {},
+        "error": None,
+    }
+
+    try:
+        import requests as _req
+        # 1. 检查服务可用性
+        resp = _req.get(f"http://{server_addr}/system_stats", timeout=5)
+        if resp.status_code == 200:
+            result["available"] = True
+            stats = resp.json()
+            result["system"] = stats.get("system", {})
+            # 提取显存信息
+            devices = stats.get("devices", [])
+            if devices:
+                gpu = devices[0]
+                result["system"]["gpu"] = {
+                    "name": gpu.get("name", ""),
+                    "vram_total_gb": round(gpu.get("vram_total", 0) / 1024**3, 1),
+                    "vram_free_gb": round(gpu.get("vram_free", 0) / 1024**3, 1),
+                    "vram_used_gb": round((gpu.get("vram_total", 0) - gpu.get("vram_free", 0)) / 1024**3, 1),
+                }
+        else:
+            result["error"] = f"HTTP {resp.status_code}"
+            return result
+
+        # 2. 获取队列状态
+        try:
+            resp2 = _req.get(f"http://{server_addr}/queue", timeout=5)
+            if resp2.status_code == 200:
+                queue = resp2.json()
+                result["queue"] = {
+                    "running": len(queue.get("queue_running", [])),
+                    "pending": len(queue.get("queue_pending", [])),
+                }
+        except Exception:
+            pass
+
+        # 3. 获取模型列表
+        try:
+            resp3 = _req.get(f"http://{server_addr}/object_info", timeout=10)
+            if resp3.status_code == 200:
+                nodes = resp3.json()
+                # 统计可用节点数
+                result["models"]["nodes_count"] = len(nodes)
+                # 检查关键模型节点是否可用
+                key_nodes = ["UNETLoader", "CheckpointLoaderSimple", "VAELoader", "LoraLoader", "CLIPLoader"]
+                result["models"]["key_nodes"] = {n: (n in nodes) for n in key_nodes}
+        except Exception:
+            pass
+
+        print(f"[系统状态] ComfyUI可用: {'✅' if result['available'] else '❌'}")
+        if result["system"].get("gpu"):
+            gpu = result["system"]["gpu"]
+            print(f"  GPU: {gpu['name']} | 显存: {gpu['vram_used_gb']}/{gpu['vram_total_gb']}GB (空闲{gpu['vram_free_gb']}GB)")
+        if result["queue"]:
+            print(f"  队列: 运行中{result['queue']['running']}, 等待{result['queue']['pending']}")
+
+    except _req.exceptions.ConnectionError:
+        result["error"] = "连接失败，ComfyUI未启动"
+        print(f"[系统状态] ❌ ComfyUI未启动: {server_addr}")
+    except Exception as e:
+        result["error"] = str(e)
+        print(f"[系统状态] ❌ 获取状态失败: {e}")
+
+    return result
+
+
+def check_vram_available(server_addr: str = "127.0.0.1:8188", min_free_gb: float = 4.0) -> bool:
+    """
+    检查显存是否满足最低要求
+
+    Args:
+        server_addr: ComfyUI地址
+        min_free_gb: 最低空闲显存(GB)
+
+    Returns:
+        bool: 是否满足
+    """
+    status = get_comfyui_status(server_addr)
+    if not status["available"]:
+        return False
+    gpu = status["system"].get("gpu", {})
+    free = gpu.get("vram_free_gb", 0)
+    ok = free >= min_free_gb
+    print(f"[显存检查] 空闲{free}GB / 需求{min_free_gb}GB → {'✅ 满足' if ok else '❌ 不足'}")
+    return ok
