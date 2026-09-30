@@ -78,6 +78,13 @@ try:
 except ImportError:
     _GLOW_OUTLINE_AVAILABLE = False
 
+# 混合模式工具（保存时自动注入）
+try:
+    from mix_mode import save_with_mix_modes
+    _MIX_MODE_AVAILABLE = True
+except ImportError:
+    _MIX_MODE_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -999,8 +1006,11 @@ class E2EPipeline:
             except Exception as e:
                 print(f"  拍立得照片墙失败: {e}")
 
-        # 保存
-        result = project.save()
+        # 保存（自动注入混合模式）
+        if _MIX_MODE_AVAILABLE and getattr(project, '_mix_mode_patches', None):
+            result = save_with_mix_modes(project)
+        else:
+            result = project.save()
         return {"status": "success", "segments": len(segments), "transitions": trans_count}
 
 

@@ -31,7 +31,7 @@ except ImportError:
     _PIL_AVAILABLE = False
 
 try:
-    from mix_mode import apply_mix_mode, inject_mix_modes_to_draft, MIX_MODES
+    from mix_mode import apply_mix_mode, save_with_mix_modes, MIX_MODES
     _MIX_MODE_AVAILABLE = True
 except ImportError:
     _MIX_MODE_AVAILABLE = False
@@ -153,10 +153,8 @@ def create_glow_outline(
         return {"status": "failed", "reason": "轮廓图添加失败"}
 
     # 5. 应用正片叠底混合模式
-    mix_patches = []
     if _MIX_MODE_AVAILABLE:
         apply_mix_mode(project, outline_seg, mode="multiply", intensity=1.0)
-        mix_patches = getattr(project, '_mix_mode_patches', [])
     else:
         print("  ⚠️  mix_mode模块不可用，正片叠底需手动设置")
 
@@ -188,17 +186,12 @@ def create_glow_outline(
     except Exception as e:
         print(f"  ⚠️  {dream_effect}特效添加失败: {e}")
 
-    # 8. 保存工程
-    result = project.save()
+    # 8. 保存工程并自动注入混合模式
+    if _MIX_MODE_AVAILABLE:
+        result = save_with_mix_modes(project)
+    else:
+        result = project.save()
     draft_path = result.get("draft_path", "")
-
-    # 9. 注入混合模式到草稿
-    if mix_patches and draft_path:
-        # 记录片段material_id用于匹配
-        for i, patch in enumerate(mix_patches):
-            if i == 0 and outline_seg:
-                patch["segment_material_id"] = outline_seg.material_id
-        inject_mix_modes_to_draft(draft_path, mix_patches)
 
     return {
         "status": "success",
