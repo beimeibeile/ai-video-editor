@@ -3019,12 +3019,16 @@ def hunyuan_i2v(
     # 下载视频
     video_info = videos[0]
     video_filename = video_info.get("filename", "")
-    video_data = client.download_image(video_filename, video_info.get("subfolder", ""), video_info.get("type", "output"))
+    temp_video_path = client.download_image(
+        video_filename,
+        subfolder=video_info.get("subfolder", ""),
+        type_=video_info.get("type", "output"),
+    )
 
-    # 保存到输出路径
+    # 复制到输出路径
+    import shutil as _shutil
     _os.makedirs(_os.path.dirname(output_path) or ".", exist_ok=True)
-    with open(output_path, "wb") as f:
-        f.write(video_data)
+    _shutil.copy2(temp_video_path, output_path)
 
     print(f"  输出已保存: {output_path}")
     return output_path
