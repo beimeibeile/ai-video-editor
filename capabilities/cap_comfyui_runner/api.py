@@ -1472,7 +1472,7 @@ def txt2video_ltx25(
     prompt: str,
     output_path: str,
     width: int = 768,
-    height: int = 432,
+    height: int = 448,
     frames: int = 97,
     fps: float = 24.0,
     steps: int = 42,
@@ -1492,7 +1492,7 @@ def txt2video_ltx25(
     两种模型模式：
     - int8_distilled: 直接使用distilled主模型（20GB，简单快速）
     - int8_dev_lora: dev基础模型 + distilled LoRA（20GB+8.3GB，可切换LoRA更灵活）
-    经RTX 3080 12GB验证：768x432@97帧可稳定运行。
+    经RTX 3080 12GB验证：768x448@97帧可稳定运行。
 
     Args:
         prompt: 正向提示词（英文效果最佳）
@@ -3033,3 +3033,86 @@ def hunyuan_i2v(
     print(f"  输出已保存: {output_path}")
     return output_path
 
+
+def hunyuan_batch_i2v(
+    image_paths: List[str],
+    output_dir: str,
+    prompt: str = "smooth camera movement, cinematic, high quality, detailed",
+    negative_prompt: str = "blurry, low quality, distorted, static, no motion, ugly, deformed",
+    width: int = 640,
+    height: int = 360,
+    frames: int = 33,
+    fps: int = 16,
+    steps: int = 20,
+    cfg: float = 6.0,
+    per_image_prompts: List[str] = None,
+    server_addr: str = "127.0.0.1:8188",
+    timeout_per_video: int = 600,
+) -> List[str]:
+    """
+    混元视频批量图生视频：多张静态图片→多个动态视频（串行执行避免显存溢出）
+
+    混元视频1.5 I2V模型，电影级画质，适合需要高质感的素材加工。
+    RTX 3080 12GB建议640x360@33帧。
+
+    Args:
+        image_paths: 输入图片路径列表
+        output_dir: 输出目录
+        prompt: 统一运动描述提示词
+        negative_prompt: 负向提示词
+        width/height: 分辨率（建议640x360）
+        frames: 帧数（33≈2秒@16fps）
+        fps: 帧率
+        steps: 采样步数
+        cfg: CFG值（混元建议6.0）
+        per_image_prompts: 每张图片独立提示词列表
+        server_addr: ComfyUI地址
+        timeout_per_video: 单个视频超时
+
+    Returns:
+        输出视频路径列表（失败的为None）
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    total = len(image_paths)
+
+    for i, img_path in enumerate(image_paths):
+        if not os.path.exists(img_path):
+            print(f"[{i+1}/{total}] ⚠️ 图片不存在，跳过: {img_path}")
+            results.append(None)
+            continue
+
+        img_prompt = prompt
+        if per_image_prompts and i < len(per_image_prompts) and per_image_prompts[i]:
+            img_prompt = per_image_prompts[i]
+
+        base_name = os.path.splitext(os.path.basename(img_path))[0]
+        out_path = os.path.join(output_dir, f"{base_name}_motion.mp4")
+
+        print(f"[{i+1}/{total}] 混元I2V: {os.path.basename(img_path)}")
+        print(f"  提示词: {img_prompt[:60]}...")
+
+        try:
+            result = hunyuan_i2v(
+                image_path=img_path,
+                output_path=out_path,
+                prompt=img_prompt,
+                negative_prompt=negative_prompt,
+                width=width,
+                height=height,
+                frames=frames,
+                fps=fps,
+                steps=steps,
+                cfg=cfg,
+                server_addr=server_addr,
+                timeout=timeout_per_video,
+            )
+            results.append(result)
+            print(f"  ✅ 完成: {os.path.basename(result)}")
+        except Exception as e:
+            print(f"  ❌ 失败: {e}")
+            results.append(None)
+
+    success = sum(1 for r in results if r)
+    print(f"\n混元批量I2V完成: {success}/{total} 成功")
+    return results
