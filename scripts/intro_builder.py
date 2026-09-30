@@ -32,7 +32,11 @@ else:
 # 导入特效模块
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, MODULE_DIR)
-from mask_flash_transition import create_solid_color_image, add_expand_animation
+from mask_flash_transition import create_solid_color_image
+try:
+    from mask_flash_transition import add_expand_animation
+except ImportError:
+    add_expand_animation = None  # 旧版接口已移除，使用蒙版关键帧替代
 from subtitle_bar import add_subtitle_bar, BAR_STYLES
 
 
@@ -180,7 +184,7 @@ def create_intro(
                 track_name=f"Flash_{i}",
             )
 
-            if seg:
+            if seg and add_expand_animation:
                 # 添加展开动画
                 add_expand_animation(
                     seg,
@@ -345,7 +349,7 @@ def add_intro_to_project(
                 track_name=f"IntroFlash_{i}",
             )
 
-            if seg:
+            if seg and add_expand_animation:
                 add_expand_animation(
                     seg,
                     direction=direction,
