@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-09-30",
+  "showcases": [
+    {
+      "effect_id": "mask_flash_transition",
+      "name": "蒙版展开快闪",
+      "category": "transitions",
+      "showcase_dir": "mask_flash_transition",
+      "tutorial_source": "抖音教程-李华Liha",
+      "tutorial_duration": 366,
+      "core_technique": "多色块多画中画轨道依次展开+矩形蒙版关键帧",
+      "implementation": "scale+transform关键帧模拟蒙版展开（API不支持蒙版关键帧）",
+      "fidelity": 3,
+      "fidelity_note": "用缩放+位移动画模拟蒙版展开，效果接近但不是真正的蒙版动画",
+      "test_projects": ["MaskFlash_Cyberpunk", "StripeFlash_Neon"],
+      "presets": ["cyberpunk", "warm", "cool", "mono", "neon", "pastel"],
+      "directions": ["left", "right", "top", "bottom", "center", "horizontal", "vertical"],
+      "status": "verified"
+    },
+    {
+      "effect_id": "subtitle_bar",
+      "name": "半透明字幕条",
+      "category": "text",
+      "showcase_dir": "subtitle_bar",
+      "tutorial_source": "抖音教程-剪辑进阶",
+      "tutorial_duration": 157,
+      "core_technique": "矩形贴纸+圆形贴纸+复合片段+圆形蒙版反转+高光",
+      "implementation": "Pillow预生成半透明渐变圆角矩形PNG+画中画轨道叠加",
+      "fidelity": 4,
+      "fidelity_note": "视觉效果高度还原，进阶版复合片段+蒙版未实现（不影响主要效果）",
+      "test_projects": ["SubtitleBar_Demo"],
+      "presets": ["pill_warm", "pill_cool", "pill_cyber", "rect_dark", "rect_minimal", "tag_small"],
+      "status": "verified"
+    },
+    {
+      "effect_id": "intro_builder",
+      "name": "片头生成器",
+      "category": "combo",
+      "showcase_dir": "intro_builder",
+      "tutorial_source": "特效组合（蒙版快闪+字幕条）",
+      "tutorial_duration": null,
+      "core_technique": "组合蒙版快闪转场+半透明字幕条标题",
+      "implementation": "调用mask_flash_transition+subtitle_bar组合生成",
+      "fidelity": 5,
+      "fidelity_note": "完全自主设计，无对标教程",
+      "test_projects": ["Intro_flash_title", "Intro_minimal_title", "Intro_warm_intro", "Intro_cyber_intro", "Intro_tag_intro", "Intro_Integrate_Test"],
+      "presets": ["flash_title", "minimal_title", "warm_intro", "cyber_intro", "tag_intro"],
+      "pipeline_integrated": true,
+      "status": "verified"
+    },
+    {
+      "effect_id": "character_intro",
+      "name": "人物介绍卡片",
+      "category": "combo",
+      "showcase_dir": "character_intro",
+      "tutorial_source": "抖音教程-狂飙人物介绍（未分类教程13435214622783193）",
+      "tutorial_duration": 14.4,
+      "core_technique": "红色渐变背景+人物照白边框+名字依次入场+3D倾斜",
+      "implementation": "Pillow生成带框肖像+渐变背景+缩放/位移/旋转关键帧模拟3D",
+      "fidelity": 3,
+      "fidelity_note": "3D倾斜用2D旋转模拟，缺少真正的3D透视效果",
+      "test_projects": ["CharacterIntro_Test"],
+      "presets": ["red_drama", "cyber_tech", "warm_friends", "minimal_white"],
+      "status": "verified"
+    }
+  ],
+  "fidelity_scale": {
+    "5": "完美还原",
+    "4": "高度还原（细微差异）",
+    "3": "基本还原（部分功能降级）",
+    "2": "部分实现（核心效果可用）",
+    "1": "原型阶段"
+  }
+}
