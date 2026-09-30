@@ -4002,3 +4002,86 @@ def inpaint_image(
 
     print(f"[图片修复] 完成: {os.path.basename(output_path)} ({steps}步)")
     return output_path
+
+
+# ═══════════════════════════════════════════════════════════════
+# 图片风格迁移（img2img）
+# ═══════════════════════════════════════════════════════════════
+
+def img2img_style_transfer(
+    input_image: str,
+    style_prompt: str,
+    output_path: str = None,
+    negative_prompt: str = "blurry, low quality, distorted, ugly, watermark, text",
+    denoise: float = 0.65,
+    steps: int = 30,
+    cfg: float = 7.0,
+    seed: int = None,
+    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    sampler_name: str = "euler",
+    scheduler: str = "normal",
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 300,
+) -> str:
+    """
+    图片风格迁移（img2img）：基于原图生成指定风格的新图
+
+    Args:
+        input_image: 原始图片路径
+        style_prompt: 风格提示词（如'oil painting style, van gogh'）
+        output_path: 输出路径
+        negative_prompt: 负向提示词
+        denoise: 去噪强度（0-1，越高风格化越强，越低越接近原图）
+        steps: 采样步数
+        cfg: 引导强度
+        seed: 随机种子
+        checkpoint: 底模名称
+        sampler_name: 采样器
+        scheduler: 调度器
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        输出图片路径
+    """
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行")
+
+    if seed is None:
+        import random
+        seed = random.randint(0, 2**31 - 1)
+
+    if output_path is None:
+        output_dir = os.path.join(os.getcwd(), "style_transfer_output")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"style_{int(time.time())}.png")
+
+    timestamp = int(time.time())
+    workflow = load_workflow_template(
+        os.path.join(TEMPLATE_DIR, "img2img_style.json"),
+        input_image=os.path.basename(input_image),
+        positive_prompt=style_prompt,
+        negative_prompt=negative_prompt,
+        seed=seed,
+        steps=steps,
+        cfg=cfg,
+        denoise=denoise,
+        checkpoint=checkpoint,
+        sampler_name=sampler_name,
+        scheduler=scheduler,
+        timestamp=timestamp,
+    )
+
+    input_images = {os.path.basename(input_image): input_image}
+    output_dir = os.path.dirname(output_path) or "."
+    results = client.run_workflow(
+        workflow, input_images=input_images,
+        output_dir=output_dir, timeout=timeout
+    )
+
+    if results and os.path.exists(results[0]) and results[0] != output_path:
+        os.replace(results[0], output_path)
+
+    print(f"[风格迁移] 完成: {os.path.basename(output_path)} (denoise={denoise}, {steps}步)")
+    return output_path
