@@ -43,12 +43,15 @@ try:
 except ImportError:
     _SUBTITLE_BAR_AVAILABLE = False
 
-# 蒙版展开快闪（特效库集成）
+# 蒙版展开快闪（特效库集成）—— v4/v5双轴向展开
 try:
-    from mask_flash_transition import create_solid_color_image, add_expand_animation as _add_expand_anim
+    from mask_flash_transition import create_solid_color_image, add_rect_mask_to_segment as _add_rect_mask
+    from mask_keyframe import apply_mask_expand as _apply_mask_kf, save_with_mask_keyframes as _save_with_mask_kf
     _MASK_FLASH_AVAILABLE = True
+    _MASK_KF_AVAILABLE = True
 except ImportError:
     _MASK_FLASH_AVAILABLE = False
+    _MASK_KF_AVAILABLE = False
 
 # 人物介绍卡片（特效库集成）
 try:
@@ -250,6 +253,9 @@ class E2EPipeline:
         # 分镜质量门检查
         qg_report = self._run_storyboard_quality_gates(sb)
 
+        # 特效自动选用：根据风格和情绪自动设置转场类型
+        self._auto_select_effects(sb, style)
+
         # 保存分镜
         sb_path = os.path.join(self.work_dir, f"{project_name}_storyboard.json")
         with open(sb_path, 'w', encoding='utf-8') as f:
@@ -319,6 +325,73 @@ class E2EPipeline:
             "edit_quality_gate": edit_report,
             "edit_report_html": edit_report_html,
         }
+
+    def _auto_select_effects(self, sb: Storyboard, style: str) -> None:
+        """特效自动选用：根据风格和镜头位置自动设置转场类型
+
+        规则：
+        - 第一个镜头：无入场转场
+        - 高潮镜头（中间偏后1-2个）→ 蒙版快闪 v4（双轴向四角汇聚）
+        - 最后一个镜头：叠化收束
+        - 普通镜头 → 根据风格选择默认转场
+        - thriller/cinematic → 快切为主
+        - vlog/emotional → 叠化为主
+        - tutorial → 淡入淡出
+        """
+        if not sb.shots:
+            return
+
+        # 风格→默认转场映射
+        style_default = {
+            "cinematic": "快切",
+            "thriller": "快切",
+            "vlog": "叠化",
+            "emotional": "叠化",
+            "tutorial": "淡入",
+        }
+        default_trans = style_default.get(style, "叠化")
+
+        # 选择高潮镜头（中间偏后1-2个）
+        n = len(sb.shots)
+        climax_indices = set()
+        if n >= 4:
+            # 选择中间偏后的1-2个镜头作为高潮
+            climax_start = max(1, n // 2)
+            climax_end = min(n - 1, climax_start + 2)
+            for i in range(climax_start, climax_end):
+                climax_indices.add(i)
+        elif n == 3:
+            climax_indices.add(1)
+
+        flash_count = 0
+        for i, shot in enumerate(sb.shots):
+            # 第一个镜头：无入场转场
+            if i == 0:
+                shot.transition_in = "无"
+                shot.transition_duration = 0.0
+                continue
+
+            # 高潮镜头：蒙版快闪 v4
+            if i in climax_indices and _MASK_FLASH_AVAILABLE:
+                shot.transition_in = "蒙版快闪"
+                shot.transition_duration = min(0.8, shot.duration * 0.3)
+                flash_count += 1
+                continue
+
+            # 最后一个镜头：叠化收束
+            if i == n - 1:
+                shot.transition_in = "叠化"
+                shot.transition_duration = 0.5
+                continue
+
+            # 普通镜头：风格默认转场
+            shot.transition_in = default_trans
+            shot.transition_duration = 0.3
+
+        if flash_count:
+            print(f"  特效自动选用: {flash_count}个高潮镜头→蒙版快闪v4, 其余→{default_trans}")
+        else:
+            print(f"  特效自动选用: 全部→{default_trans}")
 
     def _run_storyboard_quality_gates(self, sb: Storyboard) -> Optional[Dict]:
         """运行分镜质量门检查
@@ -934,16 +1007,18 @@ class E2EPipeline:
                 # 应用运镜关键帧（根据分镜camera_move字段）
                 if _CAMERA_MOVES_AVAILABLE:
                     duration_us = int(shot.duration * 1_000_000)
+                    move_intensity = getattr(shot, 'move_intensity', 1.0)
                     apply_storyboard_camera_move(
                         seg, shot.camera_move, duration_us,
-                        intensity=shot.move_intensity
+                        intensity=move_intensity
                     )
                     # 应用调色（根据分镜color_tone）
                     color_style_map = {
                         "冷": "cool", "暖": "warm", "中性": "cinematic",
                         "高对比": "noir", "低饱和": "vintage",
                     }
-                    color_style = color_style_map.get(shot.color_tone, "cinematic")
+                    color_tone = getattr(shot, 'color_tone', "中性")
+                    color_style = color_style_map.get(color_tone, "cinematic")
                     add_cinematic_color_grade(seg, duration_us, style=color_style)
             current_time += shot.duration
 
@@ -1013,16 +1088,18 @@ class E2EPipeline:
             if shot.transition_in == "无":
                 continue
 
-            # 蒙版快闪特效（特效库集成）
+            # 蒙版快闪特效 v4（双轴向四角汇聚）
             if shot.transition_in == "蒙版快闪" and _MASK_FLASH_AVAILABLE:
                 try:
                     trans_start = intro_offset + sum(s.duration for s in sb.shots[:i]) - shot.transition_duration
-                    colors = _MASK_FLASH_PRESETS.get("cyberpunk", [(0, 200, 255), (255, 0, 200), (200, 255, 0)])
-                    directions = ["center", "left", "right"]
-                    stagger = shot.transition_duration / len(colors) * 0.5
+                    # v4四角汇聚：4色块从四角对角线展开到中心
+                    flash_colors = _MASK_FLASH_PRESETS.get("cyberpunk", [(0, 200, 255), (255, 0, 200), (200, 255, 0), (0, 255, 128)])[:4]
+                    corner_dirs = ["diagonal_tl", "diagonal_tr", "diagonal_bl", "diagonal_br"]
+                    stagger = shot.transition_duration * 0.15  # 错峰15%
+                    expand_us = int(shot.transition_duration * 1e6 * 0.7)  # 展开占70%时长
 
-                    for j, (color, direction) in enumerate(zip(colors, directions)):
-                        block_path = os.path.join(flash_assets_dir, f"flash_{i}_{j}.png")
+                    for j, (color, direction) in enumerate(zip(flash_colors, corner_dirs)):
+                        block_path = os.path.join(flash_assets_dir, f"flash_v4_{i}_{j}.png")
                         os.makedirs(flash_assets_dir, exist_ok=True)
                         create_solid_color_image(color, width, height, block_path)
 
@@ -1031,15 +1108,22 @@ class E2EPipeline:
                             block_path,
                             start_time=f"{seg_start:.2f}s",
                             duration=f"{shot.transition_duration:.2f}s",
-                            track_name=f"MaskFlash_{i}_{j}",
+                            track_name=f"MaskFlashV4_{i}_{j}",
                         )
                         if flash_seg:
-                            _add_expand_anim(
-                                flash_seg,
-                                direction=direction,
-                                duration_us=int(shot.transition_duration * 1e6 * 0.8),
-                                start_us=0,
-                            )
+                            if _MASK_KF_AVAILABLE:
+                                # v4：矩形蒙版 + 双轴向对角线展开
+                                _add_rect_mask(flash_seg, width, height)
+                                _apply_mask_kf(
+                                    project, flash_seg,
+                                    start_us=0, duration_us=expand_us,
+                                    direction=direction,
+                                    canvas_w=width, canvas_h=height,
+                                    curve="EASE_OUT",
+                                )
+                            else:
+                                # 蒙版关键帧不可用时跳过该色块
+                                continue
                             # 淡出
                             end_us = int(shot.transition_duration * 1e6)
                             flash_seg.add_keyframe(draft.KeyframeProperty.alpha, int(end_us * 0.7), 1.0, **draft.Keyframe.EASE_OUT)
@@ -1047,7 +1131,7 @@ class E2EPipeline:
                     flash_count += 1
                     continue
                 except Exception as e:
-                    print(f"  蒙版快闪{i}失败，回退普通转场: {e}")
+                    print(f"  蒙版快闪v4@{i}失败，回退普通转场: {e}")
 
             # 普通转场
             try:
@@ -1161,9 +1245,25 @@ class E2EPipeline:
             except Exception as e:
                 print(f"  拍立得照片墙失败: {e}")
 
-        # 保存（自动注入混合模式）
-        if _MIX_MODE_AVAILABLE and getattr(project, '_mix_mode_patches', None):
+        # 保存（自动注入蒙版关键帧+混合模式）
+        has_mask_kf = _MASK_KF_AVAILABLE and getattr(project, '_mask_kf_patches', None)
+        has_mix = _MIX_MODE_AVAILABLE and getattr(project, '_mix_mode_patches', None)
+
+        if has_mask_kf and has_mix:
+            # 先保存基础工程，再分别注入两种补丁
+            result = project.save()
+            draft_path = os.path.join(getattr(project, 'root', ''), getattr(project, 'name', project_name))
+            from mask_keyframe import inject_mask_keyframes_to_draft
+            from mix_mode import inject_mix_modes_to_draft
+            inject_mask_keyframes_to_draft(draft_path, project._mask_kf_patches, canvas_h=height)
+            inject_mix_modes_to_draft(draft_path, project._mix_mode_patches)
+            print(f"  保存: 已注入蒙版关键帧+混合模式")
+        elif has_mask_kf:
+            result = _save_with_mask_kf(project, canvas_h=height)
+            print(f"  保存: 已注入蒙版关键帧")
+        elif has_mix:
             result = save_with_mix_modes(project)
+            print(f"  保存: 已注入混合模式")
         else:
             result = project.save()
         draft_path = os.path.join(getattr(project, 'root', ''), getattr(project, 'name', project_name))

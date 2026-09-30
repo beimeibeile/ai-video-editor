@@ -55,6 +55,13 @@ class Shot:
     material_hint: str = ""  # 素材选择建议
     color_grade: str = ""  # 调色建议
     notes: str = ""  # 备注
+    # 扩展字段（pipeline使用）
+    transition_duration: float = 0.3  # 转场时长（秒）
+    move_intensity: float = 1.0  # 运镜强度
+    color_tone: str = "中性"  # 色调（冷/暖/中性/高对比/低饱和）
+    emotion: str = "平静"  # 情绪
+    shot_size: str = ""  # 景别（与shot_type同义，兼容）
+    sfx_hint: str = ""  # 音效提示（与sfx同义，兼容）
 
 
 @dataclass
