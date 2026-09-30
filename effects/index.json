@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-09-30",
+  "effects": [
+    {
+      "id": "mask_flash_transition",
+      "name": "蒙版展开快闪",
+      "category": "transitions",
+      "module": "scripts/mask_flash_transition.py",
+      "source": "抖音教程-李华Liha",
+      "difficulty": "medium",
+      "status": "verified",
+      "description": "多色块多轨道依次展开快闪，7种展开方向，6套预设配色",
+      "tags": ["快闪", "蒙版", "转场", "色块", "卡点"],
+      "api": ["create_mask_flash_basic", "create_stripe_flash", "add_expand_animation", "apply_expand_to_segments"]
+    },
+    {
+      "id": "subtitle_bar",
+      "name": "半透明字幕条",
+      "category": "text",
+      "module": "scripts/subtitle_bar.py",
+      "source": "抖音教程-剪辑进阶",
+      "difficulty": "easy",
+      "status": "verified",
+      "description": "半透明渐变圆角矩形字幕条+高光+文字，6种预设样式，支持入场动画",
+      "tags": ["字幕条", "文本框", "半透明", "渐变", "药丸", "标签"],
+      "api": ["add_subtitle_bar", "add_subtitle_bars", "create_gradient_bar", "create_highlight_circle", "create_subtitle_bar_demo"]
+    }
+  ],
+  "categories": {
+    "transitions": "转场特效",
+    "text": "文字特效",
+    "visual": "视觉特效"
+  }
+}
