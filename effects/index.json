@@ -1,5 +1,5 @@
 {
-  "version": "1.2",
+  "version": "1.3",
   "last_updated": "2026-09-30",
   "effects": [
     {
@@ -73,6 +73,32 @@
       "description": "多张照片带拍立得边框旋转散落，入场动画旋转+缩放，适合古风/旅行/回忆类视频",
       "tags": ["拍立得", "照片墙", "旋转", "散落", "回忆", "古风"],
       "api": ["create_polaroid_wall", "create_polaroid_frame", "add_polaroid_photos_to_project"]
+    },
+    {
+      "id": "glow_outline",
+      "name": "动态发光轮廓",
+      "category": "visual",
+      "module": "scripts/glow_outline.py",
+      "source": "抖音教程-剪映进阶篇",
+      "difficulty": "hard",
+      "status": "verified",
+      "description": "黑底白边轮廓图+正片叠底混合模式+梦幻辉光+梦境特效，实现彩色发光轮廓效果",
+      "tags": ["发光轮廓", "正片叠底", "混合模式", "梦幻辉光", "梦境", "描边"],
+      "api": ["create_glow_outline", "add_glow_outline_to_project", "generate_outline_image"],
+      "dependencies": ["mix_mode"]
+    },
+    {
+      "id": "mix_mode",
+      "name": "混合模式工具",
+      "category": "tool",
+      "module": "scripts/mix_mode.py",
+      "source": "剪映5.9草稿逆向",
+      "difficulty": "hard",
+      "status": "partial",
+      "description": "通过JSON注入实现片段混合模式（正片叠底已逆向，其他待补充），支持强度调节",
+      "tags": ["混合模式", "正片叠底", "滤色", "叠加", "blend", "JSON注入"],
+      "api": ["apply_mix_mode", "inject_mix_modes_to_draft", "discover_mix_modes"],
+      "notes": "正片叠底已验证可用，其他9种混合模式待逆向effect_id和resource_id"
     }
   ],
   "categories": {
@@ -88,6 +114,8 @@
     "intro_builder": "已集成到E2EPipeline（add_intro=True时使用特效库片头，5种风格映射）",
     "subtitle_bar": "已集成到E2EPipeline（字幕部分，cinema→rect_dark, vlog→pill_warm, tech→pill_cyber等）",
     "mask_flash_transition": "已集成到E2EPipeline（转场部分，transition_in='蒙版快闪'时触发，3色块赛博朋克配色）",
-    "character_intro": "已集成到E2EPipeline（character_intros参数传入人物列表，片头后自动添加，风格自动映射）"
+    "character_intro": "已集成到E2EPipeline（character_intros参数传入人物列表，片头后自动添加，风格自动映射）",
+    "text_layout": "已集成到E2EPipeline（text_layout_style参数，钩子文案使用文字排版预设，片头+人物介绍后显示3秒）",
+    "polaroid_wall": "已集成到E2EPipeline（photo_wall参数传入图片列表，正片结束后显示拍立得照片墙结尾）"
   }
 }
