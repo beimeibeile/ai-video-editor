@@ -4085,3 +4085,301 @@ def img2img_style_transfer(
 
     print(f"[风格迁移] 完成: {os.path.basename(output_path)} (denoise={denoise}, {steps}步)")
     return output_path
+
+
+# ──────────────────────────────────────────────
+# 图像扩图（Outpaint）
+# ──────────────────────────────────────────────
+
+def outpaint_image(
+    input_image: str,
+    prompt: str = "",
+    output_path: str = None,
+    pad_left: int = 128,
+    pad_top: int = 128,
+    pad_right: int = 128,
+    pad_bottom: int = 128,
+    feathering: int = 40,
+    negative_prompt: str = "blurry, low quality, distorted, ugly, watermark, text",
+    steps: int = 35,
+    cfg: float = 7.0,
+    seed: int = None,
+    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    control_net_name: str = "control_v11p_sd15_inpaint.pth",
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 300,
+) -> str:
+    """
+    图像扩图（Outpaint）：向外扩展图像边界，AI填充空白区域
+
+    Args:
+        input_image: 原始图片路径
+        prompt: 填充区域提示词（空则自动延续原图风格）
+        output_path: 输出路径
+        pad_left/top/right/bottom: 各方向扩展像素数
+        feathering: 边缘羽化像素数
+        negative_prompt: 负向提示词
+        steps: 采样步数
+        cfg: 引导强度
+        seed: 随机种子
+        checkpoint: 底模名称
+        control_net_name: inpaint ControlNet模型
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        输出图片路径
+    """
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行")
+
+    if seed is None:
+        import random
+        seed = random.randint(0, 2**31 - 1)
+
+    if output_path is None:
+        output_dir = os.path.join(os.getcwd(), "outpaint_output")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"outpaint_{int(time.time())}.png")
+
+    # 如果未提供prompt，使用通用延续提示
+    if not prompt:
+        prompt = "high quality, detailed, seamless continuation of the image, matching style and lighting"
+
+    timestamp = int(time.time())
+    workflow = load_workflow_template(
+        os.path.join(TEMPLATE_DIR, "outpaint_sd15.json"),
+        input_image=os.path.basename(input_image),
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        seed=seed,
+        steps=steps,
+        cfg=cfg,
+        ckpt_name=checkpoint,
+        control_net_name=control_net_name,
+        pad_left=pad_left,
+        pad_top=pad_top,
+        pad_right=pad_right,
+        pad_bottom=pad_bottom,
+        feathering=feathering,
+        timestamp=timestamp,
+    )
+
+    input_images = {os.path.basename(input_image): input_image}
+    output_dir = os.path.dirname(output_path) or "."
+    results = client.run_workflow(
+        workflow, input_images=input_images,
+        output_dir=output_dir, timeout=timeout
+    )
+
+    if results and os.path.exists(results[0]) and results[0] != output_path:
+        os.replace(results[0], output_path)
+
+    print(f"[扩图] 完成: {os.path.basename(output_path)} (扩展: L{pad_left}/T{pad_top}/R{pad_right}/B{pad_bottom})")
+    return output_path
+
+
+# ──────────────────────────────────────────────
+# 视频风格迁移（逐帧 img2img）
+# ──────────────────────────────────────────────
+
+def video_style_transfer(
+    input_video: str,
+    style_prompt: str,
+    output_path: str = None,
+    denoise: float = 0.45,
+    steps: int = 20,
+    cfg: float = 7.0,
+    fps: int = None,
+    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    server_addr: str = "127.0.0.1:8188",
+    ffmpeg_path: str = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
+    timeout: int = 600,
+) -> str:
+    """
+    视频风格迁移：逐帧提取 → 风格迁移 → 重新合成视频
+
+    Args:
+        input_video: 输入视频路径
+        style_prompt: 风格提示词
+        output_path: 输出视频路径
+        denoise: 去噪强度（0-1，建议0.3-0.5，太高会闪烁）
+        steps: 每帧采样步数
+        cfg: 引导强度
+        fps: 输出帧率（None则保持原帧率）
+        checkpoint: 底模名称
+        server_addr: ComfyUI地址
+        ffmpeg_path: ffmpeg路径
+        timeout: 超时
+
+    Returns:
+        输出视频路径
+    """
+    import subprocess
+    import shutil
+
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行")
+
+    if output_path is None:
+        output_dir = os.path.join(os.getcwd(), "video_style_output")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"styled_{int(time.time())}.mp4")
+
+    # 创建临时目录
+    work_dir = os.path.join(os.path.dirname(output_path), f"_style_tmp_{int(time.time())}")
+    frames_dir = os.path.join(work_dir, "frames")
+    styled_dir = os.path.join(work_dir, "styled")
+    os.makedirs(frames_dir, exist_ok=True)
+    os.makedirs(styled_dir, exist_ok=True)
+
+    try:
+        # 1. 获取视频信息
+        video_info = get_video_info(input_video)
+        orig_fps = video_info.get("fps", 30)
+        if fps is None:
+            fps = orig_fps
+
+        # 2. 提取帧
+        print(f"[视频风格迁移] 提取帧: {input_video}")
+        extract_cmd = [
+            ffmpeg_path, "-y", "-i", input_video,
+            "-q:v", "2", os.path.join(frames_dir, "frame_%05d.jpg")
+        ]
+        subprocess.run(extract_cmd, capture_output=True, timeout=120)
+
+        frame_files = sorted(glob.glob(os.path.join(frames_dir, "*.jpg")))
+        print(f"  提取到 {len(frame_files)} 帧")
+
+        if not frame_files:
+            raise RuntimeError("帧提取失败")
+
+        # 3. 逐帧风格迁移
+        print(f"[视频风格迁移] 逐帧处理 ({denoise=}, {steps}步)")
+        styled_frames = []
+        for i, frame_path in enumerate(frame_files):
+            styled_path = os.path.join(styled_dir, f"styled_{i:05d}.png")
+            try:
+                img2img_style_transfer(
+                    input_image=frame_path,
+                    style_prompt=style_prompt,
+                    output_path=styled_path,
+                    denoise=denoise,
+                    steps=steps,
+                    cfg=cfg,
+                    checkpoint=checkpoint,
+                    server_addr=server_addr,
+                    timeout=timeout,
+                )
+                styled_frames.append(styled_path)
+                if (i + 1) % 10 == 0 or i == len(frame_files) - 1:
+                    print(f"  进度: {i+1}/{len(frame_files)}")
+            except Exception as e:
+                print(f"  ⚠️  帧{i}处理失败: {e}，使用原图")
+                shutil.copy2(frame_path, styled_path)
+                styled_frames.append(styled_path)
+
+        # 4. 合成视频
+        print(f"[视频风格迁移] 合成视频 ({fps}fps)")
+        concat_cmd = [
+            ffmpeg_path, "-y",
+            "-framerate", str(fps),
+            "-i", os.path.join(styled_dir, "styled_%05d.png"),
+            "-c:v", "libx264", "-pix_fmt", "yuv420p",
+            "-crf", "18",
+            output_path
+        ]
+        subprocess.run(concat_cmd, capture_output=True, timeout=120)
+
+        # 5. 尝试合并原音频
+        try:
+            audio_check = subprocess.run(
+                [ffmpeg_path, "-i", input_video],
+                capture_output=True, text=True
+            )
+            if "Audio" in (audio_check.stderr or ""):
+                tmp_output = output_path + ".tmp.mp4"
+                merge_cmd = [
+                    ffmpeg_path, "-y",
+                    "-i", output_path, "-i", input_video,
+                    "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0",
+                    "-shortest", tmp_output
+                ]
+                subprocess.run(merge_cmd, capture_output=True, timeout=60)
+                if os.path.exists(tmp_output):
+                    os.replace(tmp_output, output_path)
+                    print("  已合并原音频")
+        except Exception:
+            pass
+
+        print(f"[视频风格迁移] 完成: {os.path.basename(output_path)} ({len(styled_frames)}帧)")
+        return output_path
+
+    finally:
+        # 清理临时文件
+        if os.path.exists(work_dir):
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+
+# ──────────────────────────────────────────────
+# 视频转 GIF
+# ──────────────────────────────────────────────
+
+def video_to_gif(
+    input_video: str,
+    output_path: str = None,
+    fps: int = 15,
+    width: int = 480,
+    ffmpeg_path: str = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
+) -> str:
+    """
+    视频转 GIF（使用 ffmpeg，生成调色板优化的高质量GIF）
+
+    Args:
+        input_video: 输入视频路径
+        output_path: 输出GIF路径
+        fps: GIF帧率（建议10-20）
+        width: GIF宽度（高度等比缩放）
+        ffmpeg_path: ffmpeg路径
+
+    Returns:
+        输出GIF路径
+    """
+    import subprocess
+
+    if output_path is None:
+        base = os.path.splitext(os.path.basename(input_video))[0]
+        output_path = os.path.join(os.path.dirname(input_video) or ".", f"{base}.gif")
+
+    # 生成调色板
+    palette_path = output_path + ".palette.png"
+    try:
+        # 第一步：生成调色板
+        palette_cmd = [
+            ffmpeg_path, "-y", "-i", input_video,
+            "-vf", f"fps={fps},scale={width}:-1:flags=lanczos,palettegen=stats_mode=diff",
+            palette_path
+        ]
+        subprocess.run(palette_cmd, capture_output=True, timeout=120)
+
+        # 第二步：使用调色板生成GIF
+        gif_cmd = [
+            ffmpeg_path, "-y", "-i", input_video, "-i", palette_path,
+            "-lavfi", f"fps={fps},scale={width}:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
+            output_path
+        ]
+        subprocess.run(gif_cmd, capture_output=True, timeout=120)
+
+        if os.path.exists(output_path):
+            size_kb = os.path.getsize(output_path) / 1024
+            print(f"[视频转GIF] 完成: {os.path.basename(output_path)} ({size_kb:.0f}KB, {fps}fps, {width}px)")
+        else:
+            raise RuntimeError("GIF生成失败")
+
+        return output_path
+
+    finally:
+        if os.path.exists(palette_path):
+            os.remove(palette_path)
