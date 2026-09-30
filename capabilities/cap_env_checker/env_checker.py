@@ -361,9 +361,184 @@ def check_davinci_resolve() -> EnvCheckResult:
     return checker.check_davinci()
 
 
+@dataclass
+class EnvStrategy:
+    """环境适配策略"""
+    mode: str = "full"  # full / standard / minimal / basic
+    description: str = ""
+    enabled_features: List[str] = field(default_factory=list)
+    disabled_features: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    install_commands: Dict[str, str] = field(default_factory=dict)
+
+    def to_markdown(self) -> str:
+        lines = ["## 系统工作策略", ""]
+        lines.append(f"**模式**: {self.mode}")
+        lines.append(f"**说明**: {self.description}")
+        lines.append("")
+        if self.enabled_features:
+            lines.append("### ✅ 可用功能")
+            for f in self.enabled_features:
+                lines.append(f"- {f}")
+            lines.append("")
+        if self.disabled_features:
+            lines.append("### ⚠️ 受限功能")
+            for f in self.disabled_features:
+                lines.append(f"- {f}")
+            lines.append("")
+        if self.warnings:
+            lines.append("### ⚠️ 注意事项")
+            for w in self.warnings:
+                lines.append(f"- {w}")
+            lines.append("")
+        if self.install_commands:
+            lines.append("### 📦 安装触发指令")
+            lines.append("需要安装缺失组件时，发送以下指令给助手：")
+            lines.append("")
+            for name, cmd in self.install_commands.items():
+                lines.append(f"- **{name}**: `{cmd}`")
+            lines.append("")
+        return "\n".join(lines)
+
+
+class EnvStrategyGenerator:
+    """环境策略生成器"""
+
+    # 功能与依赖映射
+    FEATURE_DEPS = {
+        "剪映工程合成": ["剪映", "ffmpeg"],
+        "AI视频生成(LTX/混元)": ["ComfyUI"],
+        "AI图片生成": ["ComfyUI"],
+        "Fusion高级特效(粒子/光效)": ["DaVinci Resolve"],
+        "Fusion文字动画": ["DaVinci Resolve"],
+        "ffmpeg动效(Ken Burns/转场)": ["ffmpeg"],
+        "素材处理(格式转换/抽帧)": ["ffmpeg"],
+        "图片处理(轮廓/渐变生成)": ["Python 依赖"],
+        "字幕烧录": ["ffmpeg", "Python 依赖"],
+    }
+
+    def generate(self, report: EnvReport) -> EnvStrategy:
+        """根据检测报告生成适配策略"""
+        available = {r.name for r in report.results if r.available}
+        missing = {r.name for r in report.results if not r.available}
+
+        # 判断模式
+        if not missing:
+            mode = "full"
+            description = "全部依赖已安装，所有功能可用"
+        elif "剪映" not in missing and "ffmpeg" not in missing and "Python 依赖" not in missing:
+            mode = "standard"
+            description = "核心剪辑功能可用，AI/Fusion特效需安装对应依赖"
+        elif "剪映" not in missing and "ffmpeg" not in missing:
+            mode = "minimal"
+            description = "基础剪辑可用，图片处理和AI特效受限"
+        else:
+            mode = "basic"
+            description = "核心依赖缺失，仅能进行创意规划和分镜设计"
+
+        # 计算可用/受限功能
+        enabled = []
+        disabled = []
+        for feature, deps in self.FEATURE_DEPS.items():
+            if all(d in available for d in deps):
+                enabled.append(feature)
+            else:
+                missing_deps = [d for d in deps if d not in available]
+                disabled.append(f"{feature} (缺失: {', '.join(missing_deps)})")
+
+        # 警告
+        warnings = []
+        if "ComfyUI" in missing:
+            warnings.append("未安装ComfyUI，AI视频/图片生成功能不可用。可使用剪映内置特效和ffmpeg动效替代。")
+        if "DaVinci Resolve" in missing:
+            warnings.append("未安装DaVinci Resolve，Fusion高级特效（粒子/光效/文字动画）不可用。可使用剪映内置特效替代。")
+        if "剪映" in missing:
+            warnings.append("未安装剪映，无法进行工程合成和导出。仅能进行创意规划、分镜设计和素材准备。")
+        if "ffmpeg" in missing:
+            warnings.append("未安装ffmpeg，视频处理、格式转换、字幕烧录等功能不可用。")
+
+        # 安装指令
+        install_commands = {}
+        for r in report.results:
+            if not r.available:
+                if r.name == "Python 依赖":
+                    install_commands[r.name] = "安装Python依赖"
+                elif r.name == "ffmpeg":
+                    install_commands[r.name] = "安装ffmpeg"
+                elif r.name == "剪映":
+                    install_commands[r.name] = "安装剪映5.9"
+                elif r.name == "ComfyUI":
+                    install_commands[r.name] = "安装ComfyUI"
+                elif r.name == "DaVinci Resolve":
+                    install_commands[r.name] = "安装DaVinci Resolve"
+
+        return EnvStrategy(
+            mode=mode,
+            description=description,
+            enabled_features=enabled,
+            disabled_features=disabled,
+            warnings=warnings,
+            install_commands=install_commands,
+        )
+
+
+def check_environment_with_strategy(config: Optional[Dict[str, Any]] = None) -> Tuple[EnvReport, EnvStrategy]:
+    """便捷函数：执行环境检测并生成策略"""
+    report = check_environment(config)
+    generator = EnvStrategyGenerator()
+    strategy = generator.generate(report)
+    return report, strategy
+
+
+def generate_detailed_report(report: EnvReport, strategy: EnvStrategy) -> str:
+    """生成详细环境报告（含策略分析和安装指引）"""
+    lines = []
+    lines.append(report.to_markdown())
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(strategy.to_markdown())
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## 用户选择")
+    lines.append("")
+    lines.append("请选择以下操作：")
+    lines.append("")
+    lines.append("1. **继续使用当前环境** - 接受功能限制，使用可用功能完成任务")
+    lines.append("2. **安装缺失依赖** - 发送上方对应安装指令，助手将引导安装")
+    lines.append("3. **稍后再问** - 本次跳过，下次运行时重新检测")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## 各组件功能影响详解")
+    lines.append("")
+    lines.append("### 剪映（核心依赖）")
+    lines.append("- 影响：工程创建、片段编排、转场、字幕、特效、导出")
+    lines.append("- 替代：无（必须安装）")
+    lines.append("")
+    lines.append("### ffmpeg（核心依赖）")
+    lines.append("- 影响：视频格式转换、抽帧、Ken Burns动效、转场合成、字幕烧录")
+    lines.append("- 替代：剪映内置部分功能，但批量处理和自定义动效受限")
+    lines.append("")
+    lines.append("### ComfyUI（可选依赖）")
+    lines.append("- 影响：AI视频生成（LTX-2.5/混元）、AI图片生成、图生视频、首尾帧视频")
+    lines.append("- 替代：使用用户提供的素材图片/视频，或使用ffmpeg动效")
+    lines.append("")
+    lines.append("### DaVinci Resolve（可选依赖）")
+    lines.append("- 影响：Fusion粒子特效、镜头光晕、辉光、专业文字动画器、高级合成")
+    lines.append("- 替代：剪映内置特效（粒子/光效/文字动画），效果略逊但够用")
+    lines.append("")
+    lines.append("### Python 依赖（核心依赖）")
+    lines.append("- 影响：图片处理（轮廓生成、渐变、纯色图）、数据处理、API调用")
+    lines.append("- 替代：无（必须安装）")
+    lines.append("")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("ai-video-editor 环境检测")
     print("=" * 60)
-    report = check_environment()
-    print(report.to_markdown())
+    report, strategy = check_environment_with_strategy()
+    print(generate_detailed_report(report, strategy))

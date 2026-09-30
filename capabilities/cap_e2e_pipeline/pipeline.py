@@ -404,52 +404,68 @@ class E2EPipeline:
             print(f"  特效自动选用: 全部→{default_trans}")
 
     def _run_env_check(self):
-        """运行环境检测，缺失组件时警告但不阻断流程
+        """运行环境检测，生成适配策略并输出详细报告
 
-        关键依赖（剪映、ffmpeg）缺失时警告；
-        可选依赖（ComfyUI、DaVinci Resolve）缺失时提示但继续。
+        检测完成后：
+        1. 根据真实环境生成系统工作策略（full/standard/minimal/basic）
+        2. 输出详细报告（环境状况+功能影响+安装指引）
+        3. 给用户选择机会（继续/安装/跳过）
+        4. 提示安装触发指令
         """
         if not _ENV_CHECKER_AVAILABLE:
             return
 
         try:
-            report = _check_env()
+            from cap_env_checker import check_environment_with_strategy, generate_detailed_report
+            report, strategy = check_environment_with_strategy()
 
-            # 关键依赖检查
-            critical_missing = []
-            optional_missing = []
-            for r in report.results:
-                if not r.available:
-                    if r.name in ["剪映", "ffmpeg", "Python 依赖"]:
-                        critical_missing.append(r.name)
-                    else:
-                        optional_missing.append(r.name)
+            # 输出策略摘要
+            print(f"\n{'='*60}")
+            print(f"环境检测完成 | 策略模式: {strategy.mode}")
+            print(f"{'='*60}")
+            print(f"说明: {strategy.description}")
+            print(f"可用功能: {len(strategy.enabled_features)}项 | 受限功能: {len(strategy.disabled_features)}项")
 
-            if critical_missing:
-                print(f"\n⚠️  关键依赖缺失: {', '.join(critical_missing)}")
-                print("   部分功能可能无法正常工作，建议安装后重试。")
-                for r in report.results:
-                    if not r.available and r.name in critical_missing:
-                        print(f"   - {r.name}: {r.install_hint}")
-                        if r.install_url:
-                            print(f"     下载: {r.install_url}")
+            # 缺失依赖提示
+            if report.missing:
+                print(f"\n⚠️  缺失依赖: {', '.join(report.missing)}")
+                if strategy.install_commands:
+                    print("   安装触发指令（发送给助手即可）:")
+                    for name, cmd in strategy.install_commands.items():
+                        print(f"   - {name}: 「{cmd}」")
 
-            if optional_missing:
-                print(f"\nℹ️  可选依赖缺失: {', '.join(optional_missing)}")
-                print("   以下功能将不可用，但不影响基础流程:")
-                for r in report.results:
-                    if not r.available and r.name in optional_missing:
-                        print(f"   - {r.name}: {r.install_hint[:60]}...")
+            # 警告
+            if strategy.warnings:
+                print(f"\nℹ️  注意事项:")
+                for w in strategy.warnings[:3]:
+                    print(f"   - {w[:80]}...")
 
-            # 保存环境报告
+            # 用户选择提示
+            print(f"\n请选择: 1.继续当前环境  2.安装缺失依赖  3.稍后再问")
+            print(f"{'='*60}\n")
+
+            # 保存详细报告
             try:
-                report_path = os.path.join(self.work_dir, "env_report.json")
-                os.makedirs(os.path.dirname(report_path), exist_ok=True)
+                report_dir = os.path.join(self.work_dir, "env_reports")
+                os.makedirs(report_dir, exist_ok=True)
+                from datetime import datetime
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                # JSON报告
                 import json as _json
-                with open(report_path, 'w', encoding='utf-8') as f:
+                with open(os.path.join(report_dir, f"env_report_{ts}.json"), 'w', encoding='utf-8') as f:
                     _json.dump(report.to_dict(), f, ensure_ascii=False, indent=2)
+                # Markdown详细报告
+                with open(os.path.join(report_dir, f"env_report_{ts}.md"), 'w', encoding='utf-8') as f:
+                    f.write(generate_detailed_report(report, strategy))
+                # 最新报告软链接（覆盖）
+                with open(os.path.join(self.work_dir, "env_report_latest.md"), 'w', encoding='utf-8') as f:
+                    f.write(generate_detailed_report(report, strategy))
             except Exception:
                 pass
+
+            # 保存策略到pipeline实例，供后续流程参考
+            self._env_strategy = strategy
+            self._env_report = report
 
         except Exception as e:
             print(f"\n⚠️  环境检测跳过: {e}")
