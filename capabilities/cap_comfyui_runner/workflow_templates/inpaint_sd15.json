@@ -1,0 +1,61 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {"ckpt_name": "{{ckpt_name}}"}
+  },
+  "2": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {"text": "{{prompt}}", "clip": ["1", 1]}
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {"text": "{{negative_prompt}}", "clip": ["1", 1]}
+  },
+  "4": {
+    "class_type": "LoadImage",
+    "inputs": {"image": "{{input_image}}"}
+  },
+  "5": {
+    "class_type": "LoadImage",
+    "inputs": {"image": "{{mask_image}}"}
+  },
+  "6": {
+    "class_type": "ControlNetLoader",
+    "inputs": {"control_net_name": "{{control_net_name}}"}
+  },
+  "7": {
+    "class_type": "ControlNetApply",
+    "inputs": {"conditioning": ["2", 0], "control_net": ["6", 0], "image": ["4", 0], "strength": 1.0}
+  },
+  "8": {
+    "class_type": "VAEEncode",
+    "inputs": {"pixels": ["4", 0], "vae": ["1", 2]}
+  },
+  "9": {
+    "class_type": "SetLatentNoiseMask",
+    "inputs": {"samples": ["8", 0], "mask": ["5", 1]}
+  },
+  "10": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": {{seed}},
+      "steps": {{steps}},
+      "cfg": {{cfg}},
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1.0,
+      "model": ["1", 0],
+      "positive": ["7", 0],
+      "negative": ["3", 0],
+      "latent_image": ["9", 0]
+    }
+  },
+  "11": {
+    "class_type": "VAEDecode",
+    "inputs": {"samples": ["10", 0], "vae": ["1", 2]}
+  },
+  "12": {
+    "class_type": "SaveImage",
+    "inputs": {"filename_prefix": "inpaint_output", "images": ["11", 0]}
+  }
+}

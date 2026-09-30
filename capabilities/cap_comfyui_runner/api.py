@@ -3920,3 +3920,85 @@ def txt2img_krea2(
 
     print(f"[Krea2文生图] 完成: {os.path.basename(output_path)} ({width}x{height}, {steps}步)")
     return output_path
+
+
+# ═══════════════════════════════════════════════════════════════
+# 图片修复（Inpainting）
+# ═══════════════════════════════════════════════════════════════
+
+def inpaint_image(
+    input_image: str,
+    mask_image: str,
+    prompt: str,
+    output_path: str = None,
+    negative_prompt: str = "blurry, low quality, distorted, ugly, watermark, text",
+    steps: int = 35,
+    cfg: float = 7.0,
+    seed: int = None,
+    ckpt_name: str = "majicmixRealistic_v7.safetensors",
+    control_net_name: str = "control_v11p_sd15_inpaint.pth",
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 300,
+) -> str:
+    """
+    图片修复（Inpainting）：根据遮罩修复图片中的指定区域
+
+    Args:
+        input_image: 原始图片路径
+        mask_image: 遮罩图片路径（白色区域=需要修复的区域）
+        prompt: 修复提示词
+        output_path: 输出路径
+        negative_prompt: 负向提示词
+        steps: 采样步数
+        cfg: 引导强度
+        seed: 随机种子
+        ckpt_name: 底模名称
+        control_net_name: inpaint ControlNet模型名
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        输出图片路径
+    """
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行")
+
+    if seed is None:
+        import random
+        seed = random.randint(0, 2**31 - 1)
+
+    if output_path is None:
+        output_dir = os.path.join(os.getcwd(), "inpaint_output")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"inpaint_{int(time.time())}.png")
+
+    timestamp = int(time.time())
+    workflow = load_workflow_template(
+        os.path.join(TEMPLATE_DIR, "inpaint_sd15.json"),
+        input_image=os.path.basename(input_image),
+        mask_image=os.path.basename(mask_image),
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        seed=seed,
+        steps=steps,
+        cfg=cfg,
+        ckpt_name=ckpt_name,
+        control_net_name=control_net_name,
+    )
+
+    input_images = {
+        os.path.basename(input_image): input_image,
+        os.path.basename(mask_image): mask_image,
+    }
+    output_dir = os.path.dirname(output_path) or "."
+    results = client.run_workflow(
+        workflow, input_images=input_images,
+        output_dir=output_dir, timeout=timeout
+    )
+
+    if results and os.path.exists(results[0]) and results[0] != output_path:
+        os.replace(results[0], output_path)
+
+    print(f"[图片修复] 完成: {os.path.basename(output_path)} ({steps}步)")
+    return output_path
