@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "last_updated": "2026-09-30",
   "effects": [
     {
@@ -34,9 +34,21 @@
       "source": "特效组合（蒙版快闪+字幕条）",
       "difficulty": "easy",
       "status": "verified",
-      "description": "组合特效生成短视频片头，5种模板：快闪标题/极简标题/温暖开场/赛博开场/标签开场",
+      "description": "组合特效生成短视频片头，5种模板，支持在已有工程中添加",
       "tags": ["片头", "开场", "标题", "组合", "模板"],
-      "api": ["create_intro", "create_intro_batch"]
+      "api": ["create_intro", "create_intro_batch", "add_intro_to_project"]
+    },
+    {
+      "id": "character_intro",
+      "name": "人物介绍卡片",
+      "category": "combo",
+      "module": "scripts/character_intro.py",
+      "source": "抖音教程-狂飙人物介绍",
+      "difficulty": "medium",
+      "status": "verified",
+      "description": "人物照片+边框依次入场，名字标签带颜色区分，4种预设风格",
+      "tags": ["人物介绍", "卡片", "角色", "入场", "名单"],
+      "api": ["create_character_intro", "create_framed_portrait", "add_card_entrance_animation"]
     }
   ],
   "categories": {
@@ -47,5 +59,10 @@
   },
   "tools": {
     "effect_library": "scripts/effect_library.py - 特效库统一调用器（检索/搜索/应用）"
+  },
+  "pipeline_integration": {
+    "intro_builder": "已集成到E2EPipeline（add_intro=True时使用特效库片头）",
+    "subtitle_bar": "待集成（字幕部分）",
+    "mask_flash_transition": "待集成（转场部分）"
   }
 }

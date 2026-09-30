@@ -272,6 +272,125 @@ def create_intro_batch(
     return results
 
 
+def add_intro_to_project(
+    project,
+    template: str = "flash_title",
+    title: str = "标题",
+    subtitle: str = None,
+    start_time: float = 0.0,
+    width: int = 1080,
+    height: int = 1920,
+    output_dir: str = None,
+    custom_config: Dict = None,
+) -> float:
+    """在已有剪映工程中添加片头（从指定时间开始）
+
+    用于模式A/B流程集成，在正片之前插入片头。
+
+    Args:
+        project: JyProject实例（已创建的工程）
+        template: 模板名称
+        title: 主标题
+        subtitle: 副标题（可选）
+        start_time: 片头起始时间（秒），默认0
+        width: 画布宽
+        height: 画布高
+        output_dir: 素材输出目录
+        custom_config: 自定义配置覆盖
+
+    Returns:
+        片头时长（秒）
+    """
+    cfg = INTRO_TEMPLATES.get(template, INTRO_TEMPLATES["flash_title"]).copy()
+    if custom_config:
+        cfg.update(custom_config)
+
+    duration = cfg["duration"]
+
+    if output_dir is None:
+        output_dir = os.path.join(MODULE_DIR, "intro_assets")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 1. 添加背景
+    bg_path = os.path.join(output_dir, f"bg_{template}_{int(start_time*1000)}.png")
+    try:
+        from PIL import Image
+        bg = Image.new("RGB", (width, height), cfg["bg_color"])
+        bg.save(bg_path)
+        project.add_media_safe(
+            bg_path,
+            start_time=f"{start_time:.2f}s",
+            duration=f"{duration:.2f}s",
+            track_name="IntroBG",
+        )
+    except Exception as e:
+        print(f"  ⚠️ 片头背景生成失败: {e}")
+
+    # 2. 添加蒙版快闪
+    if cfg.get("flash_colors"):
+        colors = cfg["flash_colors"]
+        directions = cfg.get("flash_directions", ["center"] * len(colors))
+        flash_dur = cfg.get("flash_duration", 0.8)
+        stagger = flash_dur / len(colors) * 0.5
+
+        for i, (color, direction) in enumerate(zip(colors, directions)):
+            block_path = os.path.join(output_dir, f"flash_{template}_{i}.png")
+            create_solid_color_image(color, width, height, block_path)
+
+            seg_start = start_time + i * stagger
+            seg = project.add_media_safe(
+                block_path,
+                start_time=f"{seg_start:.2f}s",
+                duration=f"{flash_dur:.2f}s",
+                track_name=f"IntroFlash_{i}",
+            )
+
+            if seg:
+                add_expand_animation(
+                    seg,
+                    direction=direction,
+                    duration_us=int(flash_dur * 1e6 * 0.8),
+                    start_us=0,
+                )
+                end_us = int(flash_dur * 1e6)
+                fade_start = int(end_us * 0.7)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start, 1.0, **draft.Keyframe.EASE_OUT)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, end_us, 0.0, **draft.Keyframe.EASE_OUT)
+
+    # 3. 添加字幕条标题
+    bar_start = start_time + duration * 0.3
+    bar_duration = duration - duration * 0.3
+    add_subtitle_bar(
+        project,
+        text=title,
+        start_time=f"{bar_start:.2f}s",
+        duration=f"{bar_duration:.2f}s",
+        style=cfg["bar_style"],
+        position_y=cfg["bar_position_y"],
+        anim_in=cfg["bar_anim_in"],
+        output_dir=output_dir,
+    )
+
+    # 4. 添加副标题
+    if subtitle:
+        sub_start = bar_start + 0.3
+        sub_duration = duration - (sub_start - start_time)
+        project.add_text_simple(
+            subtitle,
+            start_time=f"{sub_start:.2f}s",
+            duration=f"{sub_duration:.2f}s",
+            font_size=6.0,
+            color_rgb=(200, 200, 200),
+            style=draft.TextStyle(size=6.0),
+            clip_settings=draft.ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
+            anim_in="渐显",
+            track_name="IntroSub",
+        )
+
+    print(f"  ✅ 片头已添加: {title} ({template}, {duration}s, 起始{start_time}s)")
+    return duration
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("片头生成器 - 可用模板")

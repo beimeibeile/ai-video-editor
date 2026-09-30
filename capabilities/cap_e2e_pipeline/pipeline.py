@@ -27,6 +27,24 @@ try:
 except ImportError:
     _CREATIVE_ENGINE_AVAILABLE = False
 
+# 片头生成器（特效库集成）
+try:
+    _scripts_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts")
+    sys.path.insert(0, _scripts_dir)
+    from intro_builder import add_intro_to_project as _add_intro_effect
+    _INTRO_BUILDER_AVAILABLE = True
+except ImportError:
+    _INTRO_BUILDER_AVAILABLE = False
+
+# 片头风格→模板映射
+_INTRO_STYLE_MAP = {
+    "impact": "flash_title",
+    "cute": "warm_intro",
+    "funny": "tag_intro",
+    "minimal": "minimal_title",
+    "suspense": "cyber_intro",
+}
+
 
 class E2EPipeline:
     """端到端视频生成流程"""
@@ -559,13 +577,29 @@ class E2EPipeline:
 
         project = JyProject(project_name, width=width, height=height, overwrite=True)
 
-        # 0. 片头（在正片之前）
+        # 0. 片头（在正片之前）—— 使用特效库片头生成器
         intro_offset = 0.0
         if add_intro:
-            intro_offset = self._add_intro_to_project(
-                project, sb, intro_duration, intro_style, width, height, draft
-            )
-            print(f"  片头: {intro_duration}s ({intro_style})")
+            if _INTRO_BUILDER_AVAILABLE:
+                intro_template = _INTRO_STYLE_MAP.get(intro_style, "flash_title")
+                intro_title = sb.hook_text or sb.theme or "精彩开始"
+                intro_sub = sb.ending_text if len(sb.ending_text) < 20 else None
+                intro_offset = _add_intro_effect(
+                    project,
+                    template=intro_template,
+                    title=intro_title,
+                    subtitle=intro_sub,
+                    start_time=0.0,
+                    width=width,
+                    height=height,
+                    output_dir=os.path.join(self.work_dir, "output", "intro_assets"),
+                )
+                print(f"  片头: {intro_offset}s ({intro_template}, 特效库)")
+            else:
+                intro_offset = self._add_intro_to_project(
+                    project, sb, intro_duration, intro_style, width, height, draft
+                )
+                print(f"  片头: {intro_duration}s ({intro_style}, 原生)")
 
         # 1. 添加视频片段（从片头后开始）
         segments = []
