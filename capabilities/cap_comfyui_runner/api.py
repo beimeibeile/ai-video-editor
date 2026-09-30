@@ -3835,3 +3835,78 @@ def get_video_info(video_path: str, ffprobe_path: str = None) -> Dict[str, Any]:
         elif s.get("codec_type") == "audio":
             info["audio"] = {"codec": s.get("codec_name",""), "channels": s.get("channels",0)}
     return info
+
+
+# ═══════════════════════════════════════════════════════════════
+# Flux 文生图
+# ═══════════════════════════════════════════════════════════════
+
+def txt2img_flux(
+    prompt: str,
+    output_path: str = None,
+    width: int = 1024,
+    height: int = 1024,
+    steps: int = 20,
+    guidance: float = 3.5,
+    seed: int = None,
+    negative_prompt: str = "",
+    unet_name: str = "flux1-dev.safetensors",
+    server_addr: str = "127.0.0.1:8188",
+    timeout: int = 300,
+) -> str:
+    """
+    Flux1-dev 文生图（高质量图像生成）
+
+    Args:
+        prompt: 正面提示词
+        output_path: 输出路径
+        width/height: 分辨率
+        steps: 采样步数
+        guidance: 引导强度（Flux推荐3.5）
+        seed: 随机种子
+        negative_prompt: 负向提示词（Flux通常不需要）
+        unet_name: UNet模型名
+        server_addr: ComfyUI地址
+        timeout: 超时
+
+    Returns:
+        输出图片路径
+    """
+    client = ComfyClient(server_addr)
+    if not client.is_running():
+        raise ConnectionError("ComfyUI未运行")
+
+    if seed is None:
+        import random
+        seed = random.randint(0, 2**31 - 1)
+
+    if output_path is None:
+        output_dir = os.path.join(os.getcwd(), "flux_output")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"flux_{int(time.time())}.png")
+
+    timestamp = int(time.time())
+    workflow = load_workflow_template(
+        os.path.join(TEMPLATE_DIR, "flux_txt2img.json"),
+        positive_prompt_placeholder=prompt,
+        negative_prompt_placeholder=negative_prompt,
+        width=width,
+        height=height,
+        seed=seed,
+        steps=steps,
+        guidance=guidance,
+        unet_name=unet_name,
+        timestamp=timestamp,
+    )
+
+    output_dir = os.path.dirname(output_path) or "."
+    results = client.run_workflow(
+        workflow, input_images={},
+        output_dir=output_dir, timeout=timeout
+    )
+
+    if results and os.path.exists(results[0]) and results[0] != output_path:
+        os.replace(results[0], output_path)
+
+    print(f"[Flux文生图] 完成: {os.path.basename(output_path)} ({width}x{height}, {steps}步)")
+    return output_path
