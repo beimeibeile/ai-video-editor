@@ -132,6 +132,24 @@ try:
 except ImportError:
     _TEXT_BG_SLIDE_AVAILABLE = False
 
+try:
+    from subtitle_bar import add_subtitle_bar as _add_subtitle_bar
+    _SUBTITLE_BAR_AVAILABLE = True
+except ImportError:
+    _SUBTITLE_BAR_AVAILABLE = False
+
+try:
+    from character_card import add_character_card as _add_character_card
+    _CHARACTER_CARD_AVAILABLE = True
+except ImportError:
+    _CHARACTER_CARD_AVAILABLE = False
+
+try:
+    from circular_date_badge import add_date_badge_to_project as _add_date_badge
+    _DATE_BADGE_AVAILABLE = True
+except ImportError:
+    _DATE_BADGE_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -260,7 +278,7 @@ class E2EPipeline:
             beat_threshold: 卡点能量阈值（0-1）
             character_intros: 人物介绍列表，每项如 {"image": "path", "name": "张三", "subtitle": "主角"}
             text_layout_style: 文字排版预设风格（vertical_stagger/horizontal_title/diagonal_cascade/left_align_stack/center_focus），用于钩子文案
-            hook_effect: 钩子文案特效（wipe=羽化擦开 / bg_slide=背景块滑入 / layout=文字排版 / None=默认），与text_layout_style互斥，优先hook_effect
+            hook_effect: 钩子文案特效（wipe=羽化擦开 / bg_slide=背景块滑入 / layout=文字排版 / subtitle_bar=字幕条 / character_card=人物卡 / date_badge=日期标签 / None=默认），与text_layout_style互斥，优先hook_effect
             photo_wall: 拍立得照片墙图片路径列表，用于结尾展示
             glow_outline_shots: 使用发光轮廓效果的镜头索引列表，如 [0, 2]
 
@@ -1220,6 +1238,53 @@ class E2EPipeline:
             elif hook_effect == "layout" and _TEXT_LAYOUT_AVAILABLE:
                 # layout模式已在1.6处理，这里仅记录
                 hook_effect_duration = text_layout_duration
+            elif hook_effect == "subtitle_bar" and _SUBTITLE_BAR_AVAILABLE:
+                try:
+                    _add_subtitle_bar(
+                        project,
+                        text=sb.hook_text,
+                        start_time=f"{hook_start:.2f}s",
+                        duration="3s",
+                        style="pill_warm",
+                        position_y=0.0,
+                        output_dir=os.path.join(self.work_dir, "output", "subtitle_bar_assets"),
+                    )
+                    hook_effect_duration = 3.0
+                    print(f"  钩子特效: 字幕条 ({hook_effect_duration}s)")
+                except Exception as e:
+                    print(f"  字幕条失败: {e}")
+            elif hook_effect == "character_card" and _CHARACTER_CARD_AVAILABLE:
+                try:
+                    card_name = sb.hook_text if len(sb.hook_text) <= 6 else sb.hook_text[:6]
+                    _add_character_card(
+                        project,
+                        character_name=card_name,
+                        start_time=f"{hook_start:.2f}s",
+                        duration="3.5s",
+                        style="kuangbiao",
+                        output_dir=os.path.join(self.work_dir, "output", "character_card_assets"),
+                    )
+                    hook_effect_duration = 3.5
+                    print(f"  钩子特效: 人物卡 ({hook_effect_duration}s)")
+                except Exception as e:
+                    print(f"  人物卡失败: {e}")
+            elif hook_effect == "date_badge" and _DATE_BADGE_AVAILABLE:
+                try:
+                    from datetime import datetime
+                    date_text = datetime.now().strftime("%m.%d")
+                    _add_date_badge(
+                        project,
+                        date_text=date_text,
+                        start_time=f"{hook_start:.2f}s",
+                        duration="3s",
+                        style="circle_red",
+                        position=(-0.7, -0.7),
+                        scale=1.0,
+                    )
+                    hook_effect_duration = 3.0
+                    print(f"  钩子特效: 日期标签 ({hook_effect_duration}s)")
+                except Exception as e:
+                    print(f"  日期标签失败: {e}")
 
         # 2. 添加视频片段（从片头+人物介绍+文字排版+钩子特效后开始）
         segments = []
