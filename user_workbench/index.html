@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Video Editor - 用户工作台</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  min-height: 100vh;
+  color: #fff;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* 头部 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  margin-bottom: 30px;
+}
+.logo {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.logo span { font-size: 14px; color: #888; font-weight: 400; margin-left: 10px; }
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4ade80;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* 卡片 */
+.card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 创建向导 */
+.wizard-steps {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.step {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 13px;
+  color: #888;
+  transition: all 0.3s;
+}
+.step.active {
+  background: rgba(0,212,255,0.1);
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+.step-num {
+  display: inline-block;
+  width: 24px; height: 24px;
+  line-height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  margin-right: 6px;
+  font-size: 12px;
+}
+.step.active .step-num { background: #00d4ff; color: #000; }
+
+/* 输入框 */
+.input-group { margin-bottom: 16px; }
+.input-label {
+  display: block;
+  font-size: 14px;
+  color: #ccc;
+  margin-bottom: 8px;
+}
+.input-text {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border 0.3s;
+}
+.input-text:focus { border-color: #00d4ff; }
+.input-text::placeholder { color: #555; }
+
+textarea.input-text {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* 风格选择 */
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.style-item {
+  padding: 14px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.style-item:hover { background: rgba(255,255,255,0.08); }
+.style-item.selected {
+  border-color: #00d4ff;
+  background: rgba(0,212,255,0.1);
+}
+.style-color {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+  border: 2px solid rgba(255,255,255,0.2);
+}
+.style-name { font-size: 13px; font-weight: 500; }
+.style-desc { font-size: 11px; color: #888; margin-top: 2px; }
+
+/* 按钮 */
+.btn {
+  padding: 12px 28px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary {
+  background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+  color: #fff;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,212,255,0.3); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: #ccc;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.15); }
+
+/* 进度条 */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+  border-radius: 4px;
+  transition: width 0.5s;
+}
+
+/* 项目列表 */
+.project-list { display: flex; flex-direction: column; gap: 12px; }
+.project-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.2s;
+}
+.project-item:hover { background: rgba(255,255,255,0.06); }
+.project-info { flex: 1; }
+.project-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.project-meta { font-size: 12px; color: #888; }
+.project-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.status-completed { background: rgba(74,222,128,0.15); color: #4ade80; }
+.status-running { background: rgba(0,212,255,0.15); color: #00d4ff; }
+.status-failed { background: rgba(248,113,113,0.15); color: #f87171; }
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* 提示 */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 14px 24px;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 1000;
+  animation: slideIn 0.3s;
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* 两栏布局 */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 768px) {
+  .two-col { grid-template-columns: 1fr; }
+  .style-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 头部 -->
+  <div class="header">
+    <div class="logo">🎬 AI Video Editor <span>用户工作台 v2.0</span></div>
+    <div class="status"><div class="status-dot"></div> 服务运行中</div>
+  </div>
+
+  <!-- 创建视频 -->
+  <div class="card">
+    <div class="card-title">✨ 创建新视频</div>
+
+    <div class="wizard-steps">
+      <div class="step active" id="step1-indicator"><span class="step-num">1</span>输入内容</div>
+      <div class="step" id="step2-indicator"><span class="step-num">2</span>选择风格</div>
+      <div class="step" id="step3-indicator"><span class="step-num">3</span>生成视频</div>
+    </div>
+
+    <!-- Step 1: 输入内容 -->
+    <div id="step1">
+      <div class="input-group">
+        <label class="input-label">视频标题</label>
+        <input type="text" class="input-text" id="videoTitle" placeholder="例如：我的国庆旅行vlog">
+      </div>
+      <div class="input-group">
+        <label class="input-label">内容要点（每行一个，最多8个）</label>
+        <textarea class="input-text" id="videoPoints" placeholder="到达目的地&#10;美景打卡&#10;美食探店&#10;返程总结"></textarea>
+      </div>
+      <div style="text-align: right;">
+        <button class="btn btn-primary" onclick="goStep(2)">下一步 →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: 选择风格 -->
+    <div id="step2" style="display:none;">
+      <div class="input-group">
+        <label class="input-label">选择视觉风格</label>
+        <div class="style-grid" id="styleGrid"></div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">每个要点时长（秒）</label>
+        <input type="number" class="input-text" id="videoDuration" value="4" min="2" max="10" style="width:120px;">
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <button class="btn btn-secondary" onclick="goStep(1)">← 上一步</button>
+        <button class="btn btn-primary" onclick="goStep(3)">下一步 →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: 生成 -->
+    <div id="step3" style="display:none;">
+      <div id="generateSummary" style="margin-bottom:20px; padding:16px; background:rgba(255,255,255,0.03); border-radius:10px;"></div>
+      <div id="progressArea" style="display:none;">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div style="font-size:13px; color:#888;" id="progressText">正在生成...</div>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <button class="btn btn-secondary" onclick="goStep(2)">← 上一步</button>
+        <button class="btn btn-primary" id="generateBtn" onclick="startGenerate()">🚀 开始生成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 历史项目 -->
+  <div class="card">
+    <div class="card-title">📁 历史项目</div>
+    <div class="project-list" id="projectList">
+      <div class="empty-state">
+        <div class="empty-icon">🎬</div>
+        <div>还没有项目，创建你的第一个视频吧！</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedStyle = 'ocean';
+let currentProjectId = null;
+
+// 加载风格
+const styles = [
+  {id:'sunset', name:'日落橙', color:'#ff6262', desc:'温暖活力'},
+  {id:'ocean', name:'海洋蓝', color:'#0077b6', desc:'科技冷静'},
+  {id:'forest', name:'森林绿', color:'#388e3c', desc:'自然清新'},
+  {id:'purple', name:'梦幻紫', color:'#7b1fa2', desc:'神秘高级'},
+  {id:'dark', name:'暗夜黑', color:'#28283c', desc:'电影感'},
+  {id:'gold', name:'黄金色', color:'#daa520', desc:'奢华大气'},
+  {id:'warm', name:'暖橙红', color:'#dc5028', desc:'热情奔放'},
+  {id:'cool', name:'冷调蓝', color:'#3264b4', desc:'理性专业'},
+];
+
+function renderStyles() {
+  const grid = document.getElementById('styleGrid');
+  grid.innerHTML = styles.map(s => `
+    <div class="style-item ${s.id===selectedStyle?'selected':''}" onclick="selectStyle('${s.id}')">
+      <div class="style-color" style="background:${s.color}"></div>
+      <div class="style-name">${s.name}</div>
+      <div class="style-desc">${s.desc}</div>
+    </div>
+  `).join('');
+}
+
+function selectStyle(id) {
+  selectedStyle = id;
+  renderStyles();
+}
+
+function goStep(n) {
+  for (let i=1; i<=3; i++) {
+    document.getElementById('step'+i).style.display = i===n ? 'block' : 'none';
+    document.getElementById('step'+i+'-indicator').classList.toggle('active', i===n);
+  }
+  if (n===3) updateSummary();
+}
+
+function updateSummary() {
+  const title = document.getElementById('videoTitle').value || '未命名视频';
+  const points = document.getElementById('videoPoints').value.split('\n').filter(p=>p.trim());
+  const duration = document.getElementById('videoDuration').value;
+  const styleName = styles.find(s=>s.id===selectedStyle)?.name || '';
+  const totalDur = (points.length + 2) * parseFloat(duration);
+  document.getElementById('generateSummary').innerHTML = `
+    <div style="font-size:15px; font-weight:600; margin-bottom:8px;">${title}</div>
+    <div style="font-size:13px; color:#aaa; line-height:1.8;">
+      📝 内容要点：${points.length} 个<br>
+      🎨 视觉风格：${styleName}<br>
+      ⏱️ 预计时长：约 ${totalDur} 秒<br>
+      🎬 输出：剪映工程（可在剪映中打开编辑）
+    </div>
+  `;
+}
+
+async function startGenerate() {
+  const title = document.getElementById('videoTitle').value || '未命名视频';
+  const points = document.getElementById('videoPoints').value.split('\n').filter(p=>p.trim());
+  const duration = document.getElementById('videoDuration').value;
+
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('generateBtn').textContent = '生成中...';
+  document.getElementById('progressArea').style.display = 'block';
+
+  try {
+    const res = await fetch('/api/create', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({title, points, style: selectedStyle, duration})
+    });
+    const data = await res.json();
+    currentProjectId = data.project_id;
+    pollProgress();
+  } catch(e) {
+    showToast('生成失败: ' + e.message);
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('generateBtn').textContent = '🚀 开始生成';
+  }
+}
+
+async function pollProgress() {
+  if (!currentProjectId) return;
+  try {
+    const res = await fetch('/api/status/' + currentProjectId);
+    const project = await res.json();
+    const progress = project.progress || 0;
+    document.getElementById('progressFill').style.width = progress + '%';
+
+    if (project.status === 'completed') {
+      document.getElementById('progressText').textContent = '✅ 生成完成！';
+      document.getElementById('generateBtn').textContent = '✅ 已完成';
+      showToast('视频生成完成！可在剪映中打开工程');
+      loadProjects();
+      return;
+    } else if (project.status === 'failed') {
+      document.getElementById('progressText').textContent = '❌ 生成失败: ' + (project.error||'');
+      document.getElementById('generateBtn').disabled = false;
+      document.getElementById('generateBtn').textContent = '🚀 重新生成';
+      return;
+    } else {
+      document.getElementById('progressText').textContent = `正在生成... ${progress}%`;
+    }
+    setTimeout(pollProgress, 1000);
+  } catch(e) {
+    setTimeout(pollProgress, 2000);
+  }
+}
+
+async function loadProjects() {
+  try {
+    const res = await fetch('/api/projects');
+    const data = await res.json();
+    const list = document.getElementById('projectList');
+    if (data.projects.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎬</div><div>还没有项目，创建你的第一个视频吧！</div></div>';
+      return;
+    }
+    list.innerHTML = data.projects.map(p => `
+      <div class="project-item">
+        <div class="project-info">
+          <div class="project-title">${p.title}</div>
+          <div class="project-meta">
+            ${p.created_at} · ${p.scene_count||0}个场景 · ${p.duration||0}秒
+            ${p.draft_path ? ' · 📂 ' + p.draft_path.split('\\').pop() : ''}
+          </div>
+        </div>
+        <div class="project-status status-${p.status}">${statusText(p.status)}</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+function statusText(s) {
+  return {completed:'已完成', running:'生成中', failed:'失败', generating:'生成中'}[s] || s;
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+// 初始化
+renderStyles();
+loadProjects();
+</script>
+</body>
+</html>
