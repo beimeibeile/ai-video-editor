@@ -26,3 +26,10 @@ Thumbs.db
 logs/
 
 .cache/
+
+# 测试生成的临时素材（不应提交）
+scripts/text_bg_slide_assets/*.png
+scripts/glow_outline_assets/*.png
+scripts/*_assets/*.png
+*.test.png
+*.tmp.png
