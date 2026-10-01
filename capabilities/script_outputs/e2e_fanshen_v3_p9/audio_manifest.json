@@ -1,0 +1,387 @@
+{
+  "total_duration": 180.0,
+  "track_summary": {
+    "BGM": 5,
+    "对话": 13,
+    "旁白": 4,
+    "音效": 2,
+    "环境音": 5
+  },
+  "character_voices": {
+    "陈默": {
+      "voice_id": "voice_male_0",
+      "gender": "male",
+      "pitch": 0.95,
+      "speed": 0.95,
+      "description": "陈默的音色, 内向, 敏感, 有韧性"
+    },
+    "王总": {
+      "voice_id": "voice_male_1",
+      "gender": "male",
+      "pitch": 1.05,
+      "speed": 1.05,
+      "description": "王总的音色, 外向, 务实, 傲慢"
+    }
+  },
+  "narration_script": "这是一个关于普通人逆袭的故事。\n被公司优化，一切似乎都失去了希望。\n直到发现AI视频编辑器，命运开始悄然改变。\n最终，作品惊艳前老板。\n有时候，翻身只需要一个对的工具，和一颗不放弃的心。",
+  "tracks": {
+    "bgm": [
+      {
+        "track_type": "BGM",
+        "start_time": 0.0,
+        "duration": 36.0,
+        "content": "suspenseful rhythm, low frequency drone, tension building, 80-90 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "紧张"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 36.0,
+        "duration": 36.0,
+        "content": "ambient pad, light piano, peaceful, minimal, 60-70 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 72.0,
+        "duration": 36.0,
+        "content": "orchestral, powerful drums, cinematic, building intensity, 100-120 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "高潮"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 108.0,
+        "duration": 36.0,
+        "content": "orchestral, powerful drums, cinematic, building intensity, 100-120 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "冲突"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 144.0,
+        "duration": 36.0,
+        "content": "ambient pad, light piano, peaceful, minimal, 60-70 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "释然"
+      }
+    ],
+    "dialogue": [
+      {
+        "track_type": "对话",
+        "start_time": 6.6,
+        "duration": 4.44,
+        "content": "【您已被公司优化，请到HR办理离职手续】",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 17.7,
+        "duration": 6.0,
+        "content": "又失业了...第三次了...这日子什么时候是个头...",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 32.9,
+        "duration": 8.22,
+        "content": "还在为视频剪辑烦恼？AI视频编辑器，一句话生成专业视频！零基础也能做大片！",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 59.0,
+        "duration": 6.67,
+        "content": "这...这就完了？才30秒？这效果比我之前公司外包做的还好！",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 75.7,
+        "duration": 4.67,
+        "content": "我...我也能做视频了！我也能靠这个吃饭！",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 93.9,
+        "duration": 3.56,
+        "content": "陈默？你怎么在这？你不是被...",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 102.8,
+        "duration": 4.89,
+        "content": "王总，好久不见。我现在做视频创作，自由职业。",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 115.0,
+        "duration": 5.78,
+        "content": "视频？你？别开玩笑了，你连PPT都做不好，还做视频？",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 129.4,
+        "duration": 1.5,
+        "content": "您看看这个。",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 137.8,
+        "duration": 3.78,
+        "content": "这...这真是你做的？用什么做的？",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 147.2,
+        "duration": 5.78,
+        "content": "用AI视频编辑器做的，一句话就能生成，然后我再微调。",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 160.1,
+        "duration": 5.56,
+        "content": "原来，翻身只需要一个对的工具，和一个不放弃的自己。",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 174.0,
+        "duration": 4.67,
+        "content": "AI视频编辑器 —— 让每个人都能创造精彩",
+        "character": "",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "平静"
+      }
+    ],
+    "narration": [
+      {
+        "track_type": "旁白",
+        "start_time": 2.0,
+        "duration": 4.75,
+        "content": "这是一个关于普通人逆袭的故事。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      },
+      {
+        "track_type": "旁白",
+        "start_time": 63.0,
+        "duration": 5.25,
+        "content": "被公司优化，一切似乎都失去了希望。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      },
+      {
+        "track_type": "旁白",
+        "start_time": 126.0,
+        "duration": 6.25,
+        "content": "直到发现AI视频编辑器，命运开始悄然改变。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      },
+      {
+        "track_type": "旁白",
+        "start_time": 172.0,
+        "duration": 3.75,
+        "content": "最终，作品惊艳前老板。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      }
+    ],
+    "sfx": [
+      {
+        "track_type": "音效",
+        "start_time": 6.5,
+        "duration": 1.0,
+        "content": "手机震动/提示音",
+        "character": "",
+        "voice": "",
+        "volume": 0.7,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "音效",
+        "start_time": 114.9,
+        "duration": 1.0,
+        "content": "笑声",
+        "character": "",
+        "voice": "",
+        "volume": 0.7,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": ""
+      }
+    ],
+    "ambient": [
+      {
+        "track_type": "环境音",
+        "start_time": 0.0,
+        "duration": 36.0,
+        "content": "通用室内环境音",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 36.0,
+        "duration": 36.0,
+        "content": "通用室内环境音",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 72.0,
+        "duration": 36.0,
+        "content": "通用室内环境音",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 108.0,
+        "duration": 36.0,
+        "content": "通用室内环境音",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 144.0,
+        "duration": 36.0,
+        "content": "通用室内环境音",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      }
+    ]
+  }
+}

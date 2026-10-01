@@ -1,0 +1,70 @@
+{
+  "project_name": "翻身_v3_P9",
+  "total_duration": 180.00000000000003,
+  "total_shots": 19,
+  "p9_modules": {
+    "cinematography": "active",
+    "character_visual": "active",
+    "montage_parser": "active",
+    "audio_designer": "active"
+  },
+  "checks": {
+    "duration": {
+      "status": "PASS",
+      "value": "180秒",
+      "note": "时长符合3分钟目标"
+    },
+    "shot_count": {
+      "status": "PASS",
+      "value": "19镜",
+      "note": "镜头数量"
+    },
+    "shot_size_diversity": {
+      "status": "PASS",
+      "value": "3种景别",
+      "note": "景别: 全景, 特写, 近景"
+    },
+    "camera_move_diversity": {
+      "status": "WARN",
+      "value": "1种运镜",
+      "note": "运镜: 固定"
+    },
+    "character_overlay": {
+      "status": "PASS",
+      "value": "3张角色图",
+      "note": "角色画面叠加（P9-2）"
+    },
+    "montage_detection": {
+      "status": "WARN",
+      "value": "0个蒙太奇镜头",
+      "note": "蒙太奇解析（P9-3）"
+    },
+    "audio_design": {
+      "status": "PASS",
+      "value": "5轨音轨",
+      "note": "声音设计（P9-4）: {'BGM': 5, '对话': 13, '旁白': 4, '音效': 2, '环境音': 5}"
+    },
+    "emotion_curve": {
+      "status": "PASS",
+      "value": "5个情绪节点",
+      "note": "全剧情绪曲线（P9-1）"
+    },
+    "subtitle_coverage": {
+      "status": "PASS",
+      "value": "对话字幕",
+      "note": "剪映原生文字轨道"
+    },
+    "real_assets": {
+      "status": "PASS",
+      "value": "5张场景图",
+      "note": "ComfyUI真实素材"
+    }
+  },
+  "summary": {
+    "pass": 8,
+    "warn": 2,
+    "fail": 0,
+    "total": 10,
+    "score": 80
+  }
+}

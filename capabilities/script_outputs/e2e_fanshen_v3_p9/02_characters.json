@@ -1,0 +1,99 @@
+{
+  "characters": {
+    "陈默": {
+      "name": "陈默",
+      "age": 28,
+      "gender": "male",
+      "occupation": "职场人",
+      "appearance": "瘦, 黑框眼镜",
+      "background": "",
+      "personality": {
+        "mbti": null,
+        "big_five": {},
+        "traits": [],
+        "strengths": [],
+        "weaknesses": [],
+        "values": [],
+        "fears": [],
+        "motivations": []
+      },
+      "speech_style": {
+        "vocabulary_level": "normal",
+        "sentence_length": "medium",
+        "formality": 0.5,
+        "humor": 0.0,
+        "directness": 0.5,
+        "catchphrases": [],
+        "speech_habits": [],
+        "accent": ""
+      },
+      "relationships": [],
+      "arc": {
+        "starting_state": "",
+        "ending_state": "",
+        "key_moments": [],
+        "growth_dimensions": {}
+      },
+      "goals": [],
+      "secrets": [],
+      "line_count": 0
+    },
+    "王总": {
+      "name": "王总",
+      "age": 45,
+      "gender": "male",
+      "occupation": "公司老板",
+      "appearance": "西装, 傲慢",
+      "background": "",
+      "personality": {
+        "mbti": null,
+        "big_five": {},
+        "traits": [],
+        "strengths": [],
+        "weaknesses": [],
+        "values": [],
+        "fears": [],
+        "motivations": []
+      },
+      "speech_style": {
+        "vocabulary_level": "normal",
+        "sentence_length": "medium",
+        "formality": 0.5,
+        "humor": 0.0,
+        "directness": 0.5,
+        "catchphrases": [],
+        "speech_habits": [],
+        "accent": ""
+      },
+      "relationships": [],
+      "arc": {
+        "starting_state": "",
+        "ending_state": "",
+        "key_moments": [],
+        "growth_dimensions": {}
+      },
+      "goals": [],
+      "secrets": [],
+      "line_count": 0
+    }
+  },
+  "relationship_graph": {
+    "nodes": [
+      {
+        "id": "陈默",
+        "label": "陈默",
+        "occupation": "职场人",
+        "mbti": null
+      },
+      {
+        "id": "王总",
+        "label": "王总",
+        "occupation": "公司老板",
+        "mbti": null
+      }
+    ],
+    "edges": [],
+    "character_count": 2,
+    "relationship_count": 0
+  }
+}
