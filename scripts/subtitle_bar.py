@@ -50,6 +50,7 @@ def create_gradient_bar(
     alpha: int = 204,  # 80%不透明 = 204/255
     radius: int = None,  # None则自动为高度的一半（药丸形）
     gradient_angle: float = 0,  # 渐变角度，0=水平，90=垂直
+    highlight: bool = False,  # 是否在内部左侧绘制高光
     output_path: str = None,
 ) -> str:
     """生成半透明渐变圆角矩形PNG
@@ -110,6 +111,22 @@ def create_gradient_bar(
 
     # 应用蒙版
     img.paste(grad, (0, 0), mask)
+
+    # 绘制高光（内部左侧小圆形渐变）
+    if highlight:
+        hl_size = int(height * 0.6)
+        hl_x = int(height * 0.35)
+        hl_y = height // 2
+        hl_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        hl_draw = ImageDraw.Draw(hl_layer)
+        for r in range(hl_size // 2, 0, -1):
+            t = r / (hl_size // 2)
+            a = int(80 * t * t)
+            hl_draw.ellipse(
+                [(hl_x - r, hl_y - r), (hl_x + r, hl_y + r)],
+                fill=(255, 255, 255, a)
+            )
+        img = Image.alpha_composite(img, hl_layer)
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     img.save(output_path, "PNG")
@@ -256,6 +273,7 @@ def add_subtitle_bar(
         color_start=cfg["color_start"], color_end=cfg["color_end"],
         alpha=cfg["alpha"], radius=cfg["radius"],
         gradient_angle=cfg["gradient_angle"],
+        highlight=cfg.get("highlight", False),
         output_path=bar_path,
     )
 
