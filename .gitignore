@@ -33,3 +33,5 @@ scripts/glow_outline_assets/*.png
 scripts/*_assets/*.png
 *.test.png
 *.tmp.png
+
+user_outputs/
