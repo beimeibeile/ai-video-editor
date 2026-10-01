@@ -1,0 +1,38 @@
+{
+  "project_name": "QuickPreview_Test",
+  "statistics": {
+    "scene_count": 2,
+    "shot_count": 6,
+    "total_duration": 18,
+    "avg_shot_duration": 3.0
+  },
+  "outputs": {
+    "keyframes_dir": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\capabilities\\script_outputs\\quick_preview\\keyframes",
+    "keyframes_count": 6,
+    "rhythm_chart": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\capabilities\\script_outputs\\quick_preview\\rhythm_chart.png",
+    "jianying_draft": ""
+  },
+  "config": {
+    "width": 1080,
+    "height": 1920,
+    "bg_color": [
+      30,
+      30,
+      40
+    ],
+    "text_color": [
+      255,
+      255,
+      255
+    ],
+    "accent_color": [
+      100,
+      150,
+      255
+    ],
+    "font_size": 40,
+    "title_size": 60,
+    "show_shot_info": true,
+    "show_emotion": true
+  }
+}
