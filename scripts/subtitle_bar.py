@@ -114,8 +114,8 @@ def create_gradient_bar(
 
     # 绘制立体球高光（内部左侧，径向渐变+左上高光点）
     if highlight:
-        hl_radius = int(height * 0.42)
-        hl_cx = int(height * 0.42)
+        hl_radius = int(height * 0.50)
+        hl_cx = int(height * 0.50)
         hl_cy = height // 2
         hl_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         hl_draw = ImageDraw.Draw(hl_layer)
@@ -293,16 +293,6 @@ def add_subtitle_bar(
     )
 
     # 2. 生成高光
-    highlight_path = None
-    if cfg.get("highlight"):
-        highlight_path = os.path.join(output_dir, f"highlight_{style}.png")
-        create_highlight_circle(
-            size=int(cfg["height"] * 0.5),
-            color=cfg["color_start"],
-            alpha=100,
-            output_path=highlight_path,
-        )
-
     # 3. 添加背景条到画中画轨道
     bar_seg = project.add_media_safe(
         bar_path,
@@ -324,23 +314,7 @@ def add_subtitle_bar(
             except Exception:
                 pass
 
-    # 4. 添加高光
-    highlight_seg = None
-    if highlight_path and bar_seg:
-        highlight_seg = project.add_media_safe(
-            highlight_path,
-            start_time=start_time,
-            duration=duration,
-            track_name="SubtitleBar_HL",
-        )
-        if highlight_seg:
-            # 高光放在背景条左上角
-            hl_x = -0.30
-            hl_y = position_y
-            highlight_seg.clip_settings = draft.ClipSettings(
-                transform_x=hl_x,
-                transform_y=hl_y,
-            )
+    # 4. 高光已内置在背景条PNG中
 
     # 5. 添加文字
     text_seg = project.add_text_simple(
@@ -360,7 +334,6 @@ def add_subtitle_bar(
         "text": text,
         "style": style,
         "bar_segment": bar_seg,
-        "highlight_segment": highlight_seg,
         "text_segment": text_seg,
         "bar_path": bar_path,
     }
