@@ -300,7 +300,8 @@ def gate_edit_frame_precision(data: Dict[str, Any]) -> GateResult:
     misaligned = []
     for ts in timestamps:
         quotient = ts / frame_dur
-        if abs(quotient - round(quotient)) > tolerance:
+        deviation = abs(ts - round(quotient) * frame_dur)
+        if deviation > tolerance:
             misaligned.append(f"{ts}s")
     if misaligned:
         return GateResult.fail("E006", "帧对齐", f"{len(misaligned)}个时间点未帧对齐",
