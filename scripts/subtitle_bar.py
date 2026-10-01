@@ -112,18 +112,33 @@ def create_gradient_bar(
     # 应用蒙版
     img.paste(grad, (0, 0), mask)
 
-    # 绘制高光（内部左侧小圆形渐变）
+    # 绘制立体球高光（内部左侧，径向渐变+左上高光点）
     if highlight:
-        hl_size = int(height * 0.6)
-        hl_x = int(height * 0.35)
-        hl_y = height // 2
+        hl_radius = int(height * 0.42)
+        hl_cx = int(height * 0.42)
+        hl_cy = height // 2
         hl_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         hl_draw = ImageDraw.Draw(hl_layer)
-        for r in range(hl_size // 2, 0, -1):
-            t = r / (hl_size // 2)
-            a = int(80 * t * t)
+        # 球体基底：径向渐变（中心亮，边缘暗）
+        for r in range(hl_radius, 0, -1):
+            t = r / hl_radius
+            br = int(color_start[0] * (1 - t * 0.4) + 30 * (1 - t))
+            bg = int(color_start[1] * (1 - t * 0.4) + 30 * (1 - t))
+            bb = int(color_start[2] * (1 - t * 0.4) + 30 * (1 - t))
+            a = int(alpha * (1 - t * t * 0.7))
             hl_draw.ellipse(
-                [(hl_x - r, hl_y - r), (hl_x + r, hl_y + r)],
+                [(hl_cx - r, hl_cy - r), (hl_cx + r, hl_cy + r)],
+                fill=(min(255, br), min(255, bg), min(255, bb), a)
+            )
+        # 左上高光点（小亮点）
+        spot_r = int(hl_radius * 0.25)
+        spot_x = hl_cx - int(hl_radius * 0.3)
+        spot_y = hl_cy - int(hl_radius * 0.3)
+        for r in range(spot_r, 0, -1):
+            t = r / spot_r
+            a = int(180 * (1 - t * t))
+            hl_draw.ellipse(
+                [(spot_x - r, spot_y - r), (spot_x + r, spot_y + r)],
                 fill=(255, 255, 255, a)
             )
         img = Image.alpha_composite(img, hl_layer)
