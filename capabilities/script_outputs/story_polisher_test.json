@@ -1,0 +1,257 @@
+{
+  "version": {
+    "version_id": "9974b435",
+    "version_name": "v1",
+    "scene_count": 7,
+    "character_count": 2,
+    "total_duration": 80,
+    "created_at": "2026-10-02 03:55:52",
+    "notes": "初始版本",
+    "issue_count": 3,
+    "issues": [
+      {
+        "type": "对话问题",
+        "severity": "建议",
+        "description": "场景4无对话",
+        "location": "场景4: 调查",
+        "suggestion": "考虑添加对话或确认是否为纯动作场景"
+      },
+      {
+        "type": "对话问题",
+        "severity": "建议",
+        "description": "场景7无对话",
+        "location": "场景7: 结局",
+        "suggestion": "考虑添加对话或确认是否为纯动作场景"
+      },
+      {
+        "type": "情绪问题",
+        "severity": "建议",
+        "description": "场景6到7情绪跳跃过大（震惊→平静）",
+        "location": "场景6: 真相大白 → 场景7: 结局",
+        "suggestion": "考虑添加过渡场景或情绪缓冲"
+      }
+    ]
+  },
+  "pacing_analysis": {
+    "total_duration": 80,
+    "scene_count": 7,
+    "avg_scene_duration": 11.428571428571429,
+    "longest_scene": {
+      "index": 4,
+      "title": "场景5: 对峙",
+      "duration": 18
+    },
+    "shortest_scene": {
+      "index": 6,
+      "title": "场景7: 结局",
+      "duration": 7
+    },
+    "duration_distribution": {
+      "5-10秒": 2,
+      "10-20秒": 5
+    },
+    "emotion_curve": [
+      {
+        "scene_index": 0,
+        "title": "场景1: 咖啡馆",
+        "emotion": "平静",
+        "intensity": 0.2
+      },
+      {
+        "scene_index": 1,
+        "title": "场景2: 发现秘密",
+        "emotion": "紧张",
+        "intensity": 0.6
+      },
+      {
+        "scene_index": 2,
+        "title": "场景3: 讨论对策",
+        "emotion": "焦虑",
+        "intensity": 0.5
+      },
+      {
+        "scene_index": 3,
+        "title": "场景4: 调查",
+        "emotion": "坚定",
+        "intensity": 0.5
+      },
+      {
+        "scene_index": 4,
+        "title": "场景5: 对峙",
+        "emotion": "愤怒",
+        "intensity": 0.8
+      },
+      {
+        "scene_index": 5,
+        "title": "场景6: 真相大白",
+        "emotion": "震惊",
+        "intensity": 0.9
+      },
+      {
+        "scene_index": 6,
+        "title": "场景7: 结局",
+        "emotion": "平静",
+        "intensity": 0.2
+      }
+    ],
+    "high_points": [
+      {
+        "scene_index": 4,
+        "title": "场景5: 对峙",
+        "emotion": "愤怒",
+        "intensity": 0.8
+      },
+      {
+        "scene_index": 5,
+        "title": "场景6: 真相大白",
+        "emotion": "震惊",
+        "intensity": 0.9
+      }
+    ],
+    "low_points": [
+      {
+        "scene_index": 0,
+        "title": "场景1: 咖啡馆",
+        "emotion": "平静",
+        "intensity": 0.2
+      },
+      {
+        "scene_index": 6,
+        "title": "场景7: 结局",
+        "emotion": "平静",
+        "intensity": 0.2
+      }
+    ],
+    "pacing_score": 100.0
+  },
+  "structure_analysis": {
+    "act_i_scenes": [
+      {
+        "title": "场景1: 咖啡馆",
+        "duration": 8,
+        "emotional_tone": "平静",
+        "dialogues": [
+          {
+            "speaker": "李明",
+            "content": "你好"
+          },
+          {
+            "speaker": "王芳",
+            "content": "你好"
+          }
+        ]
+      }
+    ],
+    "act_ii_scenes": [
+      {
+        "title": "场景2: 发现秘密",
+        "duration": 12,
+        "emotional_tone": "紧张",
+        "dialogues": [
+          {
+            "speaker": "王芳",
+            "content": "我发现了一个秘密"
+          }
+        ]
+      },
+      {
+        "title": "场景3: 讨论对策",
+        "duration": 15,
+        "emotional_tone": "焦虑",
+        "dialogues": [
+          {
+            "speaker": "李明",
+            "content": "我们该怎么办"
+          }
+        ]
+      },
+      {
+        "title": "场景4: 调查",
+        "duration": 10,
+        "emotional_tone": "坚定",
+        "dialogues": []
+      },
+      {
+        "title": "场景5: 对峙",
+        "duration": 18,
+        "emotional_tone": "愤怒",
+        "dialogues": [
+          {
+            "speaker": "李明",
+            "content": "是你做的！"
+          }
+        ]
+      }
+    ],
+    "act_iii_scenes": [
+      {
+        "title": "场景6: 真相大白",
+        "duration": 10,
+        "emotional_tone": "震惊",
+        "dialogues": [
+          {
+            "speaker": "王芳",
+            "content": "原来如此"
+          }
+        ]
+      },
+      {
+        "title": "场景7: 结局",
+        "duration": 7,
+        "emotional_tone": "平静",
+        "dialogues": []
+      }
+    ],
+    "inciting_incident": {
+      "index": 0,
+      "title": "场景1: 咖啡馆"
+    },
+    "first_turning_point": {
+      "index": 1,
+      "title": "场景2: 发现秘密"
+    },
+    "midpoint": {
+      "index": 3,
+      "title": "场景4: 调查"
+    },
+    "second_turning_point": {
+      "index": 5,
+      "title": "场景6: 真相大白"
+    },
+    "climax": {
+      "index": 5,
+      "title": "场景6: 真相大白"
+    },
+    "resolution": {
+      "index": 6,
+      "title": "场景7: 结局"
+    },
+    "structure_score": 100,
+    "missing_elements": []
+  },
+  "issues": [
+    {
+      "type": "对话问题",
+      "severity": "建议",
+      "description": "场景4无对话",
+      "location": "场景4: 调查",
+      "suggestion": "考虑添加对话或确认是否为纯动作场景"
+    },
+    {
+      "type": "对话问题",
+      "severity": "建议",
+      "description": "场景7无对话",
+      "location": "场景7: 结局",
+      "suggestion": "考虑添加对话或确认是否为纯动作场景"
+    },
+    {
+      "type": "情绪问题",
+      "severity": "建议",
+      "description": "场景6到7情绪跳跃过大（震惊→平静）",
+      "location": "场景6: 真相大白 → 场景7: 结局",
+      "suggestion": "考虑添加过渡场景或情绪缓冲"
+    }
+  ],
+  "optimization_suggestions": [],
+  "overall_score": 50.0
+}
