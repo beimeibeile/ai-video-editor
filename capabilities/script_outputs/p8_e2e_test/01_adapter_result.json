@@ -1,0 +1,428 @@
+{
+  "title": "财务黑幕",
+  "episode_count": 1,
+  "total_scenes": 4,
+  "total_shots": 15,
+  "total_duration": 34.324,
+  "characters": [
+    {
+      "name": "李明",
+      "description": "",
+      "personality": "",
+      "appearance": "",
+      "relationships": {},
+      "line_count": 7
+    },
+    {
+      "name": "王芳",
+      "description": "",
+      "personality": "",
+      "appearance": "",
+      "relationships": {},
+      "line_count": 5
+    }
+  ],
+  "episodes": [
+    {
+      "episode_id": 1,
+      "title": "财务黑幕 - 第1集",
+      "logline": "咖啡馆开始，李明等角色，共4场15镜",
+      "total_duration": 34.324,
+      "scene_count": 4,
+      "shot_count": 15,
+      "characters": [
+        {
+          "name": "李明",
+          "description": "",
+          "personality": "",
+          "appearance": "",
+          "relationships": {},
+          "line_count": 7
+        },
+        {
+          "name": "王芳",
+          "description": "",
+          "personality": "",
+          "appearance": "",
+          "relationships": {},
+          "line_count": 5
+        }
+      ],
+      "scenes": [
+        {
+          "scene_id": 1,
+          "title": "场景1: 咖啡馆",
+          "scene_type": "室内",
+          "location": "咖啡馆",
+          "time_of_day": "日",
+          "description": "李明走进咖啡馆，四处张望。 王芳坐在角落，向他挥手。 ",
+          "characters": [
+            "李明",
+            "王芳"
+          ],
+          "dialogues": [
+            {
+              "speaker": "李明",
+              "content": "你怎么才来？我都等了半小时了！",
+              "emotion": "平静",
+              "action": ""
+            },
+            {
+              "speaker": "王芳",
+              "content": "抱歉抱歉，路上堵车。",
+              "emotion": "平静",
+              "action": "放下手机"
+            },
+            {
+              "speaker": "李明",
+              "content": "算了，说正事吧，你找我什么事？",
+              "emotion": "平静",
+              "action": "坐下"
+            },
+            {
+              "speaker": "王芳",
+              "content": "我发现了一个秘密，关于公司的。",
+              "emotion": "平静",
+              "action": "压低声音"
+            },
+            {
+              "speaker": "李明",
+              "content": "什么秘密？",
+              "emotion": "平静",
+              "action": "惊讶"
+            },
+            {
+              "speaker": "王芳",
+              "content": "这里不方便说，换个地方。",
+              "emotion": "平静",
+              "action": "环顾四周"
+            }
+          ],
+          "actions": [
+            "李明走进咖啡馆，四处张望。",
+            "王芳坐在角落，向他挥手。"
+          ],
+          "emotional_tone": "",
+          "duration_estimate": 15.54
+        },
+        {
+          "scene_id": 2,
+          "title": "场景2: 街道",
+          "scene_type": "室外",
+          "location": "街道",
+          "time_of_day": "夜",
+          "description": "两人走出咖啡馆，街上行人稀少。 ",
+          "characters": [
+            "李明",
+            "王芳"
+          ],
+          "dialogues": [
+            {
+              "speaker": "李明",
+              "content": "现在可以说了吧？",
+              "emotion": "平静",
+              "action": ""
+            },
+            {
+              "speaker": "王芳",
+              "content": "公司的财务报表有问题，有人在做假账。",
+              "emotion": "平静",
+              "action": "紧张"
+            },
+            {
+              "speaker": "李明",
+              "content": "你确定？这可不是小事！",
+              "emotion": "平静",
+              "action": "震惊"
+            },
+            {
+              "speaker": "王芳",
+              "content": "我亲眼看到的，而且我有证据。",
+              "emotion": "平静",
+              "action": ""
+            },
+            {
+              "speaker": "李明",
+              "content": "...我们得小心点，这件事不能让任何人知道。",
+              "emotion": "平静",
+              "action": "思考"
+            }
+          ],
+          "actions": [
+            "两人走出咖啡馆，街上行人稀少。"
+          ],
+          "emotional_tone": "",
+          "duration_estimate": 12.82
+        },
+        {
+          "scene_id": 3,
+          "title": "场景3: 李明家",
+          "scene_type": "室内",
+          "location": "李明家",
+          "time_of_day": "夜",
+          "description": "李明独自坐在书桌前，翻看王芳给的资料。 他的手在颤抖。 ",
+          "characters": [
+            "李明"
+          ],
+          "dialogues": [
+            {
+              "speaker": "李明",
+              "content": "这...这比我想象的还要严重。",
+              "emotion": "平静",
+              "action": "自言自语"
+            }
+          ],
+          "actions": [
+            "李明独自坐在书桌前，翻看王芳给的资料。",
+            "他的手在颤抖。"
+          ],
+          "emotional_tone": "",
+          "duration_estimate": 3.06
+        },
+        {
+          "scene_id": 4,
+          "title": "场景4: 公司大楼",
+          "scene_type": "室外",
+          "location": "公司大楼",
+          "time_of_day": "日",
+          "description": "李明站在公司大楼前，深吸一口气。 他走了进去。 ",
+          "characters": [],
+          "dialogues": [],
+          "actions": [
+            "李明站在公司大楼前，深吸一口气。",
+            "他走了进去。"
+          ],
+          "emotional_tone": "",
+          "duration_estimate": 3.0
+        }
+      ],
+      "shots": [
+        {
+          "shot_id": 1,
+          "scene_id": 1,
+          "shot_size": "全景",
+          "camera_move": "固定",
+          "description": "咖啡馆 场景建立",
+          "subject": "咖啡馆",
+          "dialogue": null,
+          "duration": 3.0,
+          "emotion": "",
+          "notes": "交代环境和时空"
+        },
+        {
+          "shot_id": 2,
+          "scene_id": 1,
+          "shot_size": "特写",
+          "camera_move": "固定",
+          "description": "李明: 你怎么才来？我都等了半小时了！...",
+          "subject": "李明",
+          "dialogue": {
+            "speaker": "李明",
+            "content": "你怎么才来？我都等了半小时了！",
+            "emotion": "平静",
+            "action": ""
+          },
+          "duration": 3.0,
+          "emotion": "平静",
+          "notes": "对话镜头"
+        },
+        {
+          "shot_id": 3,
+          "scene_id": 1,
+          "shot_size": "近景",
+          "camera_move": "固定",
+          "description": "王芳: 抱歉抱歉，路上堵车。...",
+          "subject": "王芳",
+          "dialogue": {
+            "speaker": "王芳",
+            "content": "抱歉抱歉，路上堵车。",
+            "emotion": "平静",
+            "action": "放下手机"
+          },
+          "duration": 2.0,
+          "emotion": "平静",
+          "notes": "对话镜头，放下手机"
+        },
+        {
+          "shot_id": 4,
+          "scene_id": 1,
+          "shot_size": "特写",
+          "camera_move": "固定",
+          "description": "李明: 算了，说正事吧，你找我什么事？...",
+          "subject": "李明",
+          "dialogue": {
+            "speaker": "李明",
+            "content": "算了，说正事吧，你找我什么事？",
+            "emotion": "平静",
+            "action": "坐下"
+          },
+          "duration": 3.0,
+          "emotion": "平静",
+          "notes": "对话镜头，坐下"
+        },
+        {
+          "shot_id": 5,
+          "scene_id": 1,
+          "shot_size": "近景",
+          "camera_move": "固定",
+          "description": "王芳: 我发现了一个秘密，关于公司的。...",
+          "subject": "王芳",
+          "dialogue": {
+            "speaker": "王芳",
+            "content": "我发现了一个秘密，关于公司的。",
+            "emotion": "平静",
+            "action": "压低声音"
+          },
+          "duration": 3.0,
+          "emotion": "平静",
+          "notes": "对话镜头，压低声音"
+        },
+        {
+          "shot_id": 6,
+          "scene_id": 1,
+          "shot_size": "特写",
+          "camera_move": "固定",
+          "description": "听者反应镜头",
+          "subject": "听者",
+          "dialogue": null,
+          "duration": 1.5,
+          "emotion": "",
+          "notes": "反应镜头，增强对话张力"
+        },
+        {
+          "shot_id": 7,
+          "scene_id": 2,
+          "shot_size": "全景",
+          "camera_move": "固定",
+          "description": "街道 场景建立",
+          "subject": "街道",
+          "dialogue": null,
+          "duration": 2.564,
+          "emotion": "",
+          "notes": "交代环境和时空"
+        },
+        {
+          "shot_id": 8,
+          "scene_id": 2,
+          "shot_size": "特写",
+          "camera_move": "固定",
+          "description": "李明: 现在可以说了吧？...",
+          "subject": "李明",
+          "dialogue": {
+            "speaker": "李明",
+            "content": "现在可以说了吧？",
+            "emotion": "平静",
+            "action": ""
+          },
+          "duration": 1.6,
+          "emotion": "平静",
+          "notes": "对话镜头"
+        },
+        {
+          "shot_id": 9,
+          "scene_id": 2,
+          "shot_size": "近景",
+          "camera_move": "固定",
+          "description": "王芳: 公司的财务报表有问题，有人在做假账。...",
+          "subject": "王芳",
+          "dialogue": {
+            "speaker": "王芳",
+            "content": "公司的财务报表有问题，有人在做假账。",
+            "emotion": "平静",
+            "action": "紧张"
+          },
+          "duration": 3.6,
+          "emotion": "平静",
+          "notes": "对话镜头，紧张"
+        },
+        {
+          "shot_id": 10,
+          "scene_id": 2,
+          "shot_size": "特写",
+          "camera_move": "固定",
+          "description": "李明: 你确定？这可不是小事！...",
+          "subject": "李明",
+          "dialogue": {
+            "speaker": "李明",
+            "content": "你确定？这可不是小事！",
+            "emotion": "平静",
+            "action": "震惊"
+          },
+          "duration": 2.2,
+          "emotion": "平静",
+          "notes": "对话镜头，震惊"
+        },
+        {
+          "shot_id": 11,
+          "scene_id": 2,
+          "shot_size": "近景",
+          "camera_move": "固定",
+          "description": "王芳: 我亲眼看到的，而且我有证据。...",
+          "subject": "王芳",
+          "dialogue": {
+            "speaker": "王芳",
+            "content": "我亲眼看到的，而且我有证据。",
+            "emotion": "平静",
+            "action": ""
+          },
+          "duration": 2.8,
+          "emotion": "平静",
+          "notes": "对话镜头"
+        },
+        {
+          "shot_id": 12,
+          "scene_id": 3,
+          "shot_size": "全景",
+          "camera_move": "固定",
+          "description": "李明家 场景建立",
+          "subject": "李明家",
+          "dialogue": null,
+          "duration": 0.6120000000000001,
+          "emotion": "",
+          "notes": "交代环境和时空"
+        },
+        {
+          "shot_id": 13,
+          "scene_id": 3,
+          "shot_size": "特写",
+          "camera_move": "固定",
+          "description": "李明: 这...这比我想象的还要严重。...",
+          "subject": "李明",
+          "dialogue": {
+            "speaker": "李明",
+            "content": "这...这比我想象的还要严重。",
+            "emotion": "平静",
+            "action": "自言自语"
+          },
+          "duration": 2.448,
+          "emotion": "平静",
+          "notes": "对话镜头，自言自语"
+        },
+        {
+          "shot_id": 14,
+          "scene_id": 4,
+          "shot_size": "全景",
+          "camera_move": "固定",
+          "description": "公司大楼 场景建立",
+          "subject": "公司大楼",
+          "dialogue": null,
+          "duration": 0.6000000000000001,
+          "emotion": "",
+          "notes": "交代环境和时空"
+        },
+        {
+          "shot_id": 15,
+          "scene_id": 4,
+          "shot_size": "中景",
+          "camera_move": "跟拍",
+          "description": "动作镜头: 李明站在公司大楼前，深吸一口气。",
+          "subject": "",
+          "dialogue": null,
+          "duration": 2.4,
+          "emotion": "",
+          "notes": "动作/转场镜头"
+        }
+      ]
+    }
+  ]
+}

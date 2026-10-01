@@ -1,0 +1,38 @@
+{
+  "project_name": "财务黑幕_小样",
+  "statistics": {
+    "scene_count": 4,
+    "shot_count": 15,
+    "total_duration": 34.324,
+    "avg_shot_duration": 2.2882666666666664
+  },
+  "outputs": {
+    "keyframes_dir": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\capabilities\\script_outputs\\p8_e2e_test\\preview\\keyframes",
+    "keyframes_count": 15,
+    "rhythm_chart": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\capabilities\\script_outputs\\p8_e2e_test\\preview\\rhythm_chart.png",
+    "jianying_draft": ""
+  },
+  "config": {
+    "width": 1080,
+    "height": 1920,
+    "bg_color": [
+      30,
+      30,
+      40
+    ],
+    "text_color": [
+      255,
+      255,
+      255
+    ],
+    "accent_color": [
+      100,
+      150,
+      255
+    ],
+    "font_size": 40,
+    "title_size": 60,
+    "show_shot_info": true,
+    "show_emotion": true
+  }
+}

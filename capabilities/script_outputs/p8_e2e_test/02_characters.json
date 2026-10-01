@@ -1,0 +1,166 @@
+{
+  "characters": {
+    "李明": {
+      "name": "李明",
+      "age": 32,
+      "gender": "",
+      "occupation": "调查记者",
+      "appearance": "戴眼镜，穿深色风衣",
+      "background": "",
+      "personality": {
+        "mbti": "INTJ - 建筑师",
+        "big_five": {},
+        "traits": [
+          "冷静",
+          "谨慎",
+          "理性",
+          "执着"
+        ],
+        "strengths": [
+          "分析能力强",
+          "观察力敏锐",
+          "意志坚定"
+        ],
+        "weaknesses": [
+          "不擅表达情感",
+          "过于严肃",
+          "容易钻牛角尖"
+        ],
+        "values": [],
+        "fears": [],
+        "motivations": []
+      },
+      "speech_style": {
+        "vocabulary_level": "normal",
+        "sentence_length": "medium",
+        "formality": 0.7,
+        "humor": 0.0,
+        "directness": 0.5,
+        "catchphrases": [
+          "有意思",
+          "等等",
+          "让我想想"
+        ],
+        "speech_habits": [],
+        "accent": ""
+      },
+      "relationships": [
+        {
+          "target": "王芳",
+          "relationship_type": "同事",
+          "intensity": 0.7,
+          "description": "同事，互相信任，共同调查",
+          "history": [],
+          "dynamics": ""
+        }
+      ],
+      "arc": {
+        "starting_state": "",
+        "ending_state": "",
+        "key_moments": [],
+        "growth_dimensions": {}
+      },
+      "goals": [],
+      "secrets": [],
+      "line_count": 0
+    },
+    "王芳": {
+      "name": "王芳",
+      "age": 28,
+      "gender": "",
+      "occupation": "会计",
+      "appearance": "长发，穿职业装",
+      "background": "",
+      "personality": {
+        "mbti": "ENFP - 竞选者",
+        "big_five": {},
+        "traits": [
+          "外向",
+          "热情",
+          "直觉",
+          "勇敢"
+        ],
+        "strengths": [
+          "感染力强",
+          "善于交际",
+          "有正义感"
+        ],
+        "weaknesses": [
+          "容易冲动",
+          "不够细心",
+          "情绪波动大"
+        ],
+        "values": [],
+        "fears": [],
+        "motivations": []
+      },
+      "speech_style": {
+        "vocabulary_level": "normal",
+        "sentence_length": "medium",
+        "formality": 0.3,
+        "humor": 0.0,
+        "directness": 0.5,
+        "catchphrases": [
+          "你知道吗",
+          "天哪",
+          "听我说"
+        ],
+        "speech_habits": [],
+        "accent": ""
+      },
+      "relationships": [
+        {
+          "target": "李明",
+          "relationship_type": "同事",
+          "intensity": 0.7,
+          "description": "同事，互相欣赏，盟友",
+          "history": [],
+          "dynamics": ""
+        }
+      ],
+      "arc": {
+        "starting_state": "",
+        "ending_state": "",
+        "key_moments": [],
+        "growth_dimensions": {}
+      },
+      "goals": [],
+      "secrets": [],
+      "line_count": 0
+    }
+  },
+  "relationship_graph": {
+    "nodes": [
+      {
+        "id": "李明",
+        "label": "李明",
+        "occupation": "调查记者",
+        "mbti": "INTJ"
+      },
+      {
+        "id": "王芳",
+        "label": "王芳",
+        "occupation": "会计",
+        "mbti": "ENFP"
+      }
+    ],
+    "edges": [
+      {
+        "source": "李明",
+        "target": "王芳",
+        "type": "同事",
+        "intensity": 0.7,
+        "label": "同事"
+      },
+      {
+        "source": "王芳",
+        "target": "李明",
+        "type": "同事",
+        "intensity": 0.7,
+        "label": "同事"
+      }
+    ],
+    "character_count": 2,
+    "relationship_count": 2
+  }
+}

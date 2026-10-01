@@ -409,6 +409,15 @@ class StoryboardFinalizer:
             episode = self.add_episode(ep_num, ep_title,
                                         logline=episode_data.get("logline", ""))
 
+            # 从episode级别的shots按scene_id分组
+            all_shots = episode_data.get("shots", [])
+            shots_by_scene = {}
+            for shot in all_shots:
+                sid = shot.get("scene_id", 0)
+                if sid not in shots_by_scene:
+                    shots_by_scene[sid] = []
+                shots_by_scene[sid].append(shot)
+
             for scene_data in episode_data.get("scenes", []):
                 scene_num = scene_data.get("scene_id", len(episode.scenes) + 1)
                 scene = self.add_scene(
@@ -420,7 +429,9 @@ class StoryboardFinalizer:
                     emotional_tone=scene_data.get("emotional_tone", ""),
                 )
 
-                for shot_data in scene_data.get("shots", []):
+                # 从分组中取该场景的镜头
+                scene_shots = shots_by_scene.get(scene_num, [])
+                for shot_data in scene_shots:
                     # 映射景别
                     size_map = {
                         "大特写": ShotSize.ECU, "特写": ShotSize.CU,
@@ -437,7 +448,7 @@ class StoryboardFinalizer:
                     shot_size = size_map.get(shot_data.get("shot_size", ""), ShotSize.MS)
                     camera_move = move_map.get(shot_data.get("camera_move", ""), CameraMove.FIXED)
                     dialogue = shot_data.get("dialogue", {})
-                    dialogue_text = dialogue.get("content", "") if dialogue else ""
+                    dialogue_text = dialogue.get("content", "") if isinstance(dialogue, dict) else str(dialogue or "")
 
                     self.add_shot(
                         ep_num, scene_num,
