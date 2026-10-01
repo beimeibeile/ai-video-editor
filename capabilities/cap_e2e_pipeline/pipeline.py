@@ -109,6 +109,20 @@ try:
 except ImportError:
     _BLENDER_EFFECTS_AVAILABLE = False
 
+# 百叶窗分屏展开（特效库集成）
+try:
+    from blinds_transition import add_blinds_to_project as _add_blinds_transition
+    _BLINDS_TRANSITION_AVAILABLE = True
+except ImportError:
+    _BLINDS_TRANSITION_AVAILABLE = False
+
+# 羽化擦开文字动画（特效库集成）
+try:
+    from text_wipe_animation import add_text_wipe_to_project as _add_text_wipe
+    _TEXT_WIPE_AVAILABLE = True
+except ImportError:
+    _TEXT_WIPE_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -1319,8 +1333,34 @@ class E2EPipeline:
                 except Exception as e:
                     print(f"  蒙版快闪v4@{i}失败，回退普通转场: {e}")
 
+            # 百叶窗分屏展开转场
+            if shot.transition_in == "百叶窗" and _BLINDS_TRANSITION_AVAILABLE:
+                try:
+                    trans_start = intro_offset + sum(s.duration for s in sb.shots[:i]) - shot.transition_duration
+                    # 使用纯色背景作为百叶窗素材
+                    blinds_color = _MASK_FLASH_PRESETS.get(style, [(255, 255, 255)])[0]
+                    blinds_img = os.path.join(flash_assets_dir, f"blinds_bg_{i}.png")
+                    os.makedirs(flash_assets_dir, exist_ok=True)
+                    from PIL import Image
+                    Image.new("RGB", (width, height), blinds_color).save(blinds_img)
+                    _add_blinds_transition(
+                        project,
+                        image_path=blinds_img,
+                        start_time=trans_start,
+                        num_strips=6,
+                        duration=shot.transition_duration,
+                        stagger=shot.transition_duration * 0.1,
+                        direction="alternate",
+                        canvas_h=height,
+                    )
+                    flash_count += 1
+                    print(f"  百叶窗转场@{i}: 6条条纹 ({shot.transition_duration}s)")
+                    continue
+                except Exception as e:
+                    print(f"  百叶窗转场@{i}失败，回退普通转场: {e}")
+
             # Blender转场遮罩（需要Blender安装，转场更丰富）
-            if use_blender_transitions and _BLENDER_EFFECTS_AVAILABLE and shot.transition_in not in ["无", "蒙版快闪"]:
+            if use_blender_transitions and _BLENDER_EFFECTS_AVAILABLE and shot.transition_in not in ["无", "蒙版快闪", "百叶窗"]:
                 try:
                     trans_start = intro_offset + sum(s.duration for s in sb.shots[:i]) - shot.transition_duration
                     blender_trans_dir = os.path.join(self.work_dir, "output", "blender_transitions")
@@ -1372,7 +1412,7 @@ class E2EPipeline:
                 trans_count += 1
             except Exception as e:
                 print(f"  转场{i}失败: {e}")
-        print(f"  添加 {trans_count} 个普通转场 + {flash_count} 个蒙版快闪")
+        print(f"  添加 {trans_count} 个普通转场 + {flash_count} 个特效转场(蒙版快闪/百叶窗)")
 
         # 3. 字幕（从片头后开始）—— 优先使用特效库字幕条
         sub_count = 0
