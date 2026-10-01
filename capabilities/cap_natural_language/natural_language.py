@@ -70,6 +70,7 @@ STYLE_KEYWORDS = {
     "vintage": ["复古", "怀旧", "胶片", "老电影", "港风"],
     "noir": ["黑色", "悬疑", "暗黑", "神秘", "压抑"],
     "minimal": ["简约", "极简", "干净", "简洁", "性冷淡"],
+    "upbeat": ["轻快", "活泼", "欢快", "轻松", "动感", "活力", "明快", "俏皮", "元气", "热血", "燃", "happy", "upbeat", "lively"],
 }
 
 # 特效关键词映射
@@ -114,7 +115,7 @@ class NaturalLanguageEngine:
 
     # ==================== 意图解析 ====================
 
-    def parse(self, text: str) -> ParsedCommand:
+    def parse(self, text: str) -> Dict[str, Any]:
         """
         解析自然语言指令
 
@@ -127,50 +128,68 @@ class NaturalLanguageEngine:
         text = text.strip()
         cmd = ParsedCommand(original_text=text)
 
+        # 0. 口语关键词标准化（将用户口语转为系统标准关键词）
+        try:
+            from cap_keyword_normalizer import KeywordNormalizer
+            normalizer = KeywordNormalizer(skill_root=self.skill_root)
+            norm_result = normalizer.normalize(text)
+            # 使用标准化后的文本进行后续解析
+            parse_text = norm_result.normalized_text
+            # 合并提取的标准关键词
+            std_keywords = []
+            for cat, kws in norm_result.extracted_keywords.items():
+                std_keywords.extend(kws)
+            cmd.keywords = list(set(std_keywords))
+            cmd.confidence += norm_result.confidence * 0.1
+        except Exception:
+            parse_text = text
+
         # 1. 检测意图
-        if any(w in text for w in ["帮助", "怎么用", "使用方法", "help", "Help"]):
+        if any(w in parse_text for w in ["帮助", "怎么用", "使用方法", "help", "Help"]):
             cmd.intent = "help"
             cmd.confidence = 0.9
-            return cmd
+            return asdict(cmd)
 
-        if any(w in text for w in ["解释", "说明", "什么是", "介绍一下"]):
+        if any(w in parse_text for w in ["解释", "说明", "什么是", "介绍一下"]):
             cmd.intent = "explain"
             cmd.confidence = 0.8
-            return cmd
+            return asdict(cmd)
 
         cmd.intent = "generate_video"
 
         # 2. 提取视频类型
-        video_type, type_confidence = self._extract_video_type(text)
+        video_type, type_confidence = self._extract_video_type(parse_text)
         cmd.video_type = video_type
         cmd.confidence += type_confidence * 0.3
 
         # 3. 提取时长
-        duration, duration_found = self._extract_duration(text)
+        duration, duration_found = self._extract_duration(parse_text)
         if duration_found:
             cmd.duration = duration
             cmd.confidence += 0.15
 
         # 4. 提取风格
-        style, style_found = self._extract_style(text)
+        style, style_found = self._extract_style(parse_text)
         if style_found:
             cmd.style = style
             cmd.confidence += 0.1
 
         # 5. 提取特效
-        hook_effect, effect_found = self._extract_hook_effect(text)
+        hook_effect, effect_found = self._extract_hook_effect(parse_text)
         if effect_found:
             cmd.hook_effect = hook_effect
             cmd.confidence += 0.1
 
         # 6. 提取主题
-        topic = self._extract_topic(text, cmd.video_type)
+        topic = self._extract_topic(parse_text, cmd.video_type)
         cmd.topic = topic
         if topic:
             cmd.confidence += 0.25
 
-        # 7. 提取关键词
-        cmd.keywords = self._extract_keywords(text)
+        # 7. 提取关键词（合并标准化提取的和文本提取的）
+        text_keywords = self._extract_keywords(parse_text)
+        all_keywords = list(set(cmd.keywords + text_keywords))
+        cmd.keywords = all_keywords[:8]
 
         # 8. 检查缺失参数
         if not cmd.topic:
@@ -180,7 +199,7 @@ class NaturalLanguageEngine:
         # 9. 归一化置信度
         cmd.confidence = min(1.0, cmd.confidence)
 
-        return cmd
+        return asdict(cmd)
 
     def _extract_video_type(self, text: str) -> Tuple[str, float]:
         """提取视频类型"""
@@ -233,41 +252,92 @@ class NaturalLanguageEngine:
         return "wipe", False
 
     def _extract_topic(self, text: str, video_type: str) -> str:
-        """提取主题"""
+        """提取主题（改进版：过滤结构描述性内容）"""
+        # 结构描述过滤词（这些词开头的内容不是主题）
+        structural_prefixes = ["要有", "包含", "包括", "需要", "个", "片段", "镜头", "场景", "结尾", "开场", "标题", "字幕", "配乐", "特效", "转场"]
+
+        def _is_structural(t: str) -> bool:
+            """判断是否是结构描述而非主题"""
+            if not t:
+                return True
+            # 包含数字+量词+片段/镜头等结构词
+            if re.search(r'\d+\s*[个条段帧]\s*(旅行|片段|镜头|场景|内容)', t):
+                return True
+            # 以结构词开头
+            for prefix in structural_prefixes:
+                if t.startswith(prefix):
+                    return True
+            # 纯标点或太短
+            if len(t) <= 1:
+                return True
+            return False
+
         # 尝试模式匹配
         for pattern in TOPIC_PATTERNS:
             match = re.search(pattern, text)
             if match:
                 topic = match.group(1).strip()
-                # 清理
                 topic = re.sub(r'[，。！？,.;!?]$', '', topic)
-                if len(topic) > 1 and len(topic) < 50:
+                # 过滤结构描述
+                if not _is_structural(topic) and len(topic) > 1 and len(topic) < 50:
                     return topic
 
-        # 如果没有明确主题，尝试从类型关键词后提取
+        # 从类型关键词后提取（改进：只取第一个逗号前的内容，且过滤结构词）
         type_keywords = VIDEO_TYPE_KEYWORDS.get(video_type, [])
         for kw in type_keywords:
             if kw in text:
                 idx = text.find(kw)
                 after = text[idx + len(kw):].strip()
-                # 去掉连接词
                 after = re.sub(r'^[的，,：:是为关于]+', '', after)
-                after = re.sub(r'[，。！？,.;!?].*$', '', after)
-                if len(after) > 1 and len(after) < 50:
+                # 只取第一个逗号/句号前的内容
+                after = re.split(r'[，。！？,.;!?]', after)[0].strip()
+                if not _is_structural(after) and len(after) > 1 and len(after) < 50:
                     return after
+
+        # 兜底：从节日/地点/主题名词中提取
+        fallback_topics = ["国庆", "春节", "中秋", "端午", "元旦", "圣诞", "情人节", "母亲节", "父亲节",
+                           "旅行", "旅游", "美食", "探店", "产品", "测评", "日常", "教程", "情感",
+                           "故事", "口播", "知识", "好物", "推荐", "风景", "人物", "城市", "校园",
+                           "职场", "宠物", "健身", "婚礼", "生日", "毕业", "年会"]
+        for ft in fallback_topics:
+            if ft in text:
+                return ft
 
         return ""
 
     def _extract_keywords(self, text: str) -> List[str]:
-        """提取关键词"""
+        """提取关键词（改进版）"""
         keywords = []
-        # 提取引号中的内容
+
+        # 1. 提取引号中的内容
         quotes = re.findall(r'["「『]([^"」』]+)["」』]', text)
         keywords.extend(quotes)
 
-        # 提取2-4字的名词性短语（简化版）
-        # 这里只做简单提取，实际应用可接入分词
-        return list(set(keywords))[:5]
+        # 2. 提取视频类型关键词
+        for vtype, kws in VIDEO_TYPE_KEYWORDS.items():
+            for kw in kws:
+                if kw in text and kw not in keywords:
+                    keywords.append(kw)
+
+        # 3. 提取风格关键词
+        for style, kws in STYLE_KEYWORDS.items():
+            for kw in kws:
+                if kw in text and kw not in keywords:
+                    keywords.append(kw)
+
+        # 4. 提取数字+量词（如"30秒"、"3个"）
+        quantities = re.findall(r'\d+\s*[秒分钟个条支段帧]', text)
+        keywords.extend(quantities)
+
+        # 5. 提取常见名词（节日、地点、主题词）
+        common_nouns = ["国庆", "春节", "中秋", "端午", "旅行", "旅游", "美食", "探店", "产品", "测评",
+                        "日常", "vlog", "教程", "情感", "故事", "口播", "知识", "好物", "推荐",
+                        "风景", "人物", "城市", "农村", "校园", "职场", "宠物", "宝宝", "健身"]
+        for noun in common_nouns:
+            if noun in text and noun not in keywords:
+                keywords.append(noun)
+
+        return list(set(keywords))[:8]
 
     # ==================== 指令确认 ====================
 
@@ -308,7 +378,7 @@ class NaturalLanguageEngine:
 
     # ==================== 一键生成 ====================
 
-    def generate(self, cmd: ParsedCommand, project_name: str = None,
+    def generate(self, cmd: Dict[str, Any], project_name: str = None,
                  auto_confirm: bool = False) -> Dict[str, Any]:
         """
         根据解析结果一键生成视频
@@ -321,6 +391,8 @@ class NaturalLanguageEngine:
         Returns:
             生成结果
         """
+        if isinstance(cmd, dict):
+            cmd = ParsedCommand(**cmd)
         if cmd.intent == "help":
             return {
                 "status": "help",

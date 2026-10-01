@@ -120,6 +120,7 @@ class UserPreferenceLearner:
     # ==================== 记录生成 ====================
 
     def record_generation(self, video_type: str = "exploration", duration: float = 30.0,
+                          user_modified: bool = False,
                           style: str = "cinematic", hook_effect: str = "wipe",
                           aspect_ratio: str = "9:16", topic: str = "",
                           tags: List[str] = None, success: bool = True,

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>质量门报告 - P5_E2E_Test - 剪辑质量门报告</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --pass: #3fb950;
+  --fail: #f85149;
+  --warn: #d29922;
+  --skip: #6e7681;
+  --accent: #58a6ff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 24px;
+  line-height: 1.6;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 24px; margin-bottom: 8px; }
+.subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+
+/* KPI 带 */
+.kpi-band {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.kpi-value { font-size: 32px; font-weight: 700; }
+.kpi-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.kpi-pass .kpi-value { color: var(--pass); }
+.kpi-fail .kpi-value { color: var(--fail); }
+.kpi-warn .kpi-value { color: var(--warn); }
+.kpi-skip .kpi-value { color: var(--skip); }
+.kpi-rate .kpi-value { color: var(--accent); }
+
+/* 病灶横幅 */
+.banner {
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid var(--fail);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  display: none;
+}
+.banner.show { display: block; }
+.banner-title { color: var(--fail); font-weight: 600; margin-bottom: 4px; }
+.banner-detail { color: var(--text-muted); font-size: 14px; }
+
+/* 质量门面板 */
+.gate-section { margin-bottom: 24px; }
+.gate-section h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.gate-list { display: flex; flex-direction: column; gap: 8px; }
+.gate-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.gate-status {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.gate-pass { background: rgba(63, 185, 80, 0.2); color: var(--pass); }
+.gate-fail { background: rgba(248, 81, 73, 0.2); color: var(--fail); }
+.gate-warn { background: rgba(210, 153, 34, 0.2); color: var(--warn); }
+.gate-skip { background: rgba(110, 118, 129, 0.2); color: var(--skip); }
+.gate-content { flex: 1; }
+.gate-name { font-weight: 600; font-size: 14px; }
+.gate-id { color: var(--text-muted); font-size: 12px; margin-right: 8px; }
+.gate-message { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.gate-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* 数据概览 */
+.data-overview {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.data-overview h2 { font-size: 18px; margin-bottom: 12px; }
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.data-item { font-size: 14px; }
+.data-item .label { color: var(--text-muted); font-size: 12px; }
+.data-item .value { font-weight: 600; }
+
+/* 导出按钮 */
+.export-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+.export-btn:hover { opacity: 0.9; }
+
+.footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>P5_E2E_Test - 剪辑质量门报告</h1>
+  <div class="subtitle">生成时间: 2026-10-02 02:41:56 | 类别: edit</div>
+
+  <button class="export-btn" onclick="downloadJSON()">导出 JSON</button>
+
+  <div class="kpi-band">
+    <div class="kpi-card kpi-rate">
+      <div class="kpi-value">86%</div>
+      <div class="kpi-label">通过率</div>
+    </div>
+    <div class="kpi-card kpi-pass">
+      <div class="kpi-value">6</div>
+      <div class="kpi-label">通过</div>
+    </div>
+    <div class="kpi-card kpi-fail">
+      <div class="kpi-value">1</div>
+      <div class="kpi-label">失败</div>
+    </div>
+    <div class="kpi-card kpi-warn">
+      <div class="kpi-value">0</div>
+      <div class="kpi-label">警告</div>
+    </div>
+    <div class="kpi-card kpi-skip">
+      <div class="kpi-value">0</div>
+      <div class="kpi-label">跳过</div>
+    </div>
+  </div>
+
+  <div class="banner show" id="failBanner">
+    <div class="banner-title">有 1 道质量门未通过</div>
+    <div class="banner-detail">[E001] 超过上限25.0秒</div>
+  </div>
+
+  <div class="gate-section">
+    <h2>质量门检查 (7 道)</h2>
+    <div class="gate-list">
+      <div class="gate-item">
+  <div class="gate-status gate-fail">✗</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[E001]</span>总时长</div>
+    <div class="gate-message">超过上限25.0秒</div>
+    <div class="gate-detail">当前43.0秒</div>
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[E002]</span>片段数量</div>
+    <div class="gate-message">26个，合理</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[E003]</span>转场对齐</div>
+    <div class="gate-message">7个转场全部对齐</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[E004]</span>字幕覆盖</div>
+    <div class="gate-message">所有有旁白片段均有字幕</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[E005]</span>画幅一致</div>
+    <div class="gate-message">所有片段画幅一致</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[E006]</span>帧对齐</div>
+    <div class="gate-message">所有时间点已按30fps对齐</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[E007]</span>黑屏检测</div>
+    <div class="gate-message">无异常黑屏</div>
+    
+  </div>
+</div>
+    </div>
+  </div>
+
+  <div class="data-overview">
+  <h2>数据概览</h2>
+  <div class="data-grid"><div class="data-item"><div class="label">总时长</div><div class="value">43.0s</div></div><div class="data-item"><div class="label">帧率</div><div class="value">30fps</div></div><div class="data-item"><div class="label">视频片段</div><div class="value">26</div></div><div class="data-item"><div class="label">转场数</div><div class="value">7</div></div><div class="data-item"><div class="label">字幕数</div><div class="value">12</div></div><div class="data-item"><div class="label">字幕覆盖率</div><div class="value">97.7%</div></div><div class="data-item"><div class="label">画幅</div><div class="value">original</div></div></div>
+</div>
+
+  <div class="footer">
+    ai-video-editor 质量门报告 | cap_creative
+  </div>
+</div>
+
+<script>
+const reportData = {
+  "category": "edit",
+  "total": 7,
+  "passed": 6,
+  "failed": 1,
+  "warned": 0,
+  "skipped": 0,
+  "all_passed": false,
+  "results": [
+    {
+      "gate_id": "E001",
+      "gate_name": "总时长",
+      "status": "fail",
+      "message": "超过上限25.0秒",
+      "detail": "当前43.0秒",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E002",
+      "gate_name": "片段数量",
+      "status": "pass",
+      "message": "26个，合理",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E003",
+      "gate_name": "转场对齐",
+      "status": "pass",
+      "message": "7个转场全部对齐",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E004",
+      "gate_name": "字幕覆盖",
+      "status": "pass",
+      "message": "所有有旁白片段均有字幕",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E005",
+      "gate_name": "画幅一致",
+      "status": "pass",
+      "message": "所有片段画幅一致",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E006",
+      "gate_name": "帧对齐",
+      "status": "pass",
+      "message": "所有时间点已按30fps对齐",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E007",
+      "gate_name": "黑屏检测",
+      "status": "pass",
+      "message": "无异常黑屏",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    }
+  ],
+  "source_data": {
+    "total_duration": 43.0,
+    "max_duration": 25.0,
+    "fps": 30,
+    "segments": [
+      {
+        "start": 3.0,
+        "duration": 3.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 6.0,
+        "duration": 4.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 10.0,
+        "duration": 5.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 15.0,
+        "duration": 4.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 19.0,
+        "duration": 4.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 23.0,
+        "duration": 3.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 26.0,
+        "duration": 4.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 30.0,
+        "duration": 5.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 35.0,
+        "duration": 4.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 39.0,
+        "duration": 4.0,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 19.2,
+        "duration": 0.8,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 19.32,
+        "duration": 0.8,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 19.44,
+        "duration": 0.8,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 22.2,
+        "duration": 0.8,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 22.32,
+        "duration": 0.8,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 22.44,
+        "duration": 0.8,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 0.2,
+        "duration": 2.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 3.2,
+        "duration": 3.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 7.2,
+        "duration": 4.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 12.2,
+        "duration": 3.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 16.2,
+        "duration": 3.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 20.2,
+        "duration": 2.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 23.2,
+        "duration": 3.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 27.2,
+        "duration": 4.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 32.2,
+        "duration": 3.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      },
+      {
+        "start": 36.2,
+        "duration": 3.6,
+        "width": 0,
+        "height": 0,
+        "is_black_frame": false,
+        "track": "video"
+      }
+    ],
+    "transitions": [
+      {
+        "start": 3.0,
+        "duration": 0.3,
+        "name": "闪黑"
+      },
+      {
+        "start": 6.0,
+        "duration": 0.3,
+        "name": "闪黑"
+      },
+      {
+        "start": 10.0,
+        "duration": 0.3,
+        "name": "闪黑"
+      },
+      {
+        "start": 15.0,
+        "duration": 0.3,
+        "name": "闪黑"
+      },
+      {
+        "start": 26.0,
+        "duration": 0.3,
+        "name": "闪黑"
+      },
+      {
+        "start": 30.0,
+        "duration": 0.3,
+        "name": "闪黑"
+      },
+      {
+        "start": 35.0,
+        "duration": 0.5,
+        "name": "叠化"
+      }
+    ],
+    "subtitles": [
+      {
+        "start": 0.0,
+        "duration": 3.0,
+        "text": ""
+      },
+      {
+        "start": 0.0,
+        "duration": 3.0,
+        "text": ""
+      },
+      {
+        "start": 0.2,
+        "duration": 2.6,
+        "text": ""
+      },
+      {
+        "start": 3.2,
+        "duration": 3.6,
+        "text": ""
+      },
+      {
+        "start": 7.2,
+        "duration": 4.6,
+        "text": ""
+      },
+      {
+        "start": 12.2,
+        "duration": 3.6,
+        "text": ""
+      },
+      {
+        "start": 16.2,
+        "duration": 3.6,
+        "text": ""
+      },
+      {
+        "start": 20.2,
+        "duration": 2.6,
+        "text": ""
+      },
+      {
+        "start": 23.2,
+        "duration": 3.6,
+        "text": ""
+      },
+      {
+        "start": 27.2,
+        "duration": 4.6,
+        "text": ""
+      },
+      {
+        "start": 32.2,
+        "duration": 3.6,
+        "text": ""
+      },
+      {
+        "start": 36.2,
+        "duration": 3.6,
+        "text": ""
+      }
+    ],
+    "subtitle_coverage": 0.9767441860465116,
+    "aspect_ratio": "original",
+    "track_types": [
+      "video",
+      "audio",
+      "text"
+    ],
+    "draft_path": "C:\\Users\\Administrator\\AppData\\Local\\JianyingPro\\User Data\\Projects\\com.lveditor.draft\\P5_E2E_Test"
+  }
+};
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(reportData, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'quality_gate_report.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

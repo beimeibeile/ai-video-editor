@@ -167,7 +167,7 @@ class MultimodalInterface:
         # 10. 生成建议
         result.suggestions = self._generate_suggestions(result)
 
-        return result
+        return asdict(result)
 
     # ==================== 输入检测 ====================
 
@@ -210,15 +210,15 @@ class MultimodalInterface:
         nlu = self._get_nlu_engine()
 
         if nlu:
-            # 使用NLU引擎解析
+            # 使用NLU引擎解析（返回dict）
             parsed = nlu.parse(text)
-            result.video_type = parsed.video_type
-            result.topic = parsed.topic
-            result.duration = parsed.duration
-            result.style = parsed.style
-            result.hook_effect = parsed.hook_effect
-            result.keywords = parsed.keywords
-            result.confidence += parsed.confidence * 0.5
+            result.video_type = parsed.get("video_type", result.video_type)
+            result.topic = parsed.get("topic", result.topic)
+            result.duration = parsed.get("duration", result.duration)
+            result.style = parsed.get("style", result.style)
+            result.hook_effect = parsed.get("hook_effect", result.hook_effect)
+            result.keywords = parsed.get("keywords", result.keywords)
+            result.confidence += parsed.get("confidence", 0) * 0.5
         else:
             # 简单关键词提取
             result.topic = text[:50]
@@ -279,7 +279,7 @@ class MultimodalInterface:
             if param_key in parameters:
                 setattr(result, result_key, parameters[param_key])
 
-        return result
+        return asdict(result)
 
     # ==================== 生成指令构建 ====================
 

@@ -1,0 +1,207 @@
+{
+  "title": "风格轻快活泼 | Vlog视频",
+  "genre": "Vlog",
+  "target_audience": "短视频平台用户",
+  "total_duration": 20.0,
+  "aspect_ratio": "9:16",
+  "style": "自然+生活感",
+  "hook": "普通的一天，不普通的记录",
+  "cta": "下期想看什么？告诉我",
+  "scenes": [
+    {
+      "scene_id": "act1_hook",
+      "title": "第一幕·钩子",
+      "start_time": 0.0,
+      "duration": 3.0,
+      "emotion": "钩子",
+      "description": "用反常识/痛点/悬念抓住观众，前3秒必须留人。核心文案: 普通的一天，不普通的记录",
+      "transition_in": "硬切",
+      "transition_out": "快切",
+      "shots": [
+        {
+          "shot_id": "act1_hook_s1",
+          "start_time": 0.0,
+          "duration": 1.2000000000000002,
+          "shot_size": "特写",
+          "camera_move": "快速推进",
+          "description": "核心视觉元素大特写，配合快闪特效",
+          "subtitle": "普通的一天，不普通的记录",
+          "voiceover": "",
+          "effect_hint": "蒙版快闪+发光轮廓",
+          "emotion": "钩子",
+          "visual_ref": "高对比度特写画面，冲击力强"
+        },
+        {
+          "shot_id": "act1_hook_s2",
+          "start_time": 1.2000000000000002,
+          "duration": 1.7999999999999998,
+          "shot_size": "中景",
+          "camera_move": "固定",
+          "description": "抛出问题/痛点，引发好奇",
+          "subtitle": "你是不是也这样？",
+          "voiceover": "",
+          "effect_hint": "字幕条动画",
+          "emotion": "紧张",
+          "visual_ref": ""
+        }
+      ]
+    },
+    {
+      "scene_id": "act2_scene1",
+      "title": "第二幕·内容1",
+      "start_time": 3.0,
+      "duration": 4.67,
+      "emotion": "紧张",
+      "description": "引入主题，建立背景。围绕「风格轻快活泼」展开第一个核心点，用具体细节代替空泛描述。",
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "shots": [
+        {
+          "shot_id": "act2_scene1_s1",
+          "start_time": 3.0,
+          "duration": 2.33,
+          "shot_size": "全景",
+          "camera_move": "缓慢推进",
+          "description": "内容点1.1: 展示风格轻快活泼的相关画面",
+          "subtitle": "核心信息点1.1",
+          "voiceover": "",
+          "effect_hint": "背景滑入",
+          "emotion": "紧张",
+          "visual_ref": "与风格轻快活泼相关的高质量画面"
+        },
+        {
+          "shot_id": "act2_scene1_s2",
+          "start_time": 5.33,
+          "duration": 2.33,
+          "shot_size": "中景",
+          "camera_move": "固定",
+          "description": "内容点1.2: 展示风格轻快活泼的相关画面",
+          "subtitle": "核心信息点1.2",
+          "voiceover": "",
+          "effect_hint": "字幕条动画",
+          "emotion": "紧张",
+          "visual_ref": "与风格轻快活泼相关的高质量画面"
+        }
+      ]
+    },
+    {
+      "scene_id": "act2_scene2",
+      "title": "第二幕·内容2",
+      "start_time": 7.67,
+      "duration": 4.67,
+      "emotion": "舒缓",
+      "description": "深入展开，展示过程/对比/证据。用数据或真实体验增加可信度。",
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "shots": [
+        {
+          "shot_id": "act2_scene2_s1",
+          "start_time": 7.67,
+          "duration": 2.33,
+          "shot_size": "全景",
+          "camera_move": "缓慢推进",
+          "description": "内容点2.1: 展示风格轻快活泼的相关画面",
+          "subtitle": "核心信息点2.1",
+          "voiceover": "",
+          "effect_hint": "字幕条动画",
+          "emotion": "舒缓",
+          "visual_ref": "与风格轻快活泼相关的高质量画面"
+        },
+        {
+          "shot_id": "act2_scene2_s2",
+          "start_time": 10.0,
+          "duration": 2.33,
+          "shot_size": "中景",
+          "camera_move": "固定",
+          "description": "内容点2.2: 展示风格轻快活泼的相关画面",
+          "subtitle": "核心信息点2.2",
+          "voiceover": "",
+          "effect_hint": "人物介绍卡",
+          "emotion": "舒缓",
+          "visual_ref": "与风格轻快活泼相关的高质量画面"
+        }
+      ]
+    },
+    {
+      "scene_id": "act2_scene3",
+      "title": "第二幕·内容3",
+      "start_time": 12.34,
+      "duration": 4.67,
+      "emotion": "高潮",
+      "description": "高潮部分，展示最精彩/最意外/最有价值的内容。情绪拉满。",
+      "transition_in": "快切",
+      "transition_out": "淡入淡出",
+      "shots": [
+        {
+          "shot_id": "act2_scene3_s1",
+          "start_time": 12.34,
+          "duration": 2.33,
+          "shot_size": "全景",
+          "camera_move": "缓慢推进",
+          "description": "内容点3.1: 展示风格轻快活泼的相关画面",
+          "subtitle": "核心信息点3.1",
+          "voiceover": "",
+          "effect_hint": "人物介绍卡",
+          "emotion": "高潮",
+          "visual_ref": "与风格轻快活泼相关的高质量画面"
+        },
+        {
+          "shot_id": "act2_scene3_s2",
+          "start_time": 14.67,
+          "duration": 2.33,
+          "shot_size": "中景",
+          "camera_move": "固定",
+          "description": "内容点3.2: 展示风格轻快活泼的相关画面",
+          "subtitle": "核心信息点3.2",
+          "voiceover": "",
+          "effect_hint": "文字擦开",
+          "emotion": "高潮",
+          "visual_ref": "与风格轻快活泼相关的高质量画面"
+        }
+      ]
+    },
+    {
+      "scene_id": "act3_cta",
+      "title": "第三幕·号召",
+      "start_time": 17.009999999999998,
+      "duration": 3.0,
+      "emotion": "收尾",
+      "description": "总结核心价值，引导行动。核心文案: 下期想看什么？告诉我",
+      "transition_in": "淡入淡出",
+      "transition_out": "淡出",
+      "shots": [
+        {
+          "shot_id": "act3_cta_s1",
+          "start_time": 17.009999999999998,
+          "duration": 1.5,
+          "shot_size": "中景",
+          "camera_move": "缓慢拉远",
+          "description": "一句话总结核心价值",
+          "subtitle": "以上就是全部内容",
+          "voiceover": "",
+          "effect_hint": "文字擦开",
+          "emotion": "收尾",
+          "visual_ref": ""
+        },
+        {
+          "shot_id": "act3_cta_s2",
+          "start_time": 18.509999999999998,
+          "duration": 1.5,
+          "shot_size": "特写",
+          "camera_move": "固定",
+          "description": "引导点赞/关注/评论",
+          "subtitle": "下期想看什么？告诉我",
+          "voiceover": "",
+          "effect_hint": "蒙版快闪+发光轮廓",
+          "emotion": "高潮",
+          "visual_ref": ""
+        }
+      ]
+    }
+  ],
+  "keywords": [
+    "Vlog",
+    "风格轻快活泼"
+  ],
+  "bgm_mood": "清新民谣/轻音乐"
+}

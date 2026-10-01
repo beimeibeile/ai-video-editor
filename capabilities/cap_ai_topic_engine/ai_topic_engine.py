@@ -217,6 +217,12 @@ class AITopicEngine:
         scored.sort(key=lambda x: x["total_score"], reverse=True)
         return scored[:count]
 
+    
+    def generate_topics(self, count: int = 5, video_type: str = "",
+                       theme: str = "", tags: List[str] = None) -> List[Dict]:
+        """generate_topics别名（兼容旧API），实际调用recommend_topics"""
+        return self.recommend_topics(count=count, video_type=video_type)
+
     def _get_holiday_topics(self) -> List[Dict]:
         """获取当前日期附近的节日选题"""
         now = datetime.now()

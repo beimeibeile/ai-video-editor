@@ -169,7 +169,7 @@ class SmartEditor:
 
         if plan.shot_count == 0:
             plan.notes.append("⚠️ 未提取到镜头，使用默认方案")
-            return plan
+        return self.to_dict(plan)
 
         # 2. 生成情绪曲线
         plan.emotion_curve = self._generate_emotion_curve(shots)
