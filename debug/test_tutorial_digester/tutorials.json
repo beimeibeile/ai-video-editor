@@ -1,0 +1,34 @@
+{
+  "fc850ed75f2e": {
+    "tutorial_id": "fc850ed75f2e",
+    "title": "测试教程",
+    "url": "https://test.com/tutorial",
+    "platform": "douyin",
+    "description": "这是一个测试教程",
+    "tags": [
+      "测试",
+      "文字"
+    ],
+    "status": "generated",
+    "added_at": "2026-10-02T01:42:04.005240",
+    "parsed_at": "2026-10-02T01:42:04.005637",
+    "completed_at": "",
+    "key_steps": [
+      {
+        "step": 1,
+        "description": "第一步"
+      },
+      {
+        "step": 2,
+        "description": "第二步"
+      }
+    ],
+    "effect_name": "test_effect",
+    "effect_category": "text",
+    "effect_params": {},
+    "generated_code_path": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\debug\\test_tutorial_digester\\generated_effects\\test_effect.py",
+    "registered": false,
+    "error": "",
+    "notes": ""
+  }
+}
