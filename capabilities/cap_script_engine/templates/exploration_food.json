@@ -1,0 +1,47 @@
+{
+  "genre": "探店",
+  "name": "美食探店标准模板",
+  "description": "三幕结构：钩子→探店过程→总结号召",
+  "duration_range": [45, 90],
+  "structure": [
+    {
+      "act": "hook",
+      "duration_ratio": 0.15,
+      "emotion": "钩子",
+      "shots": [
+        {"type": "closeup", "duration": 1.5, "effect": "蒙版快闪", "purpose": "食物特写冲击"},
+        {"type": "medium", "duration": 2.0, "effect": "字幕条动画", "purpose": "抛出问题/反常识"}
+      ]
+    },
+    {
+      "act": "content",
+      "duration_ratio": 0.70,
+      "scenes": [
+        {"name": "环境展示", "emotion": "舒缓", "shot_size": "全景", "effect": "背景滑入"},
+        {"name": "菜品展示", "emotion": "高潮", "shot_size": "特写", "effect": "发光轮廓"},
+        {"name": "品尝反应", "emotion": "紧张", "shot_size": "中景", "effect": "人物介绍卡"}
+      ]
+    },
+    {
+      "act": "cta",
+      "duration_ratio": 0.15,
+      "emotion": "收尾",
+      "shots": [
+        {"type": "medium", "duration": 3.0, "effect": "文字擦开", "purpose": "总结评价"},
+        {"type": "closeup", "duration": 3.0, "effect": "蒙版快闪", "purpose": "地址+关注引导"}
+      ]
+    }
+  ],
+  "hook_templates": [
+    "这家店藏得太深了！",
+    "99%的人不知道的宝藏店铺",
+    "花XX元吃到撑是什么体验？",
+    "排队2小时也要吃的店"
+  ],
+  "cta_templates": [
+    "地址放评论区了，快去打卡！",
+    "关注我，带你吃遍全城！",
+    "你还知道哪些宝藏店？评论区告诉我！"
+  ],
+  "bgm_mood": "轻快电子/城市流行"
+}

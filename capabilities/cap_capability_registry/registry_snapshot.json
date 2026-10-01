@@ -1,0 +1,260 @@
+{
+  "capabilities": [
+    {
+      "name": "剪映工程创建",
+      "type": "edit",
+      "project": "ai-video-editor",
+      "description": "创建/编辑剪映草稿工程，支持多轨道/文字/图片/视频",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "jy_wrapper.JyProject",
+      "params": {},
+      "requires": [
+        "jianying"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "蒙版关键帧",
+      "type": "effect",
+      "project": "ai-video-editor",
+      "description": "蒙版大小/位置/旋转/羽化关键帧动画（标记+注入模式）",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "scripts.mask_keyframe",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "特效库(16+)",
+      "type": "effect",
+      "project": "ai-video-editor",
+      "description": "蒙版快闪/发光轮廓/百叶窗/文字擦开/字幕条/人物卡等",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "scripts.*",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "质量门(17道)",
+      "type": "quality",
+      "project": "ai-video-editor",
+      "description": "7 edit + 10 storyboard质量检测，输出HTML报告",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_creative.draft_quality_checker",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "端到端pipeline",
+      "type": "edit",
+      "project": "ai-video-editor",
+      "description": "分镜→素材→剪映合成，6种hook_effect",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_e2e_pipeline.pipeline",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "剧本引擎",
+      "type": "analysis",
+      "project": "ai-video-editor",
+      "description": "输入需求→输出有故事线的完整剧本(三幕结构)",
+      "version": "0.1.0",
+      "status": "available",
+      "entry_point": "cap_script_engine.script_engine",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "智能调度器",
+      "type": "analysis",
+      "project": "ai-video-editor",
+      "description": "剧本→自动匹配特效/素材/转场调度计划",
+      "version": "0.1.0",
+      "status": "available",
+      "entry_point": "cap_smart_director.smart_director",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "视频帧对齐",
+      "type": "edit",
+      "project": "ai-video-editor",
+      "description": "ffmpeg裁剪视频到精确帧边界",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "scripts.video_frame_align",
+      "params": {},
+      "requires": [
+        "ffmpeg"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "23垂类深度搜索",
+      "type": "search",
+      "project": "anysearch-skill",
+      "description": "法律/医疗/金融/学术等23领域结构化搜索",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "anysearch",
+      "params": {},
+      "requires": [
+        "anysearch"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "4语言CLI",
+      "type": "search",
+      "project": "anysearch-skill",
+      "description": "中文/英文/日文/韩文搜索接口",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "anysearch.cli",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "文生图",
+      "type": "gen_image",
+      "project": "comfyui-controls-skill",
+      "description": "ComfyUI文生图，支持sd_xl_turbo等模型",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "comfy_controls.text_to_image",
+      "params": {},
+      "requires": [
+        "comfyui"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "图生视频(LTX/混元)",
+      "type": "gen_video",
+      "project": "comfyui-controls-skill",
+      "description": "LTX-2.5/混元I2V图生视频",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "comfy_controls.image_to_video",
+      "params": {},
+      "requires": [
+        "comfyui"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "批量生成",
+      "type": "gen_image",
+      "project": "comfyui-controls-skill",
+      "description": "批量出图/出视频，自动排队",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_batch_generator",
+      "params": {},
+      "requires": [
+        "comfyui"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "模型管理",
+      "type": "gen_image",
+      "project": "comfyui-controls-skill",
+      "description": "checkpoint探测/切换/统计",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_model_manager",
+      "params": {},
+      "requires": [
+        "comfyui"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "自我进化",
+      "type": "analysis",
+      "project": "comfyui-controls-skill",
+      "description": "自动评估输出质量/分析失败/优化报告",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_self_evolution",
+      "params": {},
+      "requires": [],
+      "priority": 0
+    },
+    {
+      "name": "3D场景管理",
+      "type": "render_3d",
+      "project": "blender-controls-skill",
+      "description": "创建/编辑Blender场景，物体/灯光/相机",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_scene_manager",
+      "params": {},
+      "requires": [
+        "blender"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "批量渲染",
+      "type": "render_3d",
+      "project": "blender-controls-skill",
+      "description": "后台批量渲染动画/帧",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_batch_renderer",
+      "params": {},
+      "requires": [
+        "blender"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "3D特效库",
+      "type": "effect",
+      "project": "blender-controls-skill",
+      "description": "粒子背景/3D文字入场/转场遮罩/光线扫描",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_effects_library",
+      "params": {},
+      "requires": [
+        "blender"
+      ],
+      "priority": 0
+    },
+    {
+      "name": "渲染质量控制",
+      "type": "quality",
+      "project": "blender-controls-skill",
+      "description": "渲染结果质量检测",
+      "version": "1.0.0",
+      "status": "available",
+      "entry_point": "cap_quality_control",
+      "params": {},
+      "requires": [
+        "blender"
+      ],
+      "priority": 0
+    }
+  ],
+  "project_paths": {
+    "ai-video-editor": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor",
+    "anysearch-skill": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\anysearch-skill",
+    "comfyui-controls-skill": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\comfyui-controls-skill",
+    "blender-controls-skill": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\blender-controls-skill"
+  }
+}
