@@ -388,3 +388,226 @@ def generate_storyboard(theme: str, style: str = "cinematic",
 def list_storyboard_styles() -> List[Dict[str, str]]:
     """列出可用风格"""
     return StoryboardGenerator().list_styles()
+
+
+# ==================== 多机位对话模式（P3-4增强） ====================
+
+@dataclass
+class DialogueShot:
+    """对话分镜（多机位）"""
+    shot_type: str  # 主镜头/正反打/过肩/反应/特写
+    character: str  # 焦点角色
+    other_character: str = ""  # 对话对象（过肩镜头用）
+    duration: float = 3.0
+    shot_size: str = "中近景"
+    camera_move: str = "固定"
+    notes: str = ""
+
+
+class MultiCameraDialogue:
+    """多机位对话分镜生成器
+
+    标准对话场景镜头语言：
+    1. 建立镜头（双人/全景）- 交代空间关系
+    2. 主镜头（中近景）- 角色A说话
+    3. 反打（中近景）- 角色B说话
+    4. 过肩镜头 - 增强空间感
+    5. 反应特写 - 情绪强调
+    """
+
+    def generate_dialogue_sequence(self,
+                                     character_a: str,
+                                     character_b: str,
+                                     dialogue_a: str = "",
+                                     dialogue_b: str = "",
+                                     emotion: str = "平静",
+                                     total_duration: float = 10.0) -> List[DialogueShot]:
+        """生成对话场景的多机位分镜序列"""
+        shots = []
+
+        # 1. 建立镜头
+        shots.append(DialogueShot(
+            shot_type="建立镜头",
+            character=character_a,
+            other_character=character_b,
+            duration=total_duration * 0.15,
+            shot_size="全景",
+            camera_move="固定",
+            notes=f"交代{character_a}和{character_b}的空间关系",
+        ))
+
+        # 2. 角色A主镜头
+        if dialogue_a:
+            shots.append(DialogueShot(
+                shot_type="主镜头",
+                character=character_a,
+                other_character=character_b,
+                duration=total_duration * 0.30,
+                shot_size="中近景",
+                camera_move="固定",
+                notes=f"{character_a}说话：{dialogue_a[:30]}",
+            ))
+
+        # 3. 角色B反打
+        if dialogue_b:
+            shots.append(DialogueShot(
+                shot_type="反打",
+                character=character_b,
+                other_character=character_a,
+                duration=total_duration * 0.30,
+                shot_size="中近景",
+                camera_move="固定",
+                notes=f"{character_b}回应：{dialogue_b[:30]}",
+            ))
+
+        # 4. 过肩镜头（增强空间感）
+        shots.append(DialogueShot(
+            shot_type="过肩镜头",
+            character=character_a,
+            other_character=character_b,
+            duration=total_duration * 0.15,
+            shot_size="中景",
+            camera_move="固定",
+            notes=f"从{character_b}肩后拍{character_a}",
+        ))
+
+        # 5. 反应特写（情绪强调）
+        if emotion in ["激动", "悲伤", "愤怒", "感动"]:
+            shots.append(DialogueShot(
+                shot_type="反应特写",
+                character=character_b,
+                other_character=character_a,
+                duration=total_duration * 0.10,
+                shot_size="特写",
+                camera_move="固定",
+                notes=f"{character_b}的情绪反应（{emotion}）",
+            ))
+
+        return shots
+
+
+# ==================== 蒙太奇支持（P3-4增强） ====================
+
+class MontageBuilder:
+    """蒙太奇序列构建器
+
+    蒙太奇类型：
+    - 平行蒙太奇：两条线索同时发生，交替展示
+    - 交叉蒙太奇：两条线索交替，最终汇合（制造紧张）
+    - 隐喻蒙太奇：通过对比/象征表达含义
+    - 节奏蒙太奇：通过节奏变化表达情绪
+    - 连续蒙太奇：按时间顺序连续叙述
+    """
+
+    def build_parallel_montage(self,
+                                  line_a: List[Dict[str, Any]],
+                                  line_b: List[Dict[str, Any]],
+                                  interval: int = 1) -> List[Dict[str, Any]]:
+        """平行蒙太奇：两条线索交替展示
+
+        Args:
+            line_a: 线索A的镜头列表
+            line_b: 线索B的镜头列表
+            interval: 交替间隔（每几个镜头切换一次）
+
+        Returns:
+            交替后的镜头列表
+        """
+        result = []
+        i, j = 0, 0
+        while i < len(line_a) or j < len(line_b):
+            for _ in range(interval):
+                if i < len(line_a):
+                    result.append({**line_a[i], "montage_line": "A", "montage_type": "平行蒙太奇"})
+                    i += 1
+            for _ in range(interval):
+                if j < len(line_b):
+                    result.append({**line_b[j], "montage_line": "B", "montage_type": "平行蒙太奇"})
+                    j += 1
+        return result
+
+    def build_cross_montage(self,
+                               line_a: List[Dict[str, Any]],
+                               line_b: List[Dict[str, Any]],
+                               convergence_point: int = -1) -> List[Dict[str, Any]]:
+        """交叉蒙太奇：两条线索交替，节奏加快，最终汇合
+
+        Args:
+            line_a: 线索A的镜头列表
+            line_b: 线索B的镜头列表
+            convergence_point: 汇合点索引（-1表示最后汇合）
+
+        Returns:
+            交替后的镜头列表（节奏逐渐加快）
+        """
+        result = []
+        i, j = 0, 0
+        total = len(line_a) + len(line_b)
+        step = 0
+
+        while i < len(line_a) or j < len(line_b):
+            # 节奏逐渐加快：从2个一组变为1个一组
+            group_size = max(1, 2 - step // (total // 4))
+
+            for _ in range(group_size):
+                if i < len(line_a):
+                    shot = {**line_a[i], "montage_line": "A", "montage_type": "交叉蒙太奇"}
+                    if i == len(line_a) - 1 and convergence_point in [-1, i]:
+                        shot["montage_convergence"] = True
+                    result.append(shot)
+                    i += 1
+            for _ in range(group_size):
+                if j < len(line_b):
+                    shot = {**line_b[j], "montage_line": "B", "montage_type": "交叉蒙太奇"}
+                    if j == len(line_b) - 1 and convergence_point in [-1, j]:
+                        shot["montage_convergence"] = True
+                    result.append(shot)
+                    j += 1
+            step += 1
+
+        return result
+
+    def build_montage_from_shots(self,
+                                    shots: List[Dict[str, Any]],
+                                    montage_type: str = "节奏蒙太奇",
+                                    target_duration: float = 15.0) -> List[Dict[str, Any]]:
+        """将普通镜头序列转换为蒙太奇序列
+
+        Args:
+            shots: 原始镜头列表
+            montage_type: 蒙太奇类型
+            target_duration: 目标总时长
+
+        Returns:
+            蒙太奇化的镜头列表
+        """
+        if not shots:
+            return []
+
+        # 节奏蒙太奇：前慢后快，制造情绪递进
+        if montage_type == "节奏蒙太奇":
+            n = len(shots)
+            result = []
+            for i, shot in enumerate(shots):
+                # 前1/3慢，中间1/3中，后1/3快
+                if i < n // 3:
+                    duration = target_duration * 0.5 / (n // 3)
+                elif i < 2 * n // 3:
+                    duration = target_duration * 0.3 / (n // 3)
+                else:
+                    duration = target_duration * 0.2 / max(1, n - 2 * n // 3)
+                result.append({
+                    **shot,
+                    "duration": round(duration, 2),
+                    "montage_type": "节奏蒙太奇",
+                    "montage_phase": "慢" if i < n // 3 else "中" if i < 2 * n // 3 else "快",
+                })
+            return result
+
+        # 连续蒙太奇：保持原顺序，均匀时长
+        elif montage_type == "连续蒙太奇":
+            avg_duration = target_duration / len(shots)
+            return [{**shot, "duration": round(avg_duration, 2), "montage_type": "连续蒙太奇"} for shot in shots]
+
+        # 默认：标记蒙太奇类型
+        return [{**shot, "montage_type": montage_type} for shot in shots]
