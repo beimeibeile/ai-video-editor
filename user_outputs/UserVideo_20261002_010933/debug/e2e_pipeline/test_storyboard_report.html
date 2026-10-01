@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>质量门报告 - test - 分镜质量门报告</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --pass: #3fb950;
+  --fail: #f85149;
+  --warn: #d29922;
+  --skip: #6e7681;
+  --accent: #58a6ff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 24px;
+  line-height: 1.6;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 24px; margin-bottom: 8px; }
+.subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+
+/* KPI 带 */
+.kpi-band {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.kpi-value { font-size: 32px; font-weight: 700; }
+.kpi-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.kpi-pass .kpi-value { color: var(--pass); }
+.kpi-fail .kpi-value { color: var(--fail); }
+.kpi-warn .kpi-value { color: var(--warn); }
+.kpi-skip .kpi-value { color: var(--skip); }
+.kpi-rate .kpi-value { color: var(--accent); }
+
+/* 病灶横幅 */
+.banner {
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid var(--fail);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  display: none;
+}
+.banner.show { display: block; }
+.banner-title { color: var(--fail); font-weight: 600; margin-bottom: 4px; }
+.banner-detail { color: var(--text-muted); font-size: 14px; }
+
+/* 质量门面板 */
+.gate-section { margin-bottom: 24px; }
+.gate-section h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.gate-list { display: flex; flex-direction: column; gap: 8px; }
+.gate-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.gate-status {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.gate-pass { background: rgba(63, 185, 80, 0.2); color: var(--pass); }
+.gate-fail { background: rgba(248, 81, 73, 0.2); color: var(--fail); }
+.gate-warn { background: rgba(210, 153, 34, 0.2); color: var(--warn); }
+.gate-skip { background: rgba(110, 118, 129, 0.2); color: var(--skip); }
+.gate-content { flex: 1; }
+.gate-name { font-weight: 600; font-size: 14px; }
+.gate-id { color: var(--text-muted); font-size: 12px; margin-right: 8px; }
+.gate-message { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.gate-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* 数据概览 */
+.data-overview {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.data-overview h2 { font-size: 18px; margin-bottom: 12px; }
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.data-item { font-size: 14px; }
+.data-item .label { color: var(--text-muted); font-size: 12px; }
+.data-item .value { font-weight: 600; }
+
+/* 导出按钮 */
+.export-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+.export-btn:hover { opacity: 0.9; }
+
+.footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>test - 分镜质量门报告</h1>
+  <div class="subtitle">生成时间: 2026-10-02 01:09:52 | 类别: storyboard</div>
+
+  <button class="export-btn" onclick="downloadJSON()">导出 JSON</button>
+
+  <div class="kpi-band">
+    <div class="kpi-card kpi-rate">
+      <div class="kpi-value">80%</div>
+      <div class="kpi-label">通过率</div>
+    </div>
+    <div class="kpi-card kpi-pass">
+      <div class="kpi-value">8</div>
+      <div class="kpi-label">通过</div>
+    </div>
+    <div class="kpi-card kpi-fail">
+      <div class="kpi-value">1</div>
+      <div class="kpi-label">失败</div>
+    </div>
+    <div class="kpi-card kpi-warn">
+      <div class="kpi-value">0</div>
+      <div class="kpi-label">警告</div>
+    </div>
+    <div class="kpi-card kpi-skip">
+      <div class="kpi-value">1</div>
+      <div class="kpi-label">跳过</div>
+    </div>
+  </div>
+
+  <div class="banner show" id="failBanner">
+    <div class="banner-title">有 1 道质量门未通过</div>
+    <div class="banner-detail">[S008] 镜头合计30.0s与总时长15.0s差15.0s</div>
+  </div>
+
+  <div class="gate-section">
+    <h2>质量门检查 (10 道)</h2>
+    <div class="gate-list">
+      <div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S001]</span>镜头时长</div>
+    <div class="gate-message">10个镜头全部在2-15秒范围内</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S002]</span>钩子检查</div>
+    <div class="gate-message">首个钩子在1.125秒</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-skip">→</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S003]</span>节拍认领</div>
+    <div class="gate-message">无节拍数据</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S004]</span>景别多样性</div>
+    <div class="gate-message">5种景别: 特写, 远景, 中景, 全景, 近景</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S005]</span>运镜多样性</div>
+    <div class="gate-message">动态镜头100% (10/10)</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S006]</span>情绪节奏</div>
+    <div class="gate-message">情绪完整: 展开, 收束, 钩子, 高潮</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S007]</span>首镜头景别</div>
+    <div class="gate-message">首镜头为'特写'，符合短视频习惯</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-fail">✗</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S008]</span>时长合计</div>
+    <div class="gate-message">镜头合计30.0s与总时长15.0s差15.0s</div>
+    <div class="gate-detail">误差超过0.5秒阈值</div>
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S009]</span>字幕覆盖</div>
+    <div class="gate-message">字幕完整10/10</div>
+    
+  </div>
+</div>
+<div class="gate-item">
+  <div class="gate-status gate-pass">✓</div>
+  <div class="gate-content">
+    <div class="gate-name"><span class="gate-id">[S010]</span>首镜头转场</div>
+    <div class="gate-message">首镜头无入场转场，正确</div>
+    
+  </div>
+</div>
+    </div>
+  </div>
+
+  <div class="data-overview">
+  <h2>数据概览</h2>
+  <div class="data-grid"><div class="data-item"><div class="label">镜头数</div><div class="value">10</div></div><div class="data-item"><div class="label">镜头总时长</div><div class="value">30.0s</div></div><div class="data-item"><div class="label">总时长</div><div class="value">15.0s</div></div></div>
+</div>
+
+  <div class="footer">
+    ai-video-editor 质量门报告 | cap_creative
+  </div>
+</div>
+
+<script>
+const reportData = {
+  "category": "storyboard",
+  "total": 10,
+  "passed": 8,
+  "failed": 1,
+  "warned": 0,
+  "skipped": 1,
+  "all_passed": false,
+  "results": [
+    {
+      "gate_id": "S001",
+      "gate_name": "镜头时长",
+      "status": "pass",
+      "message": "10个镜头全部在2-15秒范围内",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S002",
+      "gate_name": "钩子检查",
+      "status": "pass",
+      "message": "首个钩子在1.125秒",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S003",
+      "gate_name": "节拍认领",
+      "status": "skip",
+      "message": "无节拍数据",
+      "detail": "",
+      "severity": "info",
+      "data": {}
+    },
+    {
+      "gate_id": "S004",
+      "gate_name": "景别多样性",
+      "status": "pass",
+      "message": "5种景别: 特写, 远景, 中景, 全景, 近景",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S005",
+      "gate_name": "运镜多样性",
+      "status": "pass",
+      "message": "动态镜头100% (10/10)",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S006",
+      "gate_name": "情绪节奏",
+      "status": "pass",
+      "message": "情绪完整: 展开, 收束, 钩子, 高潮",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S007",
+      "gate_name": "首镜头景别",
+      "status": "pass",
+      "message": "首镜头为'特写'，符合短视频习惯",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S008",
+      "gate_name": "时长合计",
+      "status": "fail",
+      "message": "镜头合计30.0s与总时长15.0s差15.0s",
+      "detail": "误差超过0.5秒阈值",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S009",
+      "gate_name": "字幕覆盖",
+      "status": "pass",
+      "message": "字幕完整10/10",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S010",
+      "gate_name": "首镜头转场",
+      "status": "pass",
+      "message": "首镜头无入场转场，正确",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    }
+  ]
+};
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(reportData, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'quality_gate_report.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

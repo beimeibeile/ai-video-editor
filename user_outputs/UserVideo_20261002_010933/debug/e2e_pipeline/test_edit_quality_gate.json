@@ -1,0 +1,74 @@
+{
+  "category": "edit",
+  "total": 7,
+  "passed": 6,
+  "failed": 1,
+  "warned": 0,
+  "skipped": 0,
+  "all_passed": false,
+  "results": [
+    {
+      "gate_id": "E001",
+      "gate_name": "总时长",
+      "status": "fail",
+      "message": "超过上限20.0秒",
+      "detail": "当前33.0秒",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E002",
+      "gate_name": "片段数量",
+      "status": "pass",
+      "message": "26个，合理",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E003",
+      "gate_name": "转场对齐",
+      "status": "pass",
+      "message": "7个转场全部对齐",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E004",
+      "gate_name": "字幕覆盖",
+      "status": "pass",
+      "message": "所有有旁白片段均有字幕",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E005",
+      "gate_name": "画幅一致",
+      "status": "pass",
+      "message": "所有片段画幅一致",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E006",
+      "gate_name": "帧对齐",
+      "status": "pass",
+      "message": "所有时间点已按30fps对齐",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "E007",
+      "gate_name": "黑屏检测",
+      "status": "pass",
+      "message": "无异常黑屏",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    }
+  ]
+}

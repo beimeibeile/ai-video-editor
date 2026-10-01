@@ -1,0 +1,714 @@
+{
+  "status": "success",
+  "topic": "test",
+  "video_type": "exploration",
+  "target_duration": 15.0,
+  "project_name": "UserVideo_20261002_010933",
+  "steps": {
+    "script": {
+      "status": "success",
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\script_*.json"
+    },
+    "direction": {
+      "status": "success"
+    },
+    "synthesize": {
+      "status": "success",
+      "project_name": "UserVideo_20261002_010933",
+      "storyboard": {
+        "theme": "test",
+        "style": "cinematic",
+        "total_duration": 15.0,
+        "hook_text": "test，你敢信？",
+        "ending_text": "这就是test",
+        "bgm_mood": "史诗",
+        "intro_style": "impact",
+        "outro_style": "impact",
+        "shot_count": 10,
+        "shots": [
+          {
+            "index": 0,
+            "duration": 2.25,
+            "shot_size": "特写",
+            "camera_move": "推",
+            "move_intensity": 0.13,
+            "transition_in": "无",
+            "transition_duration": 0.0,
+            "emotion": "钩子",
+            "subtitle": "16个抖音爆款钩子模板及案例解析",
+            "subtitle_style": "epic",
+            "color_tone": "冷",
+            "narration": "",
+            "sfx_hint": "whoosh/boom",
+            "notes": ""
+          },
+          {
+            "index": 1,
+            "duration": 3.0,
+            "shot_size": "近景",
+            "camera_move": "推",
+            "move_intensity": 0.1,
+            "transition_in": "快切",
+            "transition_duration": 0.3,
+            "emotion": "展开",
+            "subtitle": "钩子开场文案- prompts",
+            "subtitle_style": "epic",
+            "color_tone": "冷",
+            "narration": "",
+            "sfx_hint": "轻柔过渡",
+            "notes": ""
+          },
+          {
+            "index": 2,
+            "duration": 3.75,
+            "shot_size": "中景",
+            "camera_move": "移右",
+            "move_intensity": 0.08,
+            "transition_in": "快切",
+            "transition_duration": 0.3,
+            "emotion": "展开",
+            "subtitle": "... 钩子开场文案」智能体",
+            "subtitle_style": "epic",
+            "color_tone": "中性",
+            "narration": "",
+            "sfx_hint": "轻柔过渡",
+            "notes": ""
+          },
+          {
+            "index": 3,
+            "duration": 3.0,
+            "shot_size": "全景",
+            "camera_move": "拉",
+            "move_intensity": 0.1,
+            "transition_in": "快切",
+            "transition_duration": 0.3,
+            "emotion": "展开",
+            "subtitle": "9个爆款钩子开头，掌握短视频流量密码！",
+            "subtitle_style": "epic",
+            "color_tone": "暖",
+            "narration": "",
+            "sfx_hint": "轻柔过渡",
+            "notes": ""
+          },
+          {
+            "index": 4,
+            "duration": 3.0,
+            "shot_size": "远景",
+            "camera_move": "推",
+            "move_intensity": 0.1,
+            "transition_in": "快切",
+            "transition_duration": 0.3,
+            "emotion": "展开",
+            "subtitle": "9个爆款钩子开头，掌握短视频流量密码",
+            "subtitle_style": "epic",
+            "color_tone": "暖",
+            "narration": "",
+            "sfx_hint": "轻柔过渡",
+            "notes": ""
+          },
+          {
+            "index": 5,
+            "duration": 2.25,
+            "shot_size": "特写",
+            "camera_move": "推",
+            "move_intensity": 0.1,
+            "transition_in": "蒙版快闪",
+            "transition_duration": 0.67,
+            "emotion": "展开",
+            "subtitle": "test｜视觉盛宴",
+            "subtitle_style": "epic",
+            "color_tone": "冷",
+            "narration": "",
+            "sfx_hint": "轻柔过渡",
+            "notes": ""
+          },
+          {
+            "index": 6,
+            "duration": 3.0,
+            "shot_size": "近景",
+            "camera_move": "移右",
+            "move_intensity": 0.08,
+            "transition_in": "蒙版快闪",
+            "transition_duration": 0.8,
+            "emotion": "展开",
+            "subtitle": "test｜帧帧如画",
+            "subtitle_style": "epic",
+            "color_tone": "冷",
+            "narration": "",
+            "sfx_hint": "轻柔过渡",
+            "notes": ""
+          },
+          {
+            "index": 7,
+            "duration": 3.75,
+            "shot_size": "中景",
+            "camera_move": "拉",
+            "move_intensity": 0.1,
+            "transition_in": "快切",
+            "transition_duration": 0.3,
+            "emotion": "展开",
+            "subtitle": "test｜光影叙事",
+            "subtitle_style": "epic",
+            "color_tone": "中性",
+            "narration": "",
+            "sfx_hint": "轻柔过渡",
+            "notes": ""
+          },
+          {
+            "index": 8,
+            "duration": 3.0,
+            "shot_size": "全景",
+            "camera_move": "推",
+            "move_intensity": 0.13,
+            "transition_in": "快切",
+            "transition_duration": 0.3,
+            "emotion": "高潮",
+            "subtitle": "test｜美好瞬间",
+            "subtitle_style": "epic",
+            "color_tone": "暖",
+            "narration": "",
+            "sfx_hint": "鼓点/冲击",
+            "notes": ""
+          },
+          {
+            "index": 9,
+            "duration": 3.0,
+            "shot_size": "远景",
+            "camera_move": "推",
+            "move_intensity": 0.07,
+            "transition_in": "叠化",
+            "transition_duration": 0.5,
+            "emotion": "收束",
+            "subtitle": "test｜极致体验",
+            "subtitle_style": "epic",
+            "color_tone": "暖",
+            "narration": "",
+            "sfx_hint": "淡出/收尾",
+            "notes": ""
+          }
+        ]
+      },
+      "storyboard_path": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\UserVideo_20261002_010933_storyboard.json",
+      "storyboard_quality_gate": {
+        "category": "storyboard",
+        "total": 10,
+        "passed": 8,
+        "failed": 1,
+        "warned": 0,
+        "skipped": 1,
+        "all_passed": false,
+        "results": [
+          {
+            "gate_id": "S001",
+            "gate_name": "镜头时长",
+            "status": "pass",
+            "message": "10个镜头全部在2-15秒范围内",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S002",
+            "gate_name": "钩子检查",
+            "status": "pass",
+            "message": "首个钩子在1.125秒",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S003",
+            "gate_name": "节拍认领",
+            "status": "skip",
+            "message": "无节拍数据",
+            "detail": "",
+            "severity": "info",
+            "data": {}
+          },
+          {
+            "gate_id": "S004",
+            "gate_name": "景别多样性",
+            "status": "pass",
+            "message": "5种景别: 特写, 远景, 中景, 全景, 近景",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S005",
+            "gate_name": "运镜多样性",
+            "status": "pass",
+            "message": "动态镜头100% (10/10)",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S006",
+            "gate_name": "情绪节奏",
+            "status": "pass",
+            "message": "情绪完整: 展开, 收束, 钩子, 高潮",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S007",
+            "gate_name": "首镜头景别",
+            "status": "pass",
+            "message": "首镜头为'特写'，符合短视频习惯",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S008",
+            "gate_name": "时长合计",
+            "status": "fail",
+            "message": "镜头合计30.0s与总时长15.0s差15.0s",
+            "detail": "误差超过0.5秒阈值",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S009",
+            "gate_name": "字幕覆盖",
+            "status": "pass",
+            "message": "字幕完整10/10",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "S010",
+            "gate_name": "首镜头转场",
+            "status": "pass",
+            "message": "首镜头无入场转场，正确",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          }
+        ]
+      },
+      "storyboard_report_html": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\test_storyboard_report.html",
+      "video_clips": [
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_00.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_01.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_02.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_03.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_04.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_05.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_06.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_07.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_08.mp4",
+        "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\output\\UserVideo_20261002_010933_shot_09.mp4"
+      ],
+      "work_dir": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline",
+      "draft_path": "C:\\Users\\Administrator\\AppData\\Local\\JianyingPro\\User Data\\Projects\\com.lveditor.draft\\UserVideo_20261002_010933",
+      "edit_quality_gate": {
+        "category": "edit",
+        "total": 7,
+        "passed": 6,
+        "failed": 1,
+        "warned": 0,
+        "skipped": 0,
+        "all_passed": false,
+        "results": [
+          {
+            "gate_id": "E001",
+            "gate_name": "总时长",
+            "status": "fail",
+            "message": "超过上限20.0秒",
+            "detail": "当前33.0秒",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "E002",
+            "gate_name": "片段数量",
+            "status": "pass",
+            "message": "26个，合理",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "E003",
+            "gate_name": "转场对齐",
+            "status": "pass",
+            "message": "7个转场全部对齐",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "E004",
+            "gate_name": "字幕覆盖",
+            "status": "pass",
+            "message": "所有有旁白片段均有字幕",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "E005",
+            "gate_name": "画幅一致",
+            "status": "pass",
+            "message": "所有片段画幅一致",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "E006",
+            "gate_name": "帧对齐",
+            "status": "pass",
+            "message": "所有时间点已按30fps对齐",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          },
+          {
+            "gate_id": "E007",
+            "gate_name": "黑屏检测",
+            "status": "pass",
+            "message": "无异常黑屏",
+            "detail": "",
+            "severity": "error",
+            "data": {}
+          }
+        ],
+        "source_data": {
+          "total_duration": 33.0,
+          "max_duration": 20.0,
+          "fps": 30,
+          "segments": [
+            {
+              "start": 3.0,
+              "duration": 2.25,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 5.25,
+              "duration": 3.0,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 8.25,
+              "duration": 3.75,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 12.0,
+              "duration": 3.0,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 15.0,
+              "duration": 3.0,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 18.0,
+              "duration": 2.25,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 20.25,
+              "duration": 3.0,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 23.25,
+              "duration": 3.75,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 27.0,
+              "duration": 3.0,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 30.0,
+              "duration": 3.0,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 14.32,
+              "duration": 0.67,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 14.43,
+              "duration": 0.67,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 14.53,
+              "duration": 0.67,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 16.45,
+              "duration": 0.8,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 16.57,
+              "duration": 0.8,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 16.69,
+              "duration": 0.8,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 0.2,
+              "duration": 1.85,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 2.45,
+              "duration": 2.6,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 5.45,
+              "duration": 3.35,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 9.2,
+              "duration": 2.6,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 12.2,
+              "duration": 2.6,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 15.2,
+              "duration": 1.85,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 17.45,
+              "duration": 2.6,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 20.45,
+              "duration": 3.35,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 24.2,
+              "duration": 2.6,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            },
+            {
+              "start": 27.2,
+              "duration": 2.6,
+              "width": 0,
+              "height": 0,
+              "is_black_frame": false,
+              "track": "video"
+            }
+          ],
+          "transitions": [
+            {
+              "start": 3.0,
+              "duration": 0.3,
+              "name": "闪黑"
+            },
+            {
+              "start": 5.25,
+              "duration": 0.3,
+              "name": "闪黑"
+            },
+            {
+              "start": 8.25,
+              "duration": 0.3,
+              "name": "闪黑"
+            },
+            {
+              "start": 12.0,
+              "duration": 0.3,
+              "name": "闪黑"
+            },
+            {
+              "start": 20.25,
+              "duration": 0.3,
+              "name": "闪黑"
+            },
+            {
+              "start": 23.25,
+              "duration": 0.3,
+              "name": "闪黑"
+            },
+            {
+              "start": 27.0,
+              "duration": 0.5,
+              "name": "叠化"
+            }
+          ],
+          "subtitles": [
+            {
+              "start": 0.0,
+              "duration": 3.0,
+              "text": ""
+            },
+            {
+              "start": 0.0,
+              "duration": 3.0,
+              "text": ""
+            },
+            {
+              "start": 0.2,
+              "duration": 1.85,
+              "text": ""
+            },
+            {
+              "start": 2.45,
+              "duration": 2.6,
+              "text": ""
+            },
+            {
+              "start": 5.45,
+              "duration": 3.35,
+              "text": ""
+            },
+            {
+              "start": 9.2,
+              "duration": 2.6,
+              "text": ""
+            },
+            {
+              "start": 12.2,
+              "duration": 2.6,
+              "text": ""
+            },
+            {
+              "start": 15.2,
+              "duration": 1.85,
+              "text": ""
+            },
+            {
+              "start": 17.45,
+              "duration": 2.6,
+              "text": ""
+            },
+            {
+              "start": 20.45,
+              "duration": 3.35,
+              "text": ""
+            },
+            {
+              "start": 24.2,
+              "duration": 2.6,
+              "text": ""
+            },
+            {
+              "start": 27.2,
+              "duration": 2.6,
+              "text": ""
+            }
+          ],
+          "subtitle_coverage": 0.9696969696969697,
+          "aspect_ratio": "original",
+          "track_types": [
+            "video",
+            "audio",
+            "text"
+          ],
+          "draft_path": "C:\\Users\\Administrator\\AppData\\Local\\JianyingPro\\User Data\\Projects\\com.lveditor.draft\\UserVideo_20261002_010933"
+        }
+      },
+      "edit_report_html": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933\\debug\\e2e_pipeline\\UserVideo_20261002_010933_edit_report.html"
+    },
+    "quality": {
+      "status": "success",
+      "passed": null
+    }
+  },
+  "elapsed_seconds": 28.987602,
+  "draft_path": "C:\\Users\\Administrator\\AppData\\Local\\JianyingPro\\User Data\\Projects\\com.lveditor.draft\\UserVideo_20261002_010933",
+  "output_dir": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\user_outputs\\UserVideo_20261002_010933"
+}

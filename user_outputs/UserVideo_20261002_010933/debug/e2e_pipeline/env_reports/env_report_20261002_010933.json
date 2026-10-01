@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-10-02 01:09:33",
+  "all_passed": false,
+  "missing": [
+    "Python 依赖"
+  ],
+  "results": [
+    {
+      "name": "Blender",
+      "available": true,
+      "version": "已检测",
+      "path": "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe",
+      "message": "已安装",
+      "install_url": "",
+      "install_hint": ""
+    },
+    {
+      "name": "ComfyUI",
+      "available": true,
+      "version": "API在线 (设备: cuda:0 NVIDIA GeForce RTX 3080 : cudaMallocAsync)",
+      "path": "http://127.0.0.1:8188",
+      "message": "服务运行中",
+      "install_url": "",
+      "install_hint": ""
+    },
+    {
+      "name": "剪映",
+      "available": true,
+      "version": "已检测",
+      "path": "C:\\Users\\Administrator\\Downloads\\JianyingPro_5.9（windows版本）\\5.9.0.11632\\JianyingPro.exe",
+      "message": "已安装",
+      "install_url": "",
+      "install_hint": ""
+    },
+    {
+      "name": "ffmpeg",
+      "available": true,
+      "version": "N-107010-g0dcbe1c1aa-20220526",
+      "path": "D:\\Ai\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.EXE",
+      "message": "已安装 (PATH)",
+      "install_url": "",
+      "install_hint": ""
+    },
+    {
+      "name": "Python 依赖",
+      "available": false,
+      "version": "",
+      "path": "",
+      "message": "缺失: numpy",
+      "install_url": "",
+      "install_hint": "运行: pip install numpy"
+    }
+  ]
+}

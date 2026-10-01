@@ -1,0 +1,101 @@
+{
+  "category": "storyboard",
+  "total": 10,
+  "passed": 8,
+  "failed": 1,
+  "warned": 0,
+  "skipped": 1,
+  "all_passed": false,
+  "results": [
+    {
+      "gate_id": "S001",
+      "gate_name": "镜头时长",
+      "status": "pass",
+      "message": "10个镜头全部在2-15秒范围内",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S002",
+      "gate_name": "钩子检查",
+      "status": "pass",
+      "message": "首个钩子在2.25秒",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S003",
+      "gate_name": "节拍认领",
+      "status": "skip",
+      "message": "无节拍数据",
+      "detail": "",
+      "severity": "info",
+      "data": {}
+    },
+    {
+      "gate_id": "S004",
+      "gate_name": "景别多样性",
+      "status": "pass",
+      "message": "5种景别: 中景, 近景, 全景, 特写, 远景",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S005",
+      "gate_name": "运镜多样性",
+      "status": "pass",
+      "message": "动态镜头100% (10/10)",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S006",
+      "gate_name": "情绪节奏",
+      "status": "pass",
+      "message": "情绪完整: 展开, 收束, 钩子, 高潮",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S007",
+      "gate_name": "首镜头景别",
+      "status": "pass",
+      "message": "首镜头为'特写'，符合短视频习惯",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S008",
+      "gate_name": "时长合计",
+      "status": "fail",
+      "message": "镜头合计60.0s与总时长30.0s差30.0s",
+      "detail": "误差超过0.5秒阈值",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S009",
+      "gate_name": "字幕覆盖",
+      "status": "pass",
+      "message": "字幕完整10/10",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    },
+    {
+      "gate_id": "S010",
+      "gate_name": "首镜头转场",
+      "status": "pass",
+      "message": "首镜头无入场转场，正确",
+      "detail": "",
+      "severity": "error",
+      "data": {}
+    }
+  ]
+}

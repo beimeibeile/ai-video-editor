@@ -1,0 +1,284 @@
+{
+  "script_title": "城市夜景探店 | 探店视频",
+  "total_duration": 30.0,
+  "bgm_mood": "轻快电子/城市流行",
+  "notes": "基于剧本自动调度，共5幕10镜头",
+  "shots": [
+    {
+      "shot_id": "act1_hook_s1",
+      "start_time": 0.0,
+      "duration": 1.5,
+      "transition_in": "硬切",
+      "transition_out": "快切",
+      "track_hint": "bg",
+      "effects": [
+        {
+          "name": "蒙版快闪",
+          "type": "transition",
+          "params": {},
+          "confidence": 0.9
+        },
+        {
+          "name": "发光轮廓",
+          "type": "visual",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "高对比度特写画面，冲击力强",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act1_hook_s2",
+      "start_time": 1.5,
+      "duration": 3.0,
+      "transition_in": "硬切",
+      "transition_out": "快切",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "字幕条动画",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "bg",
+          "source": "auto_bg_钩子",
+          "params": {
+            "style": "gradient"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene1_s1",
+      "start_time": 4.5,
+      "duration": 3.5,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "bg",
+      "effects": [
+        {
+          "name": "背景滑入",
+          "type": "transition",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与城市夜景探店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene1_s2",
+      "start_time": 8.0,
+      "duration": 3.5,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "字幕条动画",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与城市夜景探店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene2_s1",
+      "start_time": 11.5,
+      "duration": 3.5,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "字幕条动画",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与城市夜景探店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene2_s2",
+      "start_time": 15.0,
+      "duration": 3.5,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "overlay+bg",
+      "effects": [
+        {
+          "name": "人物介绍卡",
+          "type": "overlay",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与城市夜景探店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene3_s1",
+      "start_time": 18.5,
+      "duration": 3.5,
+      "transition_in": "快切",
+      "transition_out": "淡入淡出",
+      "track_hint": "overlay+bg",
+      "effects": [
+        {
+          "name": "人物介绍卡",
+          "type": "overlay",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与城市夜景探店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene3_s2",
+      "start_time": 22.0,
+      "duration": 3.5,
+      "transition_in": "快切",
+      "transition_out": "淡入淡出",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "文字擦开",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与城市夜景探店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act3_cta_s1",
+      "start_time": 25.5,
+      "duration": 2.25,
+      "transition_in": "淡入淡出",
+      "transition_out": "淡出",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "文字擦开",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "bg",
+          "source": "auto_bg_收尾",
+          "params": {
+            "style": "gradient"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act3_cta_s2",
+      "start_time": 27.75,
+      "duration": 2.25,
+      "transition_in": "淡入淡出",
+      "transition_out": "淡出",
+      "track_hint": "bg",
+      "effects": [
+        {
+          "name": "蒙版快闪",
+          "type": "transition",
+          "params": {},
+          "confidence": 0.9
+        },
+        {
+          "name": "发光轮廓",
+          "type": "visual",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "bg",
+          "source": "auto_bg_收尾",
+          "params": {
+            "style": "gradient"
+          }
+        }
+      ]
+    }
+  ]
+}
