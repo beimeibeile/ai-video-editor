@@ -1,4 +1,4 @@
-﻿"""
+"""
 ComfyUI高级场景API
 封装常用任务：图片超分、批量超分等
 """
@@ -9,6 +9,13 @@ from typing import List, Optional
 from .comfy_client import ComfyClient, load_workflow_template
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "workflow_templates")
+
+# 默认checkpoint（从comfy_config自动检测，消除硬编码）
+try:
+    from .comfy_config import get_default_checkpoint
+    DEFAULT_CHECKPOINT = get_default_checkpoint()
+except Exception:
+    DEFAULT_CHECKPOINT = "sd_xl_turbo_1.0_fp16.safetensors"
 
 # 可用超分模型（根据用户本地实际安装）
 UPSCALE_MODELS = [
@@ -648,7 +655,7 @@ def face_unify_image(
     timeout: int = 120,
     # 以下参数保留兼容（ReActor方案不使用）
     reference_image: str = None,
-    checkpoint: str = None,
+    checkpoint: str = DEFAULT_CHECKPOINT,
     ipadapter_model: str = None,
     positive_prompt: str = None,
     negative_prompt: str = None,
@@ -781,7 +788,7 @@ def controlnet_generate(
     output_path: str = None,
     controlnet_model: str = "control_v11p_sd15_openpose.pth",
     strength: float = 0.85,
-    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    checkpoint: str = DEFAULT_CHECKPOINT,
     negative_prompt: str = "worst quality, low quality, deformed, ugly, blurry, watermark, text",
     width: int = 768,
     height: int = 1024,
@@ -865,7 +872,7 @@ def controlnet_img2img(
     controlnet_model: str = "control_v11p_sd15_canny_fp16.safetensors",
     strength: float = 0.85,
     denoise: float = 0.65,
-    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    checkpoint: str = DEFAULT_CHECKPOINT,
     negative_prompt: str = "worst quality, low quality, deformed, ugly, blurry, watermark, text",
     seed: int = None,
     steps: int = 35,
@@ -3935,7 +3942,7 @@ def inpaint_image(
     steps: int = 35,
     cfg: float = 7.0,
     seed: int = None,
-    ckpt_name: str = "majicmixRealistic_v7.safetensors",
+    ckpt_name: str = DEFAULT_CHECKPOINT,
     control_net_name: str = "control_v11p_sd15_inpaint.pth",
     server_addr: str = "127.0.0.1:8188",
     timeout: int = 300,
@@ -4017,7 +4024,7 @@ def img2img_style_transfer(
     steps: int = 30,
     cfg: float = 7.0,
     seed: int = None,
-    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    checkpoint: str = DEFAULT_CHECKPOINT,
     sampler_name: str = "euler",
     scheduler: str = "normal",
     server_addr: str = "127.0.0.1:8188",
@@ -4104,7 +4111,7 @@ def outpaint_image(
     steps: int = 35,
     cfg: float = 7.0,
     seed: int = None,
-    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    checkpoint: str = DEFAULT_CHECKPOINT,
     control_net_name: str = "control_v11p_sd15_inpaint.pth",
     server_addr: str = "127.0.0.1:8188",
     timeout: int = 300,
@@ -4192,7 +4199,7 @@ def video_style_transfer(
     steps: int = 20,
     cfg: float = 7.0,
     fps: int = None,
-    checkpoint: str = "majicmixRealistic_v7.safetensors",
+    checkpoint: str = DEFAULT_CHECKPOINT,
     server_addr: str = "127.0.0.1:8188",
     ffmpeg_path: str = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe",
     timeout: int = 600,
