@@ -1,0 +1,279 @@
+{
+  "total_duration": 180.0,
+  "track_summary": {
+    "BGM": 5,
+    "对话": 5,
+    "旁白": 4,
+    "音效": 1,
+    "环境音": 5
+  },
+  "character_voices": {
+    "陈默": {
+      "voice_id": "voice_male_0",
+      "gender": "male",
+      "pitch": 0.95,
+      "speed": 0.95,
+      "description": "陈默的音色, 内向, 敏感, 有韧性"
+    },
+    "王总": {
+      "voice_id": "voice_male_1",
+      "gender": "male",
+      "pitch": 1.05,
+      "speed": 1.05,
+      "description": "王总的音色, 外向, 务实, 傲慢"
+    }
+  },
+  "narration_script": "这是一个关于普通人逆袭的故事。\n被公司优化，一切似乎都失去了希望。\n直到发现AI视频编辑器，命运开始悄然改变。\n最终，作品惊艳前老板。\n有时候，翻身只需要一个对的工具，和一颗不放弃的心。",
+  "tracks": {
+    "bgm": [
+      {
+        "track_type": "BGM",
+        "start_time": 0.0,
+        "duration": 26.8,
+        "content": "suspenseful rhythm, low frequency drone, tension building, 80-90 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "紧张"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 26.8,
+        "duration": 24.4,
+        "content": "ambient pad, light piano, peaceful, minimal, 60-70 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "平静"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 51.2,
+        "duration": 33.2,
+        "content": "orchestral, powerful drums, cinematic, building intensity, 100-120 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "高潮"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 84.4,
+        "duration": 69.2,
+        "content": "orchestral, powerful drums, cinematic, building intensity, 100-120 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "冲突"
+      },
+      {
+        "track_type": "BGM",
+        "start_time": 153.6,
+        "duration": 26.4,
+        "content": "ambient pad, light piano, peaceful, minimal, 60-70 BPM",
+        "character": "",
+        "voice": "",
+        "volume": 0.3,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": "释然"
+      }
+    ],
+    "dialogue": [
+      {
+        "track_type": "对话",
+        "start_time": 5.2,
+        "duration": 3.11,
+        "content": "又失业了...第三次了...",
+        "character": "陈默",
+        "voice": "voice_male_0",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "悲伤"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 35.2,
+        "duration": 4.0,
+        "content": "AI视频编辑器，一句话生成专业视频！",
+        "character": "广告画外音",
+        "voice": "default",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "希望"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 60.2,
+        "duration": 3.33,
+        "content": "这...这就完了？才30秒？！",
+        "character": "陈默",
+        "voice": "voice_male_0",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "惊讶"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 95.2,
+        "duration": 2.44,
+        "content": "你？做视频？别开玩笑了",
+        "character": "王总",
+        "voice": "voice_male_1",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "冲突"
+      },
+      {
+        "track_type": "对话",
+        "start_time": 115.2,
+        "duration": 1.5,
+        "content": "您看看这个",
+        "character": "陈默",
+        "voice": "voice_male_0",
+        "volume": 1.0,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": "坚定"
+      }
+    ],
+    "narration": [
+      {
+        "track_type": "旁白",
+        "start_time": 2.0,
+        "duration": 4.75,
+        "content": "这是一个关于普通人逆袭的故事。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      },
+      {
+        "track_type": "旁白",
+        "start_time": 63.0,
+        "duration": 5.25,
+        "content": "被公司优化，一切似乎都失去了希望。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      },
+      {
+        "track_type": "旁白",
+        "start_time": 126.0,
+        "duration": 6.25,
+        "content": "直到发现AI视频编辑器，命运开始悄然改变。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      },
+      {
+        "track_type": "旁白",
+        "start_time": 172.0,
+        "duration": 3.75,
+        "content": "最终，作品惊艳前老板。",
+        "character": "旁白",
+        "voice": "narration_default",
+        "volume": 0.9,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "emotion": ""
+      }
+    ],
+    "sfx": [
+      {
+        "track_type": "音效",
+        "start_time": 5.1,
+        "duration": 1.0,
+        "content": "手机震动/提示音",
+        "character": "",
+        "voice": "",
+        "volume": 0.7,
+        "fade_in": 0.0,
+        "fade_out": 0.0,
+        "emotion": ""
+      }
+    ],
+    "ambient": [
+      {
+        "track_type": "环境音",
+        "start_time": 0.0,
+        "duration": 26.8,
+        "content": "室内环境音, 轻微空调声, 安静",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 26.8,
+        "duration": 24.4,
+        "content": "城市街道噪音, 车流声, 人声嘈杂",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 51.2,
+        "duration": 33.2,
+        "content": "室内环境音, 轻微空调声, 安静",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 84.4,
+        "duration": 69.2,
+        "content": "咖啡馆环境音, 杯碟碰撞声, 低声交谈",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      },
+      {
+        "track_type": "环境音",
+        "start_time": 153.6,
+        "duration": 26.4,
+        "content": "天台环境音, 风声, 远处城市噪音",
+        "character": "",
+        "voice": "",
+        "volume": 0.15,
+        "fade_in": 1.0,
+        "fade_out": 1.0,
+        "emotion": ""
+      }
+    ]
+  }
+}
