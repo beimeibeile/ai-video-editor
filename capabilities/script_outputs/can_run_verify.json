@@ -1,0 +1,24 @@
+{
+  "script_engine": {
+    "pass": true,
+    "scenes": 5,
+    "shots": 10,
+    "duration": 20
+  },
+  "smart_director": {
+    "pass": true,
+    "shots": 10
+  },
+  "jianying_synthesis": {
+    "pass": true,
+    "draft_path": "C:\\Users\\Administrator\\AppData\\Local\\JianyingPro\\User Data\\Projects\\com.lveditor.draft\\CanRun_Test",
+    "duration": 0.1
+  },
+  "quality_gate": {
+    "pass": true,
+    "result": {
+      "status": "failed",
+      "reason": "draft_content.json不存在"
+    }
+  }
+}

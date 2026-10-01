@@ -162,17 +162,23 @@ class ScriptEngine:
 
         return script
 
-    def _generate_title(self, idea: str, genre: VideoGenre) -> str:
+    def _genre_value(self, genre) -> str:
+        """兼容字符串和枚举类型的genre"""
+        if hasattr(genre, 'value'):
+            return genre.value
+        return str(genre)
+
+    def _generate_title(self, idea: str, genre) -> str:
         """从需求生成标题"""
         # 简单策略：取idea前20字+类型标签
         clean = idea.strip().replace("\n", " ")
         if len(clean) > 20:
             clean = clean[:20] + "..."
-        return f"{clean} | {genre.value}视频"
+        return f"{clean} | {self._genre_value(genre)}视频"
 
-    def _extract_keywords(self, idea: str, genre: VideoGenre) -> List[str]:
+    def _extract_keywords(self, idea: str, genre) -> List[str]:
         """从需求提取关键词"""
-        kws = [genre.value]
+        kws = [self._genre_value(genre)]
         # 简单分词：按空格/标点分割，取长度>1的词
         import re
         words = re.findall(r'[\u4e00-\u9fa5a-zA-Z]{2,}', idea)
