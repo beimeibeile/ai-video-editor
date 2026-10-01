@@ -15,7 +15,7 @@ import uuid
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
-from models import Script, Scene, Shot, VideoGenre, Emotion, ShotSize
+from .models import Script, Scene, Shot, VideoGenre, Emotion, ShotSize
 
 SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")

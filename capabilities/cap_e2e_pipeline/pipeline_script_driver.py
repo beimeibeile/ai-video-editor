@@ -134,11 +134,22 @@ class ScriptDrivenPipeline:
         print(f"  类型: {video_type}")
         print(f"  时长: {duration}秒")
 
+        # video_type字符串映射到VideoGenre枚举
+        genre_map = {
+            "exploration": VideoGenre.EXPLORATION,
+            "vlog": VideoGenre.VLOG,
+            "tutorial": VideoGenre.TUTORIAL,
+            "product": VideoGenre.PROMO,
+            "emotional": VideoGenre.STORY,
+            "story": VideoGenre.STORY,
+            "ecommerce": VideoGenre.ECOMMERCE,
+            "talking": VideoGenre.TALKING,
+        }
+        genre = genre_map.get(video_type.lower(), VideoGenre.CUSTOM)
         script = self.script_engine.generate(
-            topic=topic,
-            video_type=video_type,
-            target_duration=duration,
-            style=style
+            idea=topic,
+            genre=genre,
+            duration=float(duration),
         )
 
         # 验证剧本
@@ -151,7 +162,7 @@ class ScriptDrivenPipeline:
         script_path = os.path.join(self.project_dir, f"script_{timestamp}.json")
         self.script_engine.save(script, script_path)
 
-        print(f"  ✅ 剧本生成完成: {len(script.get('scenes', []))}场景, {len(script.get('shots', []))}镜头")
+        print(f"  ✅ 剧本生成完成: {len(script.scenes)}场景, {script.total_shots}镜头")
         print(f"  📄 剧本已保存: {script_path}")
 
         return script
@@ -181,25 +192,28 @@ class ScriptDrivenPipeline:
 
         # 统计
         effect_counts = {}
-        for shot in direction.get("shots", []):
-            for eff in shot.get("effects", []):
-                effect_counts[eff] = effect_counts.get(eff, 0) + 1
+        for shot in direction.shot_directions:
+            for eff in shot.effects:
+                effect_counts[eff.effect_name] = effect_counts.get(eff.effect_name, 0) + 1
 
-        print(f"  ✅ 调度完成: {len(direction.get('shots', []))}镜头")
+        print(f"  ✅ 调度完成: {len(direction.shot_directions)}镜头")
         print(f"  🎨 特效分配: {effect_counts}")
         print(f"  📄 调度计划已保存: {direction_path}")
 
-        return direction
+        return direction.to_dict()
 
     def synthesize(self, direction: Dict[str, Any], project_name: str,
-                   hook_effect: str = "wipe") -> Dict[str, Any]:
+                   hook_effect: str = "wipe", theme: str = "",
+                   duration: float = 30.0) -> Dict[str, Any]:
         """
         Step 3: 剪映工程合成
 
         Args:
-            direction: 调度计划
+            direction: 调度计划（字典）
             project_name: 工程名
             hook_effect: 钩子特效（wipe/subtitle_bar/character_card等）
+            theme: 视频主题
+            duration: 目标时长
 
         Returns:
             合成结果
@@ -214,29 +228,33 @@ class ScriptDrivenPipeline:
         print(f"  钩子特效: {hook_effect}")
 
         # 从调度计划提取素材列表
-        materials = []
+        input_images = []
         for shot in direction.get("shots", []):
             for mat in shot.get("materials", []):
-                if mat.get("path") and os.path.exists(mat["path"]):
-                    materials.append(mat["path"])
+                mat_path = mat.get("source") or mat.get("path")
+                if mat_path and os.path.exists(mat_path):
+                    input_images.append(mat_path)
 
-        # 从调度计划提取字幕
-        subtitles = []
+        # 从调度计划提取字幕文本
+        custom_subtitles = []
         for shot in direction.get("shots", []):
-            if shot.get("narration"):
-                subtitles.append({
-                    "text": shot["narration"],
-                    "start": shot.get("start_time", 0),
-                    "duration": shot.get("duration", 3),
-                })
+            narration = shot.get("narration") or shot.get("text") or ""
+            if narration:
+                custom_subtitles.append(narration)
 
-        # 调用pipeline合成
+        shot_count = len(direction.get("shots", [])) or 5
+
+        # 调用pipeline合成（匹配E2EPipeline.run实际接口）
         result = self.pipeline.run(
+            theme=theme or "自动生成视频",
+            duration=duration,
+            shot_count=shot_count,
             project_name=project_name,
-            materials=materials,
-            subtitles=subtitles,
+            custom_subtitles=custom_subtitles if custom_subtitles else None,
+            input_images=input_images if input_images else None,
             hook_effect=hook_effect,
-            output_dir=self.output_dir,
+            use_ltx=False,
+            add_bgm=False,
         )
 
         draft_path = result.get("draft_path", "")
@@ -326,7 +344,7 @@ class ScriptDrivenPipeline:
             result["steps"]["direction"] = {"status": "success"}
 
             # Step 3: 剪映合成
-            synth_result = self.synthesize(direction, project_name, hook_effect)
+            synth_result = self.synthesize(direction, project_name, hook_effect, theme=topic, duration=duration)
             result["steps"]["synthesize"] = synth_result
             draft_path = synth_result.get("draft_path", "")
 

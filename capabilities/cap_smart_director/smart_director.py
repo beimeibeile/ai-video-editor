@@ -10,10 +10,8 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-# 导入剧本引擎模型
-SCRIPT_ENGINE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cap_script_engine")
-sys.path.insert(0, SCRIPT_ENGINE_DIR)
-from models import Script, Scene, Shot, Emotion, ShotSize
+# 导入剧本引擎模型（绝对导入，依赖capabilities在sys.path中）
+from cap_script_engine.models import Script, Scene, Shot, Emotion, ShotSize
 
 
 @dataclass
