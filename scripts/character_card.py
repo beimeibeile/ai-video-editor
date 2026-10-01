@@ -326,8 +326,37 @@ def create_character_card_demo(
         ("陈书婷", "minimal"),
     ]
 
+    # 人物背景渐变色（模拟人物照片占位）
+    bg_colors = [
+        (60, 40, 50),   # 安欣-暗紫
+        (50, 50, 30),   # 高启强-暗金
+        (30, 50, 60),   # 李响-暗青
+        (60, 30, 40),   # 陈书婷-暗红
+    ]
+
     for i, (name, style) in enumerate(characters):
         start = i * 4.0
+        # 添加人物背景占位块（渐变）
+        bg_color = bg_colors[i]
+        char_bg_path = os.path.join(output_dir, f"charbg_{i}.png")
+        if _PIL_AVAILABLE:
+            from PIL import Image as PILImage, ImageDraw as PILDraw
+            cbg = PILImage.new("RGB", (width, height), bg_color)
+            draw = PILDraw.Draw(cbg)
+            # 简单渐变
+            for y in range(height):
+                t = y / height
+                r = int(bg_color[0] * (1 - t * 0.5))
+                g = int(bg_color[1] * (1 - t * 0.5))
+                b = int(bg_color[2] * (1 - t * 0.3))
+                draw.line([(0, y), (width, y)], fill=(r, g, b))
+            cbg.save(char_bg_path)
+            project.add_media_safe(
+                char_bg_path,
+                start_time=f"{start:.2f}s",
+                duration="3.5s",
+                track_name="CharBG",
+            )
         add_character_card(
             project, name,
             start_time=start, duration=3.5,

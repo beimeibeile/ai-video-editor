@@ -264,9 +264,9 @@ def add_subtitle_bar(
     if cfg.get("highlight"):
         highlight_path = os.path.join(output_dir, f"highlight_{style}.png")
         create_highlight_circle(
-            size=int(cfg["height"] * 0.9),
+            size=int(cfg["height"] * 0.5),
             color=cfg["color_start"],
-            alpha=150,
+            alpha=100,
             output_path=highlight_path,
         )
 
@@ -302,7 +302,7 @@ def add_subtitle_bar(
         )
         if highlight_seg:
             # 高光放在背景条左上角
-            hl_x = -0.35
+            hl_x = -0.42
             hl_y = position_y + 0.02
             highlight_seg.clip_settings = draft.ClipSettings(
                 transform_x=hl_x,
