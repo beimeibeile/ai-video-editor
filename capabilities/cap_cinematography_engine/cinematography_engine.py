@@ -14,6 +14,17 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Dict, Any, Optional, Tuple
 
+# 导入导演运镜规则引擎
+try:
+    from .director_rules import DirectorRulesEngine, get_director_engine, DirectorPlan
+    _DIRECTOR_RULES_AVAILABLE = True
+except ImportError:
+    try:
+        from director_rules import DirectorRulesEngine, get_director_engine, DirectorPlan
+        _DIRECTOR_RULES_AVAILABLE = True
+    except ImportError:
+        _DIRECTOR_RULES_AVAILABLE = False
+
 
 class EmotionLevel(Enum):
     """情绪强度等级"""
@@ -354,23 +365,74 @@ class CinematographyEngine:
             decisions=decisions,
         )
 
-    def plan_full_video(self, scenes: List[Dict[str, Any]]) -> List[SceneCinematicPlan]:
+    def plan_full_video(self, scenes: List[Dict[str, Any]],
+                        apply_director_rules: bool = True) -> List[SceneCinematicPlan]:
         """
         为全剧生成电影化方案
 
         Args:
             scenes: 场景列表，每个含scene_id/shots/description
+            apply_director_rules: 是否应用8条导演运镜规则（默认True）
 
         Returns:
             场景方案列表
         """
         plans = []
+        director_reports = []  # 保存每个场景的导演规则报告
+
         for i, scene in enumerate(scenes):
-            plan = self.plan_scene(
-                scene.get("scene_id", f"scene_{i}"),
-                scene.get("shots", []),
-                scene.get("description", ""),
-            )
+            scene_id = scene.get("scene_id", f"scene_{i}")
+            scene_shots = scene.get("shots", [])
+            scene_desc = scene.get("description", "")
+            is_first = (i == 0)
+            is_last = (i == len(scenes) - 1)
+
+            # 生成基础场景方案
+            plan = self.plan_scene(scene_id, scene_shots, scene_desc)
+
+            # 应用8条导演运镜规则
+            if apply_director_rules and _DIRECTOR_RULES_AVAILABLE and scene_shots:
+                # 将decisions转换为shots格式供导演规则使用
+                director_shots = []
+                for d in plan.decisions:
+                    # 找到原始shot数据
+                    orig_shot = next((s for s in scene_shots
+                                       if s.get("shot_id", "") == d.shot_id), {})
+                    director_shots.append({
+                        "shot_id": d.shot_id,
+                        "description": orig_shot.get("description", ""),
+                        "dialogue": orig_shot.get("dialogue", ""),
+                        "shot_size": d.shot_size,
+                        "camera_move": d.camera_move,
+                        "camera_angle": d.camera_angle,
+                        "duration": d.duration,
+                        "emotion": d.emotion.value,
+                        "intent": d.intent.value,
+                    })
+
+                # 应用导演规则
+                director_engine = get_director_engine()
+                director_plan = director_engine.apply_all(
+                    director_shots, scene_desc, is_first, is_last
+                )
+                director_reports.append({
+                    "scene_id": scene_id,
+                    "plan": director_plan,
+                })
+
+                # 将导演规则的修改应用回decisions
+                for d in plan.decisions:
+                    modified_shot = next((s for s in director_shots
+                                           if s.get("shot_id", "") == d.shot_id), None)
+                    if modified_shot:
+                        d.shot_size = modified_shot.get("shot_size", d.shot_size)
+                        d.camera_move = modified_shot.get("camera_move", d.camera_move)
+                        d.camera_angle = modified_shot.get("camera_angle", d.camera_angle)
+                        d.duration = modified_shot.get("duration", d.duration)
+                        # 在reasoning中追加导演规则标记
+                        if modified_shot.get("hook"):
+                            d.reasoning += " [导演规则:段尾留钩]"
+
             # 决策场景间转场
             if i > 0:
                 prev_plan = plans[i - 1]
@@ -383,6 +445,9 @@ class CinematographyEngine:
 
         # 记录情绪曲线
         self.emotion_curve = [(p.scene_id, p.dominant_emotion.value, p.pacing) for p in plans]
+
+        # 保存导演规则报告
+        self._director_reports = director_reports
 
         return plans
 
@@ -429,6 +494,32 @@ class CinematographyEngine:
         lines = ["=" * 50, "全剧情绪曲线", "=" * 50]
         for scene_id, emotion, pacing in self.emotion_curve:
             lines.append(f"  {scene_id}: {emotion} ({pacing})")
+        return "\n".join(lines)
+
+    def get_director_rules_report(self) -> str:
+        """获取导演运镜规则应用报告"""
+        if not hasattr(self, '_director_reports') or not self._director_reports:
+            return "暂无导演规则报告（plan_full_video时apply_director_rules=False）"
+
+        lines = ["=" * 60, "导演运镜规则应用报告（全剧）", "=" * 60]
+        total_applied = 0
+        total_warnings = 0
+        for report in self._director_reports:
+            scene_id = report["scene_id"]
+            plan: DirectorPlan = report["plan"]
+            lines.append(f"\n--- {scene_id} ---")
+            lines.append(f"  应用规则: {plan.applied_count}/8 | 警告: {plan.warning_count}")
+            for r in plan.rules_applied:
+                icon = "✅" if r.applied else "⏭️"
+                lines.append(f"  {icon} [{r.rule_type.value}] {r.description}")
+                for w in r.warnings:
+                    lines.append(f"     ⚠️ {w}")
+            total_applied += plan.applied_count
+            total_warnings += plan.warning_count
+
+        lines.append(f"\n{'=' * 60}")
+        lines.append(f"总计: {len(self._director_reports)}个场景 | "
+                     f"规则应用{total_applied}次 | 警告{total_warnings}条")
         return "\n".join(lines)
 
 
