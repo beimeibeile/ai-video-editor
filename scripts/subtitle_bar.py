@@ -302,8 +302,8 @@ def add_subtitle_bar(
         )
         if highlight_seg:
             # 高光放在背景条左上角
-            hl_x = -0.42
-            hl_y = position_y + 0.02
+            hl_x = -0.30
+            hl_y = position_y
             highlight_seg.clip_settings = draft.ClipSettings(
                 transform_x=hl_x,
                 transform_y=hl_y,
@@ -318,8 +318,8 @@ def add_subtitle_bar(
         color_rgb=cfg["text_color"],
         style=draft.TextStyle(size=cfg["text_size"], bold=True),
         border=draft.TextBorder(color=(0, 0, 0), width=30),
-        clip_settings=draft.ClipSettings(transform_y=position_y),
-        anim_in=anim_in if anim_in else "渐显",
+        clip_settings=draft.ClipSettings(transform_x=0.0, transform_y=position_y),
+        anim_in="向左滑动",
         track_name="SubtitleBar_Text",
     )
 
