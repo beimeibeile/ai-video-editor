@@ -102,9 +102,11 @@ try:
 except ImportError:
     _QUALITY_GATE_AVAILABLE = False
 
-# Blender扩展特效库（转场遮罩/粒子背景/光线扫描）
+# Blender扩展特效库（转场遮罩/粒子背景/光线扫描/文字入场）
 try:
     from blender_effects import create_transition as _blender_create_transition
+    from blender_effects import create_particle_background as _blender_create_particle_bg
+    from blender_effects import create_light_sweep as _blender_create_light_sweep
     _BLENDER_EFFECTS_AVAILABLE = True
 except ImportError:
     _BLENDER_EFFECTS_AVAILABLE = False
@@ -122,6 +124,13 @@ try:
     _TEXT_WIPE_AVAILABLE = True
 except ImportError:
     _TEXT_WIPE_AVAILABLE = False
+
+# 文字背景块滑入（特效库集成）
+try:
+    from text_background_slide import add_text_bg_slide_to_project as _add_text_bg_slide
+    _TEXT_BG_SLIDE_AVAILABLE = True
+except ImportError:
+    _TEXT_BG_SLIDE_AVAILABLE = False
 
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
@@ -208,11 +217,14 @@ class E2EPipeline:
             blender_intro_style: str = "cinematic",
             use_blender_transitions: bool = False,
             blender_transition_style: str = "fade",
+            blender_particle_bg: str = None,
+            light_sweep_shots: List[int] = None,
             pip_config: List[Dict] = None,
             auto_beat: bool = False,
             beat_threshold: float = 0.5,
             character_intros: List[Dict] = None,
             text_layout_style: str = None,
+            hook_effect: str = None,
             photo_wall: List[str] = None,
             glow_outline_shots: List[int] = None) -> Dict[str, Any]:
         """
@@ -241,11 +253,14 @@ class E2EPipeline:
             blender_intro_style: Blender片头风格（cinematic/neon/minimal/epic）
             use_blender_transitions: 是否使用Blender转场遮罩（需要Blender安装，转场更丰富）
             blender_transition_style: Blender转场风格（fade/slide_left/slide_right/zoom_in/zoom_out）
+            blender_particle_bg: Blender粒子背景预设（stars/snow/bokeh/fireworks/neon），作为氛围层叠加，None=不使用
+            light_sweep_shots: 使用光线扫描特效的镜头索引列表，如 [0, 2]
             pip_config: 画中画配置列表，每项如 {"shots": [0,1], "layout": "split_h"}
             auto_beat: 是否启用自动卡点（根据BGM节拍调整切点）
             beat_threshold: 卡点能量阈值（0-1）
             character_intros: 人物介绍列表，每项如 {"image": "path", "name": "张三", "subtitle": "主角"}
             text_layout_style: 文字排版预设风格（vertical_stagger/horizontal_title/diagonal_cascade/left_align_stack/center_focus），用于钩子文案
+            hook_effect: 钩子文案特效（wipe=羽化擦开 / bg_slide=背景块滑入 / layout=文字排版 / None=默认），与text_layout_style互斥，优先hook_effect
             photo_wall: 拍立得照片墙图片路径列表，用于结尾展示
             glow_outline_shots: 使用发光轮廓效果的镜头索引列表，如 [0, 2]
 
@@ -325,11 +340,16 @@ class E2EPipeline:
             intro_style=sb.intro_style,
             use_blender_intro=use_blender_intro,
             blender_intro_style=blender_intro_style,
+            use_blender_transitions=use_blender_transitions,
+            blender_transition_style=blender_transition_style,
+            blender_particle_bg=blender_particle_bg,
+            light_sweep_shots=light_sweep_shots,
             pip_config=pip_config, auto_beat=auto_beat,
             beat_threshold=beat_threshold,
             style=style,
             character_intros=character_intros,
             text_layout_style=text_layout_style,
+            hook_effect=hook_effect,
             photo_wall=photo_wall,
             glow_outline_shots=glow_outline_shots,
         )
@@ -1011,12 +1031,17 @@ class E2EPipeline:
                         intro_style: str = "impact",
                         use_blender_intro: bool = False,
                         blender_intro_style: str = "cinematic",
+                        use_blender_transitions: bool = False,
+                        blender_transition_style: str = "fade",
+                        blender_particle_bg: str = None,
+                        light_sweep_shots: List[int] = None,
                         pip_config: List[Dict] = None,
                         auto_beat: bool = False,
                         beat_threshold: float = 0.5,
                         style: str = "cinematic",
                         character_intros: List[Dict] = None,
                         text_layout_style: str = None,
+                        hook_effect: str = None,
                         photo_wall: List[str] = None,
                         glow_outline_shots: List[int] = None) -> Dict:
         """剪映合成（含片头集成）"""
@@ -1143,7 +1168,7 @@ class E2EPipeline:
 
         # 1.6 文字排版钩子文案（特效库集成）
         text_layout_duration = 0.0
-        if text_layout_style and _TEXT_LAYOUT_AVAILABLE and sb.hook_text:
+        if text_layout_style and _TEXT_LAYOUT_AVAILABLE and sb.hook_text and hook_effect != "layout":
             try:
                 layout_texts = [sb.hook_text]
                 if sb.theme and len(sb.theme) < 15:
@@ -1160,9 +1185,78 @@ class E2EPipeline:
             except Exception as e:
                 print(f"  文字排版失败: {e}")
 
-        # 2. 添加视频片段（从片头+人物介绍+文字排版后开始）
+        # 1.7 钩子文案特效：羽化擦开 / 背景块滑入
+        hook_effect_duration = 0.0
+        if hook_effect and sb.hook_text:
+            hook_start = intro_offset + char_intro_duration + text_layout_duration
+            if hook_effect == "wipe" and _TEXT_WIPE_AVAILABLE:
+                try:
+                    _add_text_wipe(
+                        project,
+                        text_main=sb.hook_text,
+                        text_sub=sb.theme if len(sb.theme) < 10 else "",
+                        start_time=hook_start,
+                        duration=3.0,
+                        canvas_h=height,
+                    )
+                    hook_effect_duration = 3.0
+                    print(f"  钩子特效: 羽化擦开 ({hook_effect_duration}s)")
+                except Exception as e:
+                    print(f"  羽化擦开失败: {e}")
+            elif hook_effect == "bg_slide" and _TEXT_BG_SLIDE_AVAILABLE:
+                try:
+                    _add_text_bg_slide(
+                        project,
+                        text=sb.hook_text,
+                        start_time=hook_start,
+                        duration=2.5,
+                        direction="left",
+                        output_dir=os.path.join(self.work_dir, "output", "text_bg_slide_assets"),
+                    )
+                    hook_effect_duration = 2.5
+                    print(f"  钩子特效: 背景块滑入 ({hook_effect_duration}s)")
+                except Exception as e:
+                    print(f"  背景块滑入失败: {e}")
+            elif hook_effect == "layout" and _TEXT_LAYOUT_AVAILABLE:
+                # layout模式已在1.6处理，这里仅记录
+                hook_effect_duration = text_layout_duration
+
+        # 2. 添加视频片段（从片头+人物介绍+文字排版+钩子特效后开始）
         segments = []
-        current_time = intro_offset + char_intro_duration + text_layout_duration
+        current_time = intro_offset + char_intro_duration + text_layout_duration + hook_effect_duration
+
+        # 1.8 Blender粒子背景氛围层（所有前置时长已确定）
+        if blender_particle_bg and _BLENDER_EFFECTS_AVAILABLE:
+            try:
+                total_dur = current_time + sb.total_duration + 3.0
+                particle_out_dir = os.path.join(self.work_dir, "output", "particle_bg_assets")
+                particle_bg_path = _blender_create_particle_bg(
+                    output_dir=particle_out_dir,
+                    preset=blender_particle_bg,
+                    width=width,
+                    height=height,
+                    duration=total_dur,
+                )
+                if particle_bg_path and os.path.exists(particle_bg_path):
+                    particle_seg = project.add_media_safe(
+                        particle_bg_path,
+                        start_time="0s",
+                        duration=f"{total_dur}s",
+                        track_name="ParticleBg",
+                    )
+                    if particle_seg:
+                        try:
+                            from mix_mode import apply_mix_mode
+                            apply_mix_mode(project, particle_seg, mode="screen", intensity=0.6)
+                        except Exception:
+                            pass
+                        print(f"  粒子背景: {blender_particle_bg} ({total_dur:.1f}s, 氛围层)")
+                    else:
+                        print(f"  ⚠️  粒子背景导入剪映失败")
+                else:
+                    print(f"  ⚠️  粒子背景生成失败")
+            except Exception as e:
+                print(f"  ⚠️  粒子背景异常: {e}")
 
         # 画中画配置：标记哪些镜头已被画中画组合消耗
         pip_consumed = set()
@@ -1225,7 +1319,7 @@ class E2EPipeline:
         # 发光轮廓效果（特效库集成）—— 对指定镜头添加轮廓图层
         glow_count = 0
         if glow_outline_shots and _GLOW_OUTLINE_AVAILABLE:
-            glow_start_base = intro_offset + char_intro_duration + text_layout_duration
+            glow_start_base = intro_offset + char_intro_duration + text_layout_duration + hook_effect_duration
             for shot_idx in glow_outline_shots:
                 if shot_idx >= len(sb.shots) or shot_idx >= len(video_clips):
                     continue
@@ -1263,6 +1357,46 @@ class E2EPipeline:
                     print(f"  发光轮廓: 镜头{shot_idx} ({shot.duration:.1f}s)")
                 except Exception as e:
                     print(f"  发光轮廓镜头{shot_idx}失败: {e}")
+
+        # Blender光线扫描特效（对指定镜头添加扫光层）
+        light_sweep_count = 0
+        if light_sweep_shots and _BLENDER_EFFECTS_AVAILABLE:
+            sweep_start_base = intro_offset + char_intro_duration + text_layout_duration + hook_effect_duration
+            for shot_idx in light_sweep_shots:
+                if shot_idx >= len(sb.shots):
+                    continue
+                shot = sb.shots[shot_idx]
+                # 计算该镜头的起始时间
+                shot_start = sweep_start_base
+                for j in range(shot_idx):
+                    if j not in pip_consumed:
+                        shot_start += sb.shots[j].duration
+                try:
+                    sweep_out_dir = os.path.join(self.work_dir, "output", "light_sweep_assets")
+                    sweep_path = _blender_create_light_sweep(
+                        output_dir=sweep_out_dir,
+                        color=(1.0, 0.95, 0.8),
+                        width=width,
+                        height=height,
+                        duration=shot.duration,
+                    )
+                    if sweep_path and os.path.exists(sweep_path):
+                        sweep_seg = project.add_media_safe(
+                            sweep_path,
+                            start_time=f"{shot_start:.2f}s",
+                            duration=f"{shot.duration:.2f}s",
+                            track_name="LightSweep",
+                        )
+                        if sweep_seg:
+                            try:
+                                from mix_mode import apply_mix_mode
+                                apply_mix_mode(project, sweep_seg, mode="screen", intensity=0.8)
+                            except Exception:
+                                pass
+                            light_sweep_count += 1
+                            print(f"  光线扫描: 镜头{shot_idx} ({shot.duration:.1f}s)")
+                except Exception as e:
+                    print(f"  光线扫描镜头{shot_idx}失败: {e}")
 
         # 自动卡点：如果启用且有BGM，根据节拍调整切点
         if auto_beat and _AUTO_BEAT_AVAILABLE and add_bgm and sb.bgm_mood:
@@ -1497,7 +1631,7 @@ class E2EPipeline:
         # 6. 拍立得照片墙结尾（特效库集成）
         if photo_wall and _POLAROID_WALL_AVAILABLE:
             try:
-                wall_start = intro_offset + char_intro_duration + text_layout_duration + sb.total_duration
+                wall_start = intro_offset + char_intro_duration + text_layout_duration + hook_effect_duration + sb.total_duration
                 _add_polaroid_photos(
                     project,
                     photos=photo_wall,
