@@ -339,6 +339,27 @@ class ScriptDrivenPipeline:
             script = self.generate_script(topic, video_type, duration, style)
             result["steps"]["script"] = {"status": "success", "path": os.path.join(self.project_dir, "script_*.json")}
 
+            # Step 1.5: 剧本质量增强（v2人性认知+剧情创造）
+            try:
+                from cap_script_quality import ScriptQualityEngine
+                quality_engine = ScriptQualityEngine()
+                enhanced = quality_engine.enhance_script(script, idea=topic, genre=video_type)
+                quality_score = enhanced.quality_report.overall_score if enhanced.quality_report else 0
+                result["steps"]["script_quality"] = {
+                    "status": "success",
+                    "quality_score": round(quality_score, 1),
+                    "hook_type": enhanced.hook.hook_type.value if enhanced.hook else None,
+                    "emotion_points": len(enhanced.emotion_curve),
+                    "conflicts": len(enhanced.conflicts),
+                    "character_arcs": len(enhanced.character_arcs),
+                }
+                print(f"  🎬 剧本质量增强: {quality_score:.1f}/100分")
+                if enhanced.quality_report and enhanced.quality_report.suggestions:
+                    print(f"     改进建议: {enhanced.quality_report.suggestions[0]}")
+            except Exception as qe:
+                result["steps"]["script_quality"] = {"status": "skipped", "reason": str(qe)}
+                print(f"  ⚠️  剧本质量增强跳过: {qe}")
+
             # Step 2: 智能调度
             direction = self.direct(script)
             result["steps"]["direction"] = {"status": "success"}

@@ -1,0 +1,233 @@
+{
+  "title": "国庆旅行vlog，记录假期美好时光 | vlog视频",
+  "idea": "国庆旅行vlog，记录假期美好时光",
+  "genre": "vlog",
+  "duration": 30,
+  "hook": {
+    "hook_type": "promise",
+    "content": "3分钟学会国庆旅行vlog，记录假期美好时光，看完就能用！",
+    "appear_time": 0.0,
+    "duration": 3.0,
+    "expected_effect": "明确价值，给观看理由",
+    "strength": 0.75
+  },
+  "emotion_curve": [
+    {
+      "time_sec": 0.0,
+      "emotion": "excitement",
+      "intensity": 0.7,
+      "description": "中等的兴奋感"
+    },
+    {
+      "time_sec": 4.5,
+      "emotion": "anticipation",
+      "intensity": 0.6,
+      "description": "中等的期待感"
+    },
+    {
+      "time_sec": 9.0,
+      "emotion": "joy",
+      "intensity": 0.8,
+      "description": "强烈的喜悦氛围"
+    },
+    {
+      "time_sec": 15.0,
+      "emotion": "surprise",
+      "intensity": 0.7,
+      "description": "中等的惊喜感"
+    },
+    {
+      "time_sec": 21.0,
+      "emotion": "joy",
+      "intensity": 0.9,
+      "description": "强烈的喜悦氛围"
+    },
+    {
+      "time_sec": 25.5,
+      "emotion": "trust",
+      "intensity": 0.6,
+      "description": "中等的信任感"
+    },
+    {
+      "time_sec": 30.0,
+      "emotion": "joy",
+      "intensity": 0.7,
+      "description": "中等的喜悦氛围"
+    }
+  ],
+  "character_arcs": [
+    {
+      "character_name": "主角",
+      "start_state": "初学者/未知",
+      "end_state": "掌握者/成长",
+      "key_turning_points": [
+        {
+          "time": 7.5,
+          "desc": "接触新事物/遇到挑战"
+        },
+        {
+          "time": 15.0,
+          "desc": "深入探索/克服困难"
+        },
+        {
+          "time": 22.5,
+          "desc": "关键突破/掌握要领"
+        },
+        {
+          "time": 27.0,
+          "desc": "完成目标/展示成果"
+        }
+      ],
+      "growth_dimension": "能力+认知"
+    }
+  ],
+  "conflicts": [
+    {
+      "conflict_type": "external",
+      "description": "主要挑战：国庆旅行vlog，记录假期美好时光过程中的核心障碍",
+      "intensity": 0.75,
+      "start_time": 3.0,
+      "peak_time": 16.5,
+      "resolution": "通过正确方法逐步解决",
+      "resolved": true
+    },
+    {
+      "conflict_type": "internal",
+      "description": "心理冲突：从不确定到自信的转变",
+      "intensity": 0.6,
+      "start_time": 6.0,
+      "peak_time": 15.0,
+      "resolution": "通过实践建立信心",
+      "resolved": true
+    }
+  ],
+  "beats": [
+    {
+      "beat_id": 1,
+      "start_time": 0.0,
+      "duration": 3.0,
+      "description": "开场：引入国庆旅行vlog，记录假期美好时光主题",
+      "emotion": "anticipation",
+      "pacing": "build",
+      "conflict_intensity": 0.2
+    },
+    {
+      "beat_id": 2,
+      "start_time": 3.0,
+      "duration": 3.0,
+      "description": "背景：建立场景和氛围",
+      "emotion": "anticipation",
+      "pacing": "build",
+      "conflict_intensity": 0.2
+    },
+    {
+      "beat_id": 3,
+      "start_time": 6.0,
+      "duration": 3.0,
+      "description": "发展1：第一个关键点",
+      "emotion": "joy",
+      "pacing": "medium",
+      "conflict_intensity": 0.2
+    },
+    {
+      "beat_id": 4,
+      "start_time": 9.0,
+      "duration": 3.0,
+      "description": "发展2：深入探索",
+      "emotion": "joy",
+      "pacing": "medium",
+      "conflict_intensity": 0.2
+    },
+    {
+      "beat_id": 5,
+      "start_time": 12.0,
+      "duration": 3.0,
+      "description": "高潮：核心展示/突破",
+      "emotion": "joy",
+      "pacing": "medium",
+      "conflict_intensity": 0.5
+    },
+    {
+      "beat_id": 6,
+      "start_time": 15.0,
+      "duration": 3.0,
+      "description": "收尾：总结+呼吁行动",
+      "emotion": "excitement",
+      "pacing": "fast",
+      "conflict_intensity": 0.5
+    },
+    {
+      "beat_id": 7,
+      "start_time": 18.0,
+      "duration": 3.0,
+      "description": "片段7",
+      "emotion": "excitement",
+      "pacing": "fast",
+      "conflict_intensity": 0.5
+    },
+    {
+      "beat_id": 8,
+      "start_time": 21.0,
+      "duration": 3.0,
+      "description": "片段8",
+      "emotion": "excitement",
+      "pacing": "fast",
+      "conflict_intensity": 0.2
+    },
+    {
+      "beat_id": 9,
+      "start_time": 24.0,
+      "duration": 3.0,
+      "description": "片段9",
+      "emotion": "relief",
+      "pacing": "release",
+      "conflict_intensity": 0.2
+    },
+    {
+      "beat_id": 10,
+      "start_time": 27.0,
+      "duration": 3.0,
+      "description": "片段10",
+      "emotion": "relief",
+      "pacing": "release",
+      "conflict_intensity": 0.2
+    }
+  ],
+  "pacing_map": [
+    {
+      "time": 0.0,
+      "pacing": "build"
+    },
+    {
+      "time": 7.5,
+      "pacing": "fast"
+    },
+    {
+      "time": 15.0,
+      "pacing": "medium"
+    },
+    {
+      "time": 22.5,
+      "pacing": "release"
+    }
+  ],
+  "quality_report": {
+    "overall_score": 88.6,
+    "hook_score": 100,
+    "emotion_score": 62.0,
+    "conflict_score": 95.0,
+    "character_score": 90,
+    "pacing_score": 90,
+    "structure_score": 100,
+    "strengths": [
+      "钩子表现优秀(100分)",
+      "结构完整表现优秀(100分)"
+    ],
+    "weaknesses": [
+      "情感曲线需要加强(62分)"
+    ],
+    "suggestions": [
+      "丰富情感曲线，增加情绪起伏变化"
+    ]
+  }
+}
