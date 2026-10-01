@@ -102,6 +102,13 @@ try:
 except ImportError:
     _QUALITY_GATE_AVAILABLE = False
 
+# Blender扩展特效库（转场遮罩/粒子背景/光线扫描）
+try:
+    from blender_effects import create_transition as _blender_create_transition
+    _BLENDER_EFFECTS_AVAILABLE = True
+except ImportError:
+    _BLENDER_EFFECTS_AVAILABLE = False
+
 # 片头风格→模板映射
 _INTRO_STYLE_MAP = {
     "impact": "flash_title",
@@ -185,6 +192,8 @@ class E2EPipeline:
             add_intro: bool = False,
             use_blender_intro: bool = False,
             blender_intro_style: str = "cinematic",
+            use_blender_transitions: bool = False,
+            blender_transition_style: str = "fade",
             pip_config: List[Dict] = None,
             auto_beat: bool = False,
             beat_threshold: float = 0.5,
@@ -216,6 +225,8 @@ class E2EPipeline:
             add_intro: 是否添加片头
             use_blender_intro: 是否使用Blender 3D片头（需要Blender安装，效果更炫）
             blender_intro_style: Blender片头风格（cinematic/neon/minimal/epic）
+            use_blender_transitions: 是否使用Blender转场遮罩（需要Blender安装，转场更丰富）
+            blender_transition_style: Blender转场风格（fade/slide_left/slide_right/zoom_in/zoom_out）
             pip_config: 画中画配置列表，每项如 {"shots": [0,1], "layout": "split_h"}
             auto_beat: 是否启用自动卡点（根据BGM节拍调整切点）
             beat_threshold: 卡点能量阈值（0-1）
@@ -1307,6 +1318,45 @@ class E2EPipeline:
                     continue
                 except Exception as e:
                     print(f"  蒙版快闪v4@{i}失败，回退普通转场: {e}")
+
+            # Blender转场遮罩（需要Blender安装，转场更丰富）
+            if use_blender_transitions and _BLENDER_EFFECTS_AVAILABLE and shot.transition_in not in ["无", "蒙版快闪"]:
+                try:
+                    trans_start = intro_offset + sum(s.duration for s in sb.shots[:i]) - shot.transition_duration
+                    blender_trans_dir = os.path.join(self.work_dir, "output", "blender_transitions")
+                    os.makedirs(blender_trans_dir, exist_ok=True)
+
+                    # 风格映射：根据转场类型选择Blender转场风格
+                    blender_style_map = {
+                        "叠化": "fade", "快切": "fade", "闪黑": "fade",
+                        "闪白": "fade", "黑场": "fade", "淡入": "fade",
+                    }
+                    b_style = blender_style_map.get(shot.transition_in, blender_transition_style)
+
+                    trans_video = _blender_create_transition(
+                        output_dir=os.path.join(blender_trans_dir, f"trans_{i}"),
+                        style=b_style,
+                        width=width,
+                        height=height,
+                        duration=shot.transition_duration,
+                    )
+
+                    if trans_video and os.path.exists(trans_video):
+                        # 将Blender转场遮罩叠加到时间线（正片叠底混合模式）
+                        trans_seg = project.add_media_safe(
+                            trans_video,
+                            start_time=f"{trans_start:.2f}s",
+                            duration=f"{shot.transition_duration:.2f}s",
+                            track_name=f"BlenderTrans_{i}",
+                        )
+                        if trans_seg and _MIX_MODE_AVAILABLE:
+                            from mix_mode import apply_mix_mode
+                            apply_mix_mode(project, trans_seg, mode="multiply", intensity=1.0)
+                        trans_count += 1
+                        print(f"  Blender转场@{i}: {b_style} ({shot.transition_duration}s)")
+                        continue
+                except Exception as e:
+                    print(f"  Blender转场@{i}失败，回退普通转场: {e}")
 
             # 普通转场
             try:
