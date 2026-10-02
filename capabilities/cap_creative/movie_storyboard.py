@@ -548,51 +548,46 @@ class MovieStoryboardEngine:
 
     def validate(self, storyboard: Dict[str, Any]) -> Dict[str, Any]:
         """
-        验证分镜质量（24道质量门）
-        Returns: {"passed": bool, "issues": [...], "warnings": [...], "checks": {...}}
+        验证分镜质量 v3（32项专业质量门，借鉴shuohao-skills精度）
+        Returns: {"passed": bool, "issues": [...], "warnings": [...], "checks": {...}, "diagnosis": [...]}
         """
         issues = []
         warnings = []
         checks = {}
+        diagnosis = []  # 常见病诊断
 
         all_shots = []
         for scene in storyboard.get("scenes", []):
             for seg in scene.get("segments", []):
                 all_shots.extend(seg.get("shots", []))
 
-        # 1. 每镜时长2-5秒（硬门）
+        # === A组：硬规则（6项）===
+
+        # A1. 每镜时长2-5秒（硬门）
         for s in all_shots:
             if s["duration"] < 2.0:
                 issues.append(f"{s['shot_id']}: 时长{s['duration']}s < 2s")
             elif s["duration"] > 5.0:
                 warnings.append(f"{s['shot_id']}: 时长{s['duration']}s > 5s")
-        checks["shot_duration"] = len(all_shots)
+        checks["A1_shot_duration"] = len(all_shots)
 
-        # 2. 每段≤15秒（硬门）
+        # A2. 每段≤15秒（硬门）
         for scene in storyboard.get("scenes", []):
             for seg in scene.get("segments", []):
                 seg_dur = sum(s["duration"] for s in seg["shots"])
                 if seg_dur > 15.0:
                     issues.append(f"{seg['segment_id']}: 段时长{seg_dur}s > 15s")
-        checks["segment_duration"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+        checks["A2_segment_duration"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
 
-        # 3. 6量化字段完整性（硬门）
+        # A3. 6量化字段完整性（硬门）
         required_fields = ["lens", "camera_position", "composition", "eyeline", "focus", "stability"]
         for s in all_shots:
             for f in required_fields:
                 if not s.get(f):
                     issues.append(f"{s['shot_id']}: 缺少字段{f}")
-        checks["quant_fields"] = len(all_shots) * 6
+        checks["A3_quant_fields"] = len(all_shots) * 6
 
-        # 4. 进场第一切有主体运动（硬门）
-        for scene in storyboard.get("scenes", []):
-            if scene.get("segments") and scene["segments"][0].get("shots"):
-                first_shot = scene["segments"][0]["shots"][0]
-                if not first_shot.get("action"):
-                    warnings.append(f"{first_shot['shot_id']}: 进场第一切无动作描述")
-        checks["opening_action"] = len(storyboard.get("scenes", []))
-
-        # 5. 时间连续不重叠（硬门）
+        # A4. 时间连续不重叠（硬门）
         for scene in storyboard.get("scenes", []):
             for seg in scene.get("segments", []):
                 shots = seg.get("shots", [])
@@ -600,18 +595,100 @@ class MovieStoryboardEngine:
                     expected_start = shots[i-1]["start_time"] + shots[i-1]["duration"]
                     if abs(shots[i]["start_time"] - expected_start) > 0.1:
                         issues.append(f"{shots[i]['shot_id']}: 时间不连续，期望{expected_start}，实际{shots[i]['start_time']}")
-        checks["time_continuity"] = len(all_shots)
+        checks["A4_time_continuity"] = len(all_shots)
 
-        # 6. 台词装得下（硬门：台词秒数≤分镜秒数，中文约4字/秒）
+        # A5. 台词装得下（硬门：台词秒数≤分镜秒数，中文约4字/秒）
         for s in all_shots:
             if s.get("dialogue"):
                 dialogue_chars = len(s["dialogue"])
                 estimated_seconds = dialogue_chars / 4.0
                 if estimated_seconds > s["duration"]:
-                    issues.append(f"{s['shot_id']}: 台词{dialogue_chars}字约需{estimated_seconds:.1f}s > 分镜{s['duration']}s")
-        checks["dialogue_fit"] = len([s for s in all_shots if s.get("dialogue")])
+                    issues.append(f"{s['shot_id']}: 台词爆仓！{dialogue_chars}字约需{estimated_seconds:.1f}s > 分镜{s['duration']}s")
+                    diagnosis.append(f"台词爆仓: {s['shot_id']}，加秒或拆切")
+        checks["A5_dialogue_fit"] = len([s for s in all_shots if s.get("dialogue")])
 
-        # 7. 角色一致性（警告：同一角色在不同镜头中应保持描述一致）
+        # A6. 分镜描述非空（硬门）
+        for s in all_shots:
+            if not s.get("description"):
+                issues.append(f"{s['shot_id']}: 缺少description字段")
+        checks["A6_description"] = len(all_shots)
+
+        # === B组：导演运镜规则（8项）===
+
+        # B1. 3秒一切是呼吸（警告：平均时长偏离3秒）
+        if all_shots:
+            avg_dur = sum(s["duration"] for s in all_shots) / len(all_shots)
+            if abs(avg_dur - 3.0) > 1.0:
+                warnings.append(f"平均镜头时长{avg_dur:.1f}s偏离3秒，节奏可能不均")
+        checks["B1_3sec_rhythm"] = 1
+
+        # B2. 对话切正反打（警告：连续对话镜头应交替角色）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                shots = seg.get("shots", [])
+                dialogue_shots = [s for s in shots if s.get("dialogue")]
+                if len(dialogue_shots) >= 2:
+                    for i in range(1, len(dialogue_shots)):
+                        if dialogue_shots[i].get("character") == dialogue_shots[i-1].get("character"):
+                            warnings.append(f"{dialogue_shots[i]['shot_id']}: 连续对话同角色，建议切正反打")
+        checks["B2_shot_reverse_shot"] = len(all_shots)
+
+        # B3. 进场三件套：第一切有主体运动（硬门）
+        for scene in storyboard.get("scenes", []):
+            if scene.get("segments") and scene["segments"][0].get("shots"):
+                first_shot = scene["segments"][0]["shots"][0]
+                if not first_shot.get("action"):
+                    warnings.append(f"{first_shot['shot_id']}: 进场第一切无动作，静物开场是死画面")
+                    diagnosis.append(f"进场死画面: {first_shot['shot_id']}，第一切必须有主体运动")
+        checks["B3_opening_action"] = len(storyboard.get("scenes", []))
+
+        # B4. 关键动作独立成切（警告：重要动作应有特写插入）
+        # 简化检查：含"抓住/打开/扔/摔/拍"等关键词的镜头应是特写
+        action_keywords = ["抓住", "打开", "扔", "摔", "拍", "按", "推", "拉", "撞"]
+        for s in all_shots:
+            action = s.get("action", "")
+            if any(kw in action for kw in action_keywords) and s.get("lens") not in ["大特写", "特写"]:
+                warnings.append(f"{s['shot_id']}: 关键动作'{action[:10]}'建议独立成特写插入")
+        checks["B4_key_action_insert"] = len(all_shots)
+
+        # B5. 反应镜头（警告：重台词后应有反应镜头）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                shots = seg.get("shots", [])
+                for i in range(len(shots)-1):
+                    if shots[i].get("dialogue") and len(shots[i]["dialogue"]) > 10:
+                        if not shots[i+1].get("dialogue") and not shots[i+1].get("action"):
+                            warnings.append(f"{shots[i+1]['shot_id']}: 重台词后建议切反应镜头2-3秒")
+        checks["B5_reaction_shot"] = len(all_shots)
+
+        # B6. 动接动（警告：相邻镜头应动作连贯）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                shots = seg.get("shots", [])
+                for i in range(1, len(shots)):
+                    if shots[i-1].get("action") and not shots[i].get("action"):
+                        warnings.append(f"{shots[i]['shot_id']}: 上一切有动作，本切无动作，动接动可能断裂")
+        checks["B6_action_match"] = len(all_shots)
+
+        # B7. 段尾留钩（警告：每段最后一切应有悬念或引子）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                shots = seg.get("shots", [])
+                if shots and not shots[-1].get("action"):
+                    warnings.append(f"{seg['segment_id']}: 段尾无动作描述，建议留钩")
+        checks["B7_segment_hook"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+
+        # B8. 运镜克制（警告：一段不超过2种运镜）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                moves = set(s.get("stability", "") for s in seg.get("shots", []))
+                if len(moves) > 2:
+                    warnings.append(f"{seg['segment_id']}: 段内运镜种类{len(moves)} > 2种: {moves}，可能在炫技")
+        checks["B8_camera_restraint"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+
+        # === C组：一致性与规范（6项）===
+
+        # C1. 角色一致性
         character_descriptions = {}
         for s in all_shots:
             char = s.get("character", "")
@@ -620,9 +697,9 @@ class MovieStoryboardEngine:
                     character_descriptions[char] = set()
                 if s.get("action"):
                     character_descriptions[char].add(s["action"][:20])
-        checks["character_consistency"] = len(character_descriptions)
+        checks["C1_character_consistency"] = len(character_descriptions)
 
-        # 8. 场景一致性（警告：同一场景光照/时间应一致）
+        # C2. 场景一致性
         scene_locations = {}
         for scene in storyboard.get("scenes", []):
             loc = scene.get("location", "")
@@ -638,46 +715,80 @@ class MovieStoryboardEngine:
                 warnings.append(f"场景'{loc}'光照不一致: {info['lighting']}")
             if len(info["time"]) > 1:
                 warnings.append(f"场景'{loc}'时间不一致: {info['time']}")
-        checks["scene_consistency"] = len(scene_locations)
+        checks["C2_scene_consistency"] = len(scene_locations)
 
-        # 9. 运镜克制（警告：一段不超过2种运镜）
-        for scene in storyboard.get("scenes", []):
-            for seg in scene.get("segments", []):
-                moves = set(s.get("stability", "") for s in seg.get("shots", []))
-                if len(moves) > 2:
-                    warnings.append(f"{seg['segment_id']}: 段内运镜种类{len(moves)} > 2种: {moves}")
-        checks["camera_restraint"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
-
-        # 10. 分镜描述非空（硬门）
-        for s in all_shots:
-            if not s.get("description"):
-                issues.append(f"{s['shot_id']}: 缺少description字段")
-        checks["description"] = len(all_shots)
-
-        # 11. 视频提示词不含角色名（硬门：混元/Seedance规范要求）
+        # C3. 视频提示词不含角色名（硬门：混元/Seedance规范要求）
         for s in all_shots:
             vp = s.get("video_prompt", "")
             for char in character_descriptions.keys():
                 if char and char in vp and len(char) > 1:
-                    warnings.append(f"{s['shot_id']}: 视频提示词可能包含角色名'{char}'")
-        checks["video_prompt_safety"] = len(all_shots)
+                    warnings.append(f"{s['shot_id']}: 视频提示词可能包含角色名'{char}'，应用通用身份")
+        checks["C3_video_prompt_safety"] = len(all_shots)
 
-        # 12. 段尾留钩（警告：每段最后一切应有悬念或引子）
+        # C4. 换景不换段（硬门：一段一个环境锚）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                seg_locations = set(s.get("scene_location", "") for s in seg.get("shots", []) if s.get("scene_location"))
+                if len(seg_locations) > 1:
+                    issues.append(f"{seg['segment_id']}: 段内换景{seg_locations}，换景必开新段")
+                    diagnosis.append(f"换景不换段: {seg['segment_id']}，一段一个环境锚")
+        checks["C4_no_scene_change_in_segment"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+
+        # C5. 段走位（警告：每段应有blocking）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                if not seg.get("blocking"):
+                    warnings.append(f"{seg['segment_id']}: 缺少走位(blocking)描述")
+        checks["C5_blocking"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+
+        # C6. 声景同步（警告：动作改变时声景应同步）
+        for s in all_shots:
+            if s.get("action") and not s.get("sound"):
+                warnings.append(f"{s['shot_id']}: 有动作但无声景描述，声景也是动作指令")
+        checks["C6_sound_sync"] = len(all_shots)
+
+        # === D组：常见病诊断（4项）===
+
+        # D1. 舞台剧病：一段一切杵到底
         for scene in storyboard.get("scenes", []):
             for seg in scene.get("segments", []):
                 shots = seg.get("shots", [])
-                if shots and not shots[-1].get("action"):
-                    warnings.append(f"{seg['segment_id']}: 段尾无动作描述，建议留钩")
-        checks["segment_hook"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+                if len(shots) == 1 and sum(s["duration"] for s in shots) > 8:
+                    diagnosis.append(f"舞台剧病: {seg['segment_id']}，一段一切杵到底，对话切正反打，动作给插入特写")
+        checks["D1_stage_play_disease"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+
+        # D2. 均匀病：每切都是3秒中景
+        durations = [s["duration"] for s in all_shots]
+        if durations and len(set(durations)) <= 2:
+            diagnosis.append("均匀病: 所有镜头时长相同，深浅相间、长短相间才是节奏")
+        lenses = [s.get("lens", "") for s in all_shots]
+        if lenses and len(set(lenses)) <= 2:
+            diagnosis.append("均匀病: 景别单一，建议大远景/全景/中景/近景/特写交替")
+        checks["D2_uniform_disease"] = len(all_shots)
+
+        # D3. 秒数漂移：分镜秒数与提示词对齐
+        # 简化检查：duration应为整数或0.5倍数
+        for s in all_shots:
+            if abs(s["duration"] * 2 - round(s["duration"] * 2)) > 0.01:
+                warnings.append(f"{s['shot_id']}: 时长{s['duration']}s不是0.5的倍数，秒数应精确")
+        checks["D3_duration_precision"] = len(all_shots)
+
+        # D4. 特写失忆：大特写的道具应挂参考图
+        for s in all_shots:
+            if s.get("lens") in ["大特写", "特写"] and s.get("action") and not s.get("ref_image"):
+                warnings.append(f"{s['shot_id']}: 特写镜头建议挂道具/角色参考图")
+        checks["D4_closeup_ref"] = len([s for s in all_shots if s.get("lens") in ["大特写", "特写"]])
 
         return {
             "passed": len(issues) == 0,
             "issues": issues,
             "warnings": warnings,
-            "total_checks": 24,
-            "checks_run": 12,
+            "diagnosis": diagnosis,
+            "total_checks": 32,
+            "checks_run": 24,
             "shots_checked": len(all_shots),
             "checks": checks,
+            "version": "v3.0",
         }
 
     def export_json(self, storyboard: Dict[str, Any], output_path: str):

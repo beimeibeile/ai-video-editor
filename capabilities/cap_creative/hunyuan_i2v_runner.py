@@ -237,6 +237,9 @@ class HunyuanI2VRunner:
                 "samples": [sampler_id, 0],
                 "vae": [vae_id, 0],
                 "tile_size": 256,
+                "overlap": 64,
+                "temporal_size": 16,
+                "temporal_overlap": 4,
             })
         else:
             decode_id = add_node("VAEDecode", {
