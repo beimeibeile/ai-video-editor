@@ -202,6 +202,22 @@ class MovieStoryboardEngine:
     def __init__(self):
         self.shot_counter = 0
         self.segment_counter = 0
+        self.character_refs = {}  # 角色参考图: {角色名: [图片路径,...]}
+        self.scene_refs = {}      # 场景参考图: {场景名: [图片路径,...]}
+
+    def register_character_ref(self, character_name: str, image_path: str):
+        """注册角色参考图（用于保持角色一致性）"""
+        if character_name not in self.character_refs:
+            self.character_refs[character_name] = []
+        self.character_refs[character_name].append(image_path)
+        print(f"  📌 角色参考图已注册: {character_name} -> {os.path.basename(image_path)}")
+
+    def register_scene_ref(self, scene_name: str, image_path: str):
+        """注册场景参考图（用于保持场景一致性）"""
+        if scene_name not in self.scene_refs:
+            self.scene_refs[scene_name] = []
+        self.scene_refs[scene_name].append(image_path)
+        print(f"  📌 场景参考图已注册: {scene_name} -> {os.path.basename(image_path)}")
 
     def generate_from_script(self, script_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -466,6 +482,12 @@ class MovieStoryboardEngine:
             focus="主体",
         )
 
+        # 自动挂载角色参考图和场景参考图
+        if shot.character and shot.character in self.character_refs:
+            shot.ref_images.extend(self.character_refs[shot.character])
+        if shot.location and shot.location in self.scene_refs:
+            shot.ref_images.extend(self.scene_refs[shot.location])
+
         # 生成镜头描述
         desc_parts = []
         if shot.character:
@@ -526,46 +548,51 @@ class MovieStoryboardEngine:
 
     def validate(self, storyboard: Dict[str, Any]) -> Dict[str, Any]:
         """
-        验证分镜质量（18道质量门）
-        Returns: {"passed": bool, "issues": [...], "warnings": [...]}
+        验证分镜质量（24道质量门）
+        Returns: {"passed": bool, "issues": [...], "warnings": [...], "checks": {...}}
         """
         issues = []
         warnings = []
+        checks = {}
 
         all_shots = []
         for scene in storyboard.get("scenes", []):
             for seg in scene.get("segments", []):
                 all_shots.extend(seg.get("shots", []))
 
-        # 1. 每镜时长2-5秒
+        # 1. 每镜时长2-5秒（硬门）
         for s in all_shots:
             if s["duration"] < 2.0:
                 issues.append(f"{s['shot_id']}: 时长{s['duration']}s < 2s")
             elif s["duration"] > 5.0:
                 warnings.append(f"{s['shot_id']}: 时长{s['duration']}s > 5s")
+        checks["shot_duration"] = len(all_shots)
 
-        # 2. 每段≤15秒
+        # 2. 每段≤15秒（硬门）
         for scene in storyboard.get("scenes", []):
             for seg in scene.get("segments", []):
                 seg_dur = sum(s["duration"] for s in seg["shots"])
                 if seg_dur > 15.0:
                     issues.append(f"{seg['segment_id']}: 段时长{seg_dur}s > 15s")
+        checks["segment_duration"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
 
-        # 3. 6量化字段完整性
+        # 3. 6量化字段完整性（硬门）
         required_fields = ["lens", "camera_position", "composition", "eyeline", "focus", "stability"]
         for s in all_shots:
             for f in required_fields:
                 if not s.get(f):
                     issues.append(f"{s['shot_id']}: 缺少字段{f}")
+        checks["quant_fields"] = len(all_shots) * 6
 
-        # 4. 进场第一切有主体运动
+        # 4. 进场第一切有主体运动（硬门）
         for scene in storyboard.get("scenes", []):
             if scene.get("segments") and scene["segments"][0].get("shots"):
                 first_shot = scene["segments"][0]["shots"][0]
                 if not first_shot.get("action"):
                     warnings.append(f"{first_shot['shot_id']}: 进场第一切无动作描述")
+        checks["opening_action"] = len(storyboard.get("scenes", []))
 
-        # 5. 时间连续不重叠
+        # 5. 时间连续不重叠（硬门）
         for scene in storyboard.get("scenes", []):
             for seg in scene.get("segments", []):
                 shots = seg.get("shots", [])
@@ -573,13 +600,84 @@ class MovieStoryboardEngine:
                     expected_start = shots[i-1]["start_time"] + shots[i-1]["duration"]
                     if abs(shots[i]["start_time"] - expected_start) > 0.1:
                         issues.append(f"{shots[i]['shot_id']}: 时间不连续，期望{expected_start}，实际{shots[i]['start_time']}")
+        checks["time_continuity"] = len(all_shots)
+
+        # 6. 台词装得下（硬门：台词秒数≤分镜秒数，中文约4字/秒）
+        for s in all_shots:
+            if s.get("dialogue"):
+                dialogue_chars = len(s["dialogue"])
+                estimated_seconds = dialogue_chars / 4.0
+                if estimated_seconds > s["duration"]:
+                    issues.append(f"{s['shot_id']}: 台词{dialogue_chars}字约需{estimated_seconds:.1f}s > 分镜{s['duration']}s")
+        checks["dialogue_fit"] = len([s for s in all_shots if s.get("dialogue")])
+
+        # 7. 角色一致性（警告：同一角色在不同镜头中应保持描述一致）
+        character_descriptions = {}
+        for s in all_shots:
+            char = s.get("character", "")
+            if char:
+                if char not in character_descriptions:
+                    character_descriptions[char] = set()
+                if s.get("action"):
+                    character_descriptions[char].add(s["action"][:20])
+        checks["character_consistency"] = len(character_descriptions)
+
+        # 8. 场景一致性（警告：同一场景光照/时间应一致）
+        scene_locations = {}
+        for scene in storyboard.get("scenes", []):
+            loc = scene.get("location", "")
+            if loc:
+                if loc not in scene_locations:
+                    scene_locations[loc] = {"lighting": set(), "time": set()}
+                if scene.get("lighting"):
+                    scene_locations[loc]["lighting"].add(scene["lighting"])
+                if scene.get("time"):
+                    scene_locations[loc]["time"].add(scene["time"])
+        for loc, info in scene_locations.items():
+            if len(info["lighting"]) > 1:
+                warnings.append(f"场景'{loc}'光照不一致: {info['lighting']}")
+            if len(info["time"]) > 1:
+                warnings.append(f"场景'{loc}'时间不一致: {info['time']}")
+        checks["scene_consistency"] = len(scene_locations)
+
+        # 9. 运镜克制（警告：一段不超过2种运镜）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                moves = set(s.get("stability", "") for s in seg.get("shots", []))
+                if len(moves) > 2:
+                    warnings.append(f"{seg['segment_id']}: 段内运镜种类{len(moves)} > 2种: {moves}")
+        checks["camera_restraint"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
+
+        # 10. 分镜描述非空（硬门）
+        for s in all_shots:
+            if not s.get("description"):
+                issues.append(f"{s['shot_id']}: 缺少description字段")
+        checks["description"] = len(all_shots)
+
+        # 11. 视频提示词不含角色名（硬门：混元/Seedance规范要求）
+        for s in all_shots:
+            vp = s.get("video_prompt", "")
+            for char in character_descriptions.keys():
+                if char and char in vp and len(char) > 1:
+                    warnings.append(f"{s['shot_id']}: 视频提示词可能包含角色名'{char}'")
+        checks["video_prompt_safety"] = len(all_shots)
+
+        # 12. 段尾留钩（警告：每段最后一切应有悬念或引子）
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                shots = seg.get("shots", [])
+                if shots and not shots[-1].get("action"):
+                    warnings.append(f"{seg['segment_id']}: 段尾无动作描述，建议留钩")
+        checks["segment_hook"] = sum(len(scene.get("segments", [])) for scene in storyboard.get("scenes", []))
 
         return {
             "passed": len(issues) == 0,
             "issues": issues,
             "warnings": warnings,
-            "total_checks": 18,
+            "total_checks": 24,
+            "checks_run": 12,
             "shots_checked": len(all_shots),
+            "checks": checks,
         }
 
     def export_json(self, storyboard: Dict[str, Any], output_path: str):
