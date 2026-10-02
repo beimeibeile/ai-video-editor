@@ -35,3 +35,18 @@ scripts/*_assets/*.png
 *.tmp.png
 
 user_outputs/
+
+# cap_creative输出目录
+capabilities/cap_creative/composer_output/
+capabilities/cap_creative/p14_test_output/
+capabilities/cap_creative/promo_audio/
+capabilities/cap_creative/promo_images/
+capabilities/cap_creative/short_video_output/
+capabilities/cap_creative/*_output/
+capabilities/cap_creative/*_test/
+
+# 测试脚本
+capabilities/cap_creative/build_*.py
+capabilities/cap_creative/generate_*.py
+capabilities/cap_creative/*_test.py
+capabilities/cap_creative/*_demo.py

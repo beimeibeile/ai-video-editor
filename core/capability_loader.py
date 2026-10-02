@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 CAPABILITIES_DIR = os.path.join(os.path.dirname(__file__), "..", "capabilities")
 
 # 能力模块依赖声明（模块名 -> 依赖的环境模块列表）
-# 环境模块：comfyui, jianying, anysearch, ffmpeg, python_deps
+# 环境模块：comfyui, jianying, anysearch, ffmpeg, python_deps, blender
 CAPABILITY_DEPENDENCIES = {
     "cap_comfyui_runner": ["comfyui", "python_deps"],
     "cap_material_creator": ["python_deps"],
@@ -20,6 +20,16 @@ CAPABILITY_DEPENDENCIES = {
     "cap_keyframe_engine": ["jianying"],
     "cap_audio_designer": ["ffmpeg", "python_deps"],
     "cap_search": ["anysearch", "python_deps"],
+    "cap_blender_runner": ["blender", "python_deps"],
+    # cap_creative下的模块
+    "movie_storyboard": ["python_deps"],
+    "hunyuan_i2v_runner": ["comfyui", "python_deps"],
+    "short_video_composer": ["jianying", "python_deps"],
+    "real_bgm_generator": ["ffmpeg", "python_deps"],
+    "dual_mode_pipeline": ["comfyui", "jianying", "python_deps"],
+    "tag_engine": ["python_deps"],
+    "sound_engine": ["ffmpeg", "python_deps"],
+    "short_video_pipeline": ["jianying", "python_deps"],
 }
 
 # 能力模块降级方案（模块名 -> 降级说明）
@@ -70,6 +80,35 @@ def discover_capabilities() -> Dict[str, dict]:
                     "missing_dependencies": missing_deps,
                     "fallback": CAPABILITY_FALLBACK.get(name, "无降级方案，功能不可用"),
                 }
+
+    # 扫描cap_creative下的.py模块
+    creative_dir = os.path.join(CAPABILITIES_DIR, "cap_creative")
+    if os.path.exists(creative_dir):
+        for fname in os.listdir(creative_dir):
+            if fname.endswith('.py') and not fname.startswith('_'):
+                mod_name = fname[:-3]
+                mod_path = os.path.join(creative_dir, fname)
+                deps = CAPABILITY_DEPENDENCIES.get(mod_name, ["python_deps"])
+                missing_deps = [d for d in deps if not env.is_available(d)]
+
+                if not missing_deps:
+                    status = "available"
+                elif mod_name in CAPABILITY_FALLBACK:
+                    status = "degraded"
+                else:
+                    status = "unavailable"
+
+                _REGISTRY[f"cap_creative.{mod_name}"] = {
+                    "name": f"cap_creative.{mod_name}",
+                    "path": mod_path,
+                    "skill_md": None,
+                    "status": status,
+                    "dependencies": deps,
+                    "missing_dependencies": missing_deps,
+                    "fallback": CAPABILITY_FALLBACK.get(mod_name, "无降级方案，功能不可用"),
+                    "category": "creative",
+                }
+
     return _REGISTRY
 
 
