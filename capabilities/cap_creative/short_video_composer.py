@@ -223,19 +223,24 @@ class ShortVideoComposer:
             # 2. 添加素材片段
             print(f"[2/4] 添加素材片段...")
             segments = []
+            current_time = 0.0
             for i, clip in enumerate(self.clips):
                 if not os.path.exists(clip.path):
                     print(f"  ⚠️ 素材不存在: {clip.path}")
                     continue
 
+                # 自动计算起始时间（如果未设置）
+                start = clip.start_time if clip.start_time > 0 else current_time
+
                 seg = self._project.add_media_safe(
                     clip.path,
-                    start_time=f"{clip.start_time:.2f}s",
+                    start_time=f"{start:.2f}s",
                     duration=f"{clip.duration:.2f}s",
                     track_name="VideoMain",
                 )
                 if seg:
                     segments.append(seg)
+                    current_time = start + clip.duration
                     # 运镜
                     self._apply_camera_move(seg, clip)
                     # 转场
@@ -265,17 +270,24 @@ class ShortVideoComposer:
             result = self._project.save()
             draft_path = result.get("draft_path", "")
 
-            total_dur = max((c.start_time + c.duration) for c in self.clips) if self.clips else 0
+            # 计算实际总时长（使用排列后的时间）
+            actual_end = 0.0
+            t = 0.0
+            for c in self.clips:
+                start = c.start_time if c.start_time > 0 else t
+                actual_end = max(actual_end, start + c.duration)
+                t = start + c.duration
+
             print(f"\n✅ 工程构建完成")
             print(f"   草稿: {draft_path}")
-            print(f"   时长: {total_dur:.1f}s")
+            print(f"   时长: {actual_end:.1f}s")
             print(f"   片段: {len(segments)}个, 文字: {text_count}个")
 
             return {
                 "status": "success",
                 "project_name": self.project_name,
                 "draft_path": draft_path,
-                "duration": total_dur,
+                "duration": actual_end,
                 "clips": len(segments),
                 "texts": text_count,
                 "bgm": self.bgm_path,
