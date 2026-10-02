@@ -132,8 +132,9 @@ class HunyuanI2VRunner:
                         width: int = 720, height: int = 1280,
                         num_frames: int = 81, fps: int = 24,
                         steps: int = 30, cfg: float = 6.0,
-                        seed: int = -1) -> Dict[str, Any]:
-        """构建混元I2V工作流（修正版：CLIPVisionEncode + KSampler）"""
+                        seed: int = -1,
+                        low_vram: bool = False) -> Dict[str, Any]:
+        """构建混元I2V工作流（显存优化版：fp8量化+Tiled VAE）"""
         workflow = {}
         node_id = 1
 
@@ -144,10 +145,11 @@ class HunyuanI2VRunner:
             node_id += 1
             return nid
 
-        # 1. 加载UNET
+        # 1. 加载UNET（显存优化：fp8量化）
+        unet_dtype = "fp8_e4m3fn" if low_vram else "default"
         unet_id = add_node("UNETLoader", {
             "unet_name": self.model_config["unet"],
-            "weight_dtype": "default",
+            "weight_dtype": unet_dtype,
         })
 
         # 2. 加载双CLIP（混元Video 1.5需要Qwen2.5-VL + ByT5 Small）
@@ -229,11 +231,18 @@ class HunyuanI2VRunner:
             "denoise": 1.0,
         })
 
-        # 12. VAE解码
-        decode_id = add_node("VAEDecode", {
-            "samples": [sampler_id, 0],
-            "vae": [vae_id, 0],
-        })
+        # 12. VAE解码（显存优化：Tiled VAE）
+        if low_vram:
+            decode_id = add_node("VAEDecodeTiled", {
+                "samples": [sampler_id, 0],
+                "vae": [vae_id, 0],
+                "tile_size": 256,
+            })
+        else:
+            decode_id = add_node("VAEDecode", {
+                "samples": [sampler_id, 0],
+                "vae": [vae_id, 0],
+            })
 
         # 13. 保存
         save_id = add_node("SaveAnimatedWEBP", {
@@ -254,7 +263,8 @@ class HunyuanI2VRunner:
                  steps: int = 30, cfg: float = 6.0,
                  seed: int = -1,
                  output_dir: str = None,
-                 timeout: int = 600) -> Dict[str, Any]:
+                 timeout: int = 600,
+                 low_vram: bool = False) -> Dict[str, Any]:
         """
         生成I2V视频
 
@@ -270,6 +280,7 @@ class HunyuanI2VRunner:
             seed: 随机种子（-1随机）
             output_dir: 输出目录
             timeout: 超时时间（秒）
+            low_vram: 显存优化模式（fp8量化+Tiled VAE，12GB显卡建议开启）
 
         Returns:
             生成结果字典
@@ -280,6 +291,7 @@ class HunyuanI2VRunner:
         print(f"图像: {image_path}")
         print(f"提示词: {prompt[:50]}...")
         print(f"时长: {duration}s, 帧率: {fps}fps, 分辨率: {width}x{height}")
+        print(f"显存优化: {'开启 (fp8+TiledVAE)' if low_vram else '关闭'}")
 
         # 检查可用性
         avail = self.check_available()
@@ -309,6 +321,7 @@ class HunyuanI2VRunner:
             width=width, height=height,
             num_frames=num_frames, fps=fps,
             steps=steps, cfg=cfg, seed=seed,
+            low_vram=low_vram,
         )
 
         # 提交任务
