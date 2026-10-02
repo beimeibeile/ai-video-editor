@@ -169,11 +169,11 @@ class SoundEngine:
                                    duration: float = 30.0,
                                    output_file: str = "") -> str:
         """
-        生成BGM占位音频（使用ffmpeg生成简单音调）
-        实际使用时应替换为免版权音乐库
+        生成真实BGM（多声部程序生成：和弦+贝斯+旋律+鼓点）
+        替代原330Hz正弦波占位音频
 
         Args:
-            mood: 情绪key
+            mood: 情绪key（sad/tense/happy/calm/epic/romantic/determined/anxious）
             duration: 时长（秒）
             output_file: 输出路径
 
@@ -183,16 +183,35 @@ class SoundEngine:
         bgm_config = BGM_PRESETS.get(mood, BGM_PRESETS["calm"])
 
         if not output_file:
-            output_file = os.path.join(self.output_dir, f"bgm_{mood}.mp3")
+            output_file = os.path.join(self.output_dir, f"bgm_{mood}.wav")
 
-        # 根据情绪生成不同频率的简单音调作为占位
+        # 情绪映射到真实BGM生成器的风格
+        mood_map = {
+            "sad": "ink", "tense": "dark", "happy": "bright",
+            "calm": "minimal", "epic": "tech", "romantic": "retro",
+            "determined": "vlog", "anxious": "glitch",
+        }
+        bgm_mood = mood_map.get(mood, "default")
+
+        # 调用真实BGM生成器
+        try:
+            from real_bgm_generator import RealBGMGenerator
+            gen = RealBGMGenerator(ffmpeg_path=self.ffmpeg_path)
+            result = gen.generate(bgm_mood, duration=duration, bpm=120, output_path=output_file)
+            if result and os.path.exists(result):
+                print(f"  ✅ 真实BGM: {bgm_config['name']} | {duration:.0f}s | {bgm_mood}风格")
+                return result
+        except ImportError:
+            pass
+        except Exception as e:
+            print(f"  ⚠️ 真实BGM生成失败，回退正弦波: {e}")
+
+        # 回退：ffmpeg正弦波
         freq_map = {
             "sad": 220, "tense": 440, "happy": 523, "calm": 330,
             "epic": 196, "romantic": 392, "determined": 349, "anxious": 466,
         }
         freq = freq_map.get(mood, 330)
-
-        # 使用ffmpeg生成正弦波占位音频
         try:
             subprocess.run([
                 self.ffmpeg_path, "-y", "-f", "lavfi",
@@ -200,9 +219,9 @@ class SoundEngine:
                 "-af", "volume=0.1",
                 "-q:a", "2", output_file
             ], capture_output=True, timeout=30)
-            print(f"  ✅ BGM占位: {bgm_config['name']} | {duration:.0f}s | {freq}Hz")
+            print(f"  ⚠️ BGM回退(正弦波): {bgm_config['name']} | {duration:.0f}s | {freq}Hz")
         except Exception as e:
-            print(f"  ⚠️ BGM生成失败: {e}")
+            print(f"  ❌ BGM生成失败: {e}")
 
         return output_file
 
