@@ -791,6 +791,71 @@ class MovieStoryboardEngine:
             "version": "v3.0",
         }
 
+    def auto_fix(self, storyboard: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        自动修复分镜质量问题 v1.0
+        修复：台词爆仓（自动加秒）、均匀病（长短相间）、时间连续性
+        Returns: {"fixed": bool, "changes": [...], "storyboard": 修复后的分镜}
+        """
+        changes = []
+        all_shots = []
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                all_shots.extend(seg.get("shots", []))
+
+        if not all_shots:
+            return {"fixed": False, "changes": [], "storyboard": storyboard}
+
+        # === 修复1：台词爆仓（4字/秒，最少2秒，最多5秒）===
+        for s in all_shots:
+            if s.get("dialogue"):
+                dialogue_chars = len(s["dialogue"])
+                required_duration = max(2.0, min(5.0, dialogue_chars / 4.0 + 0.5))  # +0.5秒缓冲
+                if s["duration"] < required_duration:
+                    old_dur = s["duration"]
+                    s["duration"] = round(required_duration * 2) / 2  # 0.5倍数
+                    changes.append(f"{s['shot_id']}: 台词爆仓修复 {old_dur}s→{s['duration']}s（{dialogue_chars}字）")
+
+        # === 修复2：均匀病（长短相间，围着3秒打）===
+        durations = [s["duration"] for s in all_shots]
+        if len(set(durations)) <= 2 and len(all_shots) >= 3:
+            # 所有镜头时长相同或接近，生成长短相间模式
+            pattern = [3.0, 2.0, 4.0, 3.0, 2.5, 3.5]  # 长短相间
+            for i, s in enumerate(all_shots):
+                # 保留台词爆仓修复后的时长，只调整无台词或时长充足的镜头
+                if not s.get("dialogue") or s["duration"] <= 3.0:
+                    old_dur = s["duration"]
+                    new_dur = pattern[i % len(pattern)]
+                    # 确保不低于2秒
+                    new_dur = max(2.0, new_dur)
+                    if abs(old_dur - new_dur) > 0.3:
+                        s["duration"] = new_dur
+                        changes.append(f"{s['shot_id']}: 均匀病修复 {old_dur}s→{new_dur}s（长短相间）")
+
+        # === 修复3：重新计算时间连续性 ===
+        current_time = 0.0
+        for scene in storyboard.get("scenes", []):
+            for seg in scene.get("segments", []):
+                for s in seg.get("shots", []):
+                    s["start_time"] = round(current_time, 2)
+                    current_time += s["duration"]
+                seg["duration"] = round(sum(s["duration"] for s in seg["shots"]), 2)
+
+        storyboard["total_duration"] = round(current_time, 2)
+
+        if changes:
+            print(f"  ✅ 自动修复 {len(changes)} 项:")
+            for c in changes:
+                print(f"    - {c}")
+        else:
+            print("  ✅ 无需修复")
+
+        return {
+            "fixed": len(changes) > 0,
+            "changes": changes,
+            "storyboard": storyboard,
+        }
+
     def export_json(self, storyboard: Dict[str, Any], output_path: str):
         """导出分镜为JSON"""
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
