@@ -1,0 +1,49 @@
+{
+  "project_name": "翻身_完整版",
+  "total_duration": 180.0,
+  "total_shots": 19,
+  "checks": {
+    "duration": {
+      "status": "PASS",
+      "value": "180秒",
+      "note": "时长符合3分钟目标"
+    },
+    "shot_count": {
+      "status": "WARN",
+      "value": "19镜",
+      "note": "镜头数量检查"
+    },
+    "shot_size_diversity": {
+      "status": "PASS",
+      "value": "3种景别",
+      "note": "景别: 特写, 全景, 近景"
+    },
+    "subtitle_coverage": {
+      "status": "PASS",
+      "value": "13/19镜",
+      "note": "对话字幕覆盖"
+    },
+    "scene_diversity": {
+      "status": "PASS",
+      "value": "5个场景",
+      "note": "场景转换多样性"
+    },
+    "real_assets": {
+      "status": "PASS",
+      "value": "6/6张",
+      "note": "ComfyUI真实场景素材"
+    },
+    "camera_move_diversity": {
+      "status": "WARN",
+      "value": "1种运镜",
+      "note": "运镜: 固定"
+    }
+  },
+  "summary": {
+    "pass": 5,
+    "warn": 2,
+    "fail": 0,
+    "total": 7,
+    "score": 71
+  }
+}

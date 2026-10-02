@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>视频质量报告</title>
+    <style>
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #60a5fa; }
+        .summary { display: flex; gap: 20px; margin: 20px 0; }
+        .card { background: #16213e; padding: 20px; border-radius: 10px; flex: 1; }
+        .score { font-size: 48px; font-weight: bold; color: #3b82f6; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #0f3460; }
+        tr:hover { background: #16213e; }
+        .badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>视频质量报告</h1>
+        <p>生成时间: 2026-10-02 06:03:35 | 评估耗时: 0.0s</p>
+
+        <div class="summary">
+            <div class="card">
+                <div>综合评分</div>
+                <div class="score">85</div>
+                <div>等级: good</div>
+            </div>
+            <div class="card">
+                <div>镜头统计</div>
+                <div style="font-size:24px;">5 个镜头</div>
+                <div>通过: 3 | 失败: 2 | 警告: 4</div>
+            </div>
+            <div class="card">
+                <div>需重生成</div>
+                <div style="font-size:24px;color:#ef4444;">0</div>
+                <div></div>
+            </div>
+        </div>
+
+        <h2>镜头详情</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>镜头ID</th>
+                    <th>评分</th>
+                    <th>等级</th>
+                    <th>通过</th>
+                    <th>失败</th>
+                    <th>状态</th>
+                    <th>主要问题</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            <tr>
+                <td>S01_shot01</td>
+                <td style="color:#22c55e;font-weight:bold;">100</td>
+                <td>excellent</td>
+                <td>6</td>
+                <td>0</td>
+                <td></td>
+                <td style="font-size:12px;color:#666;">
+                    -
+                </td>
+            </tr>
+            
+            <tr>
+                <td>S01_shot02</td>
+                <td style="color:#f59e0b;font-weight:bold;">66</td>
+                <td>acceptable</td>
+                <td>1</td>
+                <td>3</td>
+                <td></td>
+                <td style="font-size:12px;color:#666;">
+                    S002_画面描述完整<br>S005_台词时长匹配<br>S006_构图字段完整
+                </td>
+            </tr>
+            
+            <tr>
+                <td>S01_shot03</td>
+                <td style="color:#22c55e;font-weight:bold;">100</td>
+                <td>excellent</td>
+                <td>6</td>
+                <td>0</td>
+                <td></td>
+                <td style="font-size:12px;color:#666;">
+                    -
+                </td>
+            </tr>
+            
+            <tr>
+                <td>S02_shot01</td>
+                <td style="color:#22c55e;font-weight:bold;">100</td>
+                <td>excellent</td>
+                <td>6</td>
+                <td>0</td>
+                <td></td>
+                <td style="font-size:12px;color:#666;">
+                    -
+                </td>
+            </tr>
+            
+            <tr>
+                <td>S02_shot02</td>
+                <td style="color:#f59e0b;font-weight:bold;">61</td>
+                <td>acceptable</td>
+                <td>1</td>
+                <td>3</td>
+                <td></td>
+                <td style="font-size:12px;color:#666;">
+                    S001_时长有效<br>S002_画面描述完整<br>S006_构图字段完整
+                </td>
+            </tr>
+            
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

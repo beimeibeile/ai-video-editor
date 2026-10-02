@@ -1,0 +1,202 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-10-02 06:04:22",
+  "capabilities": {
+    "script_engine": {
+      "name": "script_engine",
+      "version": "2.0",
+      "project": "ai-video-editor",
+      "description": "剧本引擎：三幕结构+场景节拍+镜头拆解",
+      "category": "creative",
+      "dependencies": [],
+      "status": "active"
+    },
+    "smart_director": {
+      "name": "smart_director",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "智能调度器：剧本→分镜→特效→运镜自动调度",
+      "category": "orchestration",
+      "dependencies": [
+        "script_engine"
+      ],
+      "status": "active"
+    },
+    "quality_gate": {
+      "name": "quality_gate",
+      "version": "2.0",
+      "project": "ai-video-editor",
+      "description": "质量门：32道剪辑+分镜质量检查",
+      "category": "quality",
+      "dependencies": [],
+      "status": "active"
+    },
+    "director_rules": {
+      "name": "director_rules",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "导演运镜规则：8条专业运镜规则",
+      "category": "cinematography",
+      "dependencies": [],
+      "status": "active"
+    },
+    "reference_mount": {
+      "name": "reference_mount",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "参考图挂载：场景/角色/道具图自动挂载",
+      "category": "creative",
+      "dependencies": [
+        "comfyui_pipeline"
+      ],
+      "status": "active"
+    },
+    "character_scene_composer": {
+      "name": "character_scene_composer",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "角色场景合成图：光照匹配+边缘羽化",
+      "category": "creative",
+      "dependencies": [],
+      "status": "active"
+    },
+    "sound_engine": {
+      "name": "sound_engine",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "声音引擎：TTS+BGM+SFX+音画对齐",
+      "category": "audio",
+      "dependencies": [],
+      "status": "active"
+    },
+    "comfyui_image_pipeline": {
+      "name": "comfyui_image_pipeline",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "ComfyUI出图全链路：IPAdapter+图生图+质量门",
+      "category": "image",
+      "dependencies": [
+        "comfyui_runner"
+      ],
+      "status": "active"
+    },
+    "dual_mode_producer": {
+      "name": "dual_mode_producer",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "双模式产出：视频模式+模板模式",
+      "category": "production",
+      "dependencies": [],
+      "status": "active"
+    },
+    "quality_loop": {
+      "name": "quality_loop",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "端到端质量闭环：评分+重生成+报告",
+      "category": "quality",
+      "dependencies": [
+        "quality_gate"
+      ],
+      "status": "active"
+    },
+    "effect_library": {
+      "name": "effect_library",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "特效库：25+特效统一调用",
+      "category": "effects",
+      "dependencies": [],
+      "status": "active"
+    },
+    "capability_registry": {
+      "name": "capability_registry",
+      "version": "1.0",
+      "project": "ai-video-editor",
+      "description": "能力注册中心：四姊妹项目26项能力统一注册",
+      "category": "infrastructure",
+      "dependencies": [],
+      "status": "active"
+    },
+    "deep_search": {
+      "name": "deep_search",
+      "version": "1.0",
+      "project": "anysearch-skill",
+      "description": "深度搜索：23垂类领域智能搜索",
+      "category": "search",
+      "dependencies": [],
+      "status": "active"
+    },
+    "structured_output": {
+      "name": "structured_output",
+      "version": "1.0",
+      "project": "anysearch-skill",
+      "description": "结构化输出：全文提取+用量预警",
+      "category": "search",
+      "dependencies": [
+        "deep_search"
+      ],
+      "status": "active"
+    },
+    "comfyui_runner": {
+      "name": "comfyui_runner",
+      "version": "1.0",
+      "project": "comfyui-controls-skill",
+      "description": "ComfyUI运行器：工作流执行+模型管理",
+      "category": "image",
+      "dependencies": [],
+      "status": "active"
+    },
+    "auto_evolve": {
+      "name": "auto_evolve",
+      "version": "1.0",
+      "project": "comfyui-controls-skill",
+      "description": "自动进化：工作流自我优化",
+      "category": "image",
+      "dependencies": [
+        "comfyui_runner"
+      ],
+      "status": "active"
+    },
+    "model_manager": {
+      "name": "model_manager",
+      "version": "1.0",
+      "project": "comfyui-controls-skill",
+      "description": "模型管理：28+checkpoint统一调度",
+      "category": "infrastructure",
+      "dependencies": [],
+      "status": "active"
+    },
+    "blender_runner": {
+      "name": "blender_runner",
+      "version": "1.0",
+      "project": "blender-controls-skill",
+      "description": "Blender运行器：3D场景渲染+动画",
+      "category": "3d",
+      "dependencies": [],
+      "status": "active"
+    },
+    "particle_effects": {
+      "name": "particle_effects",
+      "version": "1.0",
+      "project": "blender-controls-skill",
+      "description": "粒子特效：星空/雪花/散景/烟花",
+      "category": "effects",
+      "dependencies": [
+        "blender_runner"
+      ],
+      "status": "active"
+    },
+    "text_3d": {
+      "name": "text_3d",
+      "version": "1.0",
+      "project": "blender-controls-skill",
+      "description": "3D文字：入场动画+发光效果",
+      "category": "effects",
+      "dependencies": [
+        "blender_runner"
+      ],
+      "status": "active"
+    }
+  }
+}

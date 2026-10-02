@@ -1,0 +1,38 @@
+{
+  "project_name": "翻身_小样",
+  "statistics": {
+    "scene_count": 5,
+    "shot_count": 23,
+    "total_duration": 56.199999999999996,
+    "avg_shot_duration": 2.443478260869565
+  },
+  "outputs": {
+    "keyframes_dir": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\capabilities\\script_outputs\\e2e_fanshen\\preview\\keyframes",
+    "keyframes_count": 23,
+    "rhythm_chart": "C:\\Users\\Administrator\\AppData\\Local\\DoubaoWork\\User Data\\Default\\.doubaowork\\agent_mode\\workspace\\.user_skills\\ai-video-editor\\capabilities\\script_outputs\\e2e_fanshen\\preview\\rhythm_chart.png",
+    "jianying_draft": ""
+  },
+  "config": {
+    "width": 1080,
+    "height": 1920,
+    "bg_color": [
+      30,
+      30,
+      40
+    ],
+    "text_color": [
+      255,
+      255,
+      255
+    ],
+    "accent_color": [
+      100,
+      150,
+      255
+    ],
+    "font_size": 40,
+    "title_size": 60,
+    "show_shot_info": true,
+    "show_emotion": true
+  }
+}

@@ -1,0 +1,267 @@
+{
+  "version": {
+    "version_id": "072817b3",
+    "version_name": "v1",
+    "scene_count": 5,
+    "character_count": 2,
+    "total_duration": 64.8,
+    "created_at": "2026-10-02 04:34:28",
+    "notes": "初始版本",
+    "issue_count": 0,
+    "issues": []
+  },
+  "pacing_analysis": {
+    "total_duration": 64.8,
+    "scene_count": 5,
+    "avg_scene_duration": 12.959999999999999,
+    "longest_scene": {
+      "index": 3,
+      "title": "场景4: 咖啡馆",
+      "duration": 24.94
+    },
+    "shortest_scene": {
+      "index": 1,
+      "title": "场景2: 街道",
+      "duration": 8.78
+    },
+    "duration_distribution": {
+      "5-10秒": 3,
+      "10-20秒": 1,
+      "20-40秒": 1
+    },
+    "emotion_curve": [
+      {
+        "scene_index": 0,
+        "title": "场景1: 出租屋",
+        "emotion": "",
+        "intensity": 0.3
+      },
+      {
+        "scene_index": 1,
+        "title": "场景2: 街道",
+        "emotion": "",
+        "intensity": 0.3
+      },
+      {
+        "scene_index": 2,
+        "title": "场景3: 出租屋",
+        "emotion": "喜悦",
+        "intensity": 0.5
+      },
+      {
+        "scene_index": 3,
+        "title": "场景4: 咖啡馆",
+        "emotion": "",
+        "intensity": 0.3
+      },
+      {
+        "scene_index": 4,
+        "title": "场景5: 天台",
+        "emotion": "",
+        "intensity": 0.3
+      }
+    ],
+    "high_points": [
+      {
+        "scene_index": 2,
+        "title": "场景3: 出租屋",
+        "emotion": "喜悦",
+        "intensity": 0.5
+      }
+    ],
+    "low_points": [],
+    "pacing_score": 90.0
+  },
+  "structure_analysis": {
+    "act_i_scenes": [
+      {
+        "title": "场景1: 出租屋",
+        "duration": 9.64,
+        "emotional_tone": "",
+        "dialogues": [
+          {
+            "speaker": "手机屏幕亮起",
+            "content": "【您已被公司优化，请到HR办理离职手续】",
+            "emotion": "平静",
+            "action": ""
+          },
+          {
+            "speaker": "陈默",
+            "content": "又失业了...第三次了...这日子什么时候是个头...",
+            "emotion": "平静",
+            "action": "自言自语"
+          },
+          {
+            "speaker": "陈默",
+            "content": "这些岗位...都要求会AI工具，会视频剪辑，我哪会啊...我就只会做表格...",
+            "emotion": "平静",
+            "action": "叹气"
+          }
+        ]
+      }
+    ],
+    "act_ii_scenes": [
+      {
+        "title": "场景2: 街道",
+        "duration": 8.78,
+        "emotional_tone": "",
+        "dialogues": [
+          {
+            "speaker": "广告画外音",
+            "content": "还在为视频剪辑烦恼？AI视频编辑器，一句话生成专业视频！零基础也能做大片！",
+            "emotion": "平静",
+            "action": ""
+          },
+          {
+            "speaker": "陈默",
+            "content": "AI...视频编辑器？一句话就能做视频？",
+            "emotion": "平静",
+            "action": "疑惑"
+          },
+          {
+            "speaker": "陈默",
+            "content": "免费的？还能自动生成特效和字幕？真的假的...",
+            "emotion": "平静",
+            "action": "惊讶"
+          }
+        ]
+      },
+      {
+        "title": "场景3: 出租屋",
+        "duration": 11.96,
+        "emotional_tone": "喜悦",
+        "dialogues": [
+          {
+            "speaker": "陈默",
+            "content": "这...这就完了？才30秒？这效果比我之前公司外包做的还好！",
+            "emotion": "平静",
+            "action": "震惊"
+          },
+          {
+            "speaker": "陈默",
+            "content": "我...我也能做视频了！我也能靠这个吃饭！",
+            "emotion": "平静",
+            "action": "对自己说"
+          }
+        ]
+      }
+    ],
+    "act_iii_scenes": [
+      {
+        "title": "场景4: 咖啡馆",
+        "duration": 24.94,
+        "emotional_tone": "",
+        "dialogues": [
+          {
+            "speaker": "王总",
+            "content": "陈默？你怎么在这？你不是被...",
+            "emotion": "平静",
+            "action": "惊讶"
+          },
+          {
+            "speaker": "陈默",
+            "content": "王总，好久不见。我现在做视频创作，自由职业。",
+            "emotion": "平静",
+            "action": "微笑"
+          },
+          {
+            "speaker": "王总",
+            "content": "视频？你？别开玩笑了，你连PPT都做不好，还做视频？",
+            "emotion": "平静",
+            "action": "不屑"
+          },
+          {
+            "speaker": "陈默",
+            "content": "您看看这个。",
+            "emotion": "平静",
+            "action": "平静地打开电脑"
+          },
+          {
+            "speaker": "王总",
+            "content": "这...这真是你做的？用什么做的？",
+            "emotion": "平静",
+            "action": "结巴"
+          },
+          {
+            "speaker": "陈默",
+            "content": "用AI视频编辑器做的，一句话就能生成，然后我再微调。",
+            "emotion": "平静",
+            "action": "点头"
+          },
+          {
+            "speaker": "王总",
+            "content": "那个...陈默啊，我们公司正好需要一个视频团队，你有没有兴趣回来？薪资好说...",
+            "emotion": "平静",
+            "action": "坐下，语气变了"
+          },
+          {
+            "speaker": "陈默",
+            "content": "抱歉王总，我现在自己接单，比上班自由多了，收入也不比上班差。您要是有视频需求，可以找我合作，我给您打个折。",
+            "emotion": "平静",
+            "action": "微笑着摇头"
+          },
+          {
+            "speaker": "王总",
+            "content": "好...好啊，那以后多合作...",
+            "emotion": "平静",
+            "action": "尴尬地笑"
+          }
+        ]
+      },
+      {
+        "title": "场景5: 天台",
+        "duration": 9.48,
+        "emotional_tone": "",
+        "dialogues": [
+          {
+            "speaker": "陈默",
+            "content": "原来，翻身只需要一个对的工具，和一个不放弃的自己。",
+            "emotion": "平静",
+            "action": "对自己说"
+          },
+          {
+            "speaker": "字幕",
+            "content": "AI视频编辑器 —— 让每个人都能创造精彩",
+            "emotion": "平静",
+            "action": ""
+          },
+          {
+            "speaker": "字幕",
+            "content": "你的下一个作品，从一句话开始",
+            "emotion": "平静",
+            "action": ""
+          }
+        ]
+      }
+    ],
+    "inciting_incident": {
+      "index": 0,
+      "title": "场景1: 出租屋"
+    },
+    "first_turning_point": {
+      "index": 1,
+      "title": "场景2: 街道"
+    },
+    "midpoint": {
+      "index": 2,
+      "title": "场景3: 出租屋"
+    },
+    "second_turning_point": {
+      "index": 3,
+      "title": "场景4: 咖啡馆"
+    },
+    "climax": {
+      "index": 3,
+      "title": "场景4: 咖啡馆"
+    },
+    "resolution": {
+      "index": 4,
+      "title": "场景5: 天台"
+    },
+    "structure_score": 100,
+    "missing_elements": []
+  },
+  "issues": [],
+  "optimization_suggestions": [],
+  "overall_score": 95.0
+}

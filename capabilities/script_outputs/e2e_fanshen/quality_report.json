@@ -1,0 +1,39 @@
+{
+  "project_name": "翻身_AI视频编辑器",
+  "total_duration": 56.199999999999996,
+  "total_shots": 23,
+  "checks": {
+    "duration": {
+      "status": "PASS",
+      "value": "56秒",
+      "note": "时长达标"
+    },
+    "shot_count": {
+      "status": "PASS",
+      "value": "23镜",
+      "note": "镜头数充足"
+    },
+    "shot_size_diversity": {
+      "status": "PASS",
+      "value": "4种景别",
+      "note": "景别: 全景, 近景, 特写, 中景"
+    },
+    "subtitle_coverage": {
+      "status": "PASS",
+      "value": "16/23镜有字幕",
+      "note": "字幕覆盖检查"
+    },
+    "scene_transitions": {
+      "status": "WARN",
+      "value": "1个场景",
+      "note": "场景转换检查"
+    }
+  },
+  "summary": {
+    "pass": 4,
+    "warn": 1,
+    "fail": 0,
+    "total": 5,
+    "score": 80
+  }
+}

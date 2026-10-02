@@ -1,0 +1,171 @@
+{
+  "characters": {
+    "陈默": {
+      "name": "陈默",
+      "age": 28,
+      "gender": "",
+      "occupation": "前职场人/视频创作者",
+      "appearance": "戴黑框眼镜，穿格子衬衫，眼神从颓废到坚定",
+      "background": "",
+      "personality": {
+        "mbti": "INFP - 调停者",
+        "big_five": {},
+        "traits": [
+          "内向",
+          "敏感",
+          "有韧性",
+          "学习能力强",
+          "渴望被认可"
+        ],
+        "strengths": [
+          "观察力敏锐",
+          "学习能力强",
+          "有艺术感",
+          "坚持不懈"
+        ],
+        "weaknesses": [
+          "不自信",
+          "容易放弃",
+          "社交恐惧",
+          "拖延症"
+        ],
+        "values": [],
+        "fears": [],
+        "motivations": []
+      },
+      "speech_style": {
+        "vocabulary_level": "normal",
+        "sentence_length": "medium",
+        "formality": 0.5,
+        "humor": 0.0,
+        "directness": 0.5,
+        "catchphrases": [
+          "算了吧",
+          "我试试",
+          "原来如此"
+        ],
+        "speech_habits": [],
+        "accent": ""
+      },
+      "relationships": [
+        {
+          "target": "王总",
+          "relationship_type": "同事",
+          "intensity": 0.2,
+          "description": "前上下级，关系紧张，被解雇",
+          "history": [],
+          "dynamics": ""
+        }
+      ],
+      "arc": {
+        "starting_state": "",
+        "ending_state": "",
+        "key_moments": [],
+        "growth_dimensions": {}
+      },
+      "goals": [],
+      "secrets": [],
+      "line_count": 0
+    },
+    "王总": {
+      "name": "王总",
+      "age": 45,
+      "gender": "",
+      "occupation": "公司老板",
+      "appearance": "穿西装，大腹便便，表情傲慢",
+      "background": "",
+      "personality": {
+        "mbti": "ESTJ - 总经理",
+        "big_five": {},
+        "traits": [
+          "外向",
+          "务实",
+          "傲慢",
+          "功利",
+          "势利"
+        ],
+        "strengths": [
+          "决策果断",
+          "商业嗅觉敏锐",
+          "执行力强"
+        ],
+        "weaknesses": [
+          "看不起人",
+          "唯利是图",
+          "缺乏同理心",
+          "固执"
+        ],
+        "values": [],
+        "fears": [],
+        "motivations": []
+      },
+      "speech_style": {
+        "vocabulary_level": "normal",
+        "sentence_length": "medium",
+        "formality": 0.6,
+        "humor": 0.0,
+        "directness": 0.5,
+        "catchphrases": [
+          "你懂什么",
+          "听我的",
+          "这个不行"
+        ],
+        "speech_habits": [],
+        "accent": ""
+      },
+      "relationships": [
+        {
+          "target": "陈默",
+          "relationship_type": "同事",
+          "intensity": 0.2,
+          "description": "前下属，看不起，后来想拉拢",
+          "history": [],
+          "dynamics": ""
+        }
+      ],
+      "arc": {
+        "starting_state": "",
+        "ending_state": "",
+        "key_moments": [],
+        "growth_dimensions": {}
+      },
+      "goals": [],
+      "secrets": [],
+      "line_count": 0
+    }
+  },
+  "relationship_graph": {
+    "nodes": [
+      {
+        "id": "陈默",
+        "label": "陈默",
+        "occupation": "前职场人/视频创作者",
+        "mbti": "INFP"
+      },
+      {
+        "id": "王总",
+        "label": "王总",
+        "occupation": "公司老板",
+        "mbti": "ESTJ"
+      }
+    ],
+    "edges": [
+      {
+        "source": "陈默",
+        "target": "王总",
+        "type": "同事",
+        "intensity": 0.2,
+        "label": "同事"
+      },
+      {
+        "source": "王总",
+        "target": "陈默",
+        "type": "同事",
+        "intensity": 0.2,
+        "label": "同事"
+      }
+    ],
+    "character_count": 2,
+    "relationship_count": 2
+  }
+}

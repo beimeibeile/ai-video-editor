@@ -1,0 +1,103 @@
+{
+  "total_score": 85.4,
+  "overall_level": "good",
+  "shot_results": [
+    {
+      "shot_id": "S01_shot01",
+      "score": 100,
+      "level": "excellent",
+      "passed_gates": [
+        "S001_时长有效",
+        "S002_画面描述完整",
+        "S003_景别指定",
+        "S004_运镜指定",
+        "S005_台词时长匹配(无台词)",
+        "S006_构图字段完整"
+      ],
+      "failed_gates": [],
+      "warnings": [],
+      "needs_regenerate": false,
+      "regenerate_reason": ""
+    },
+    {
+      "shot_id": "S01_shot02",
+      "score": 66.0,
+      "level": "acceptable",
+      "passed_gates": [
+        "S001_时长有效"
+      ],
+      "failed_gates": [
+        "S002_画面描述完整",
+        "S005_台词时长匹配",
+        "S006_构图字段完整"
+      ],
+      "warnings": [
+        "S003_景别未指定",
+        "S004_运镜未指定"
+      ],
+      "needs_regenerate": false,
+      "regenerate_reason": ""
+    },
+    {
+      "shot_id": "S01_shot03",
+      "score": 100,
+      "level": "excellent",
+      "passed_gates": [
+        "S001_时长有效",
+        "S002_画面描述完整",
+        "S003_景别指定",
+        "S004_运镜指定",
+        "S005_台词时长匹配(无台词)",
+        "S006_构图字段完整"
+      ],
+      "failed_gates": [],
+      "warnings": [],
+      "needs_regenerate": false,
+      "regenerate_reason": ""
+    },
+    {
+      "shot_id": "S02_shot01",
+      "score": 100,
+      "level": "excellent",
+      "passed_gates": [
+        "S001_时长有效",
+        "S002_画面描述完整",
+        "S003_景别指定",
+        "S004_运镜指定",
+        "S005_台词时长匹配(无台词)",
+        "S006_构图字段完整"
+      ],
+      "failed_gates": [],
+      "warnings": [],
+      "needs_regenerate": false,
+      "regenerate_reason": ""
+    },
+    {
+      "shot_id": "S02_shot02",
+      "score": 61.0,
+      "level": "acceptable",
+      "passed_gates": [
+        "S005_台词时长匹配(无台词)"
+      ],
+      "failed_gates": [
+        "S001_时长有效",
+        "S002_画面描述完整",
+        "S006_构图字段完整"
+      ],
+      "warnings": [
+        "S003_景别未指定",
+        "S004_运镜未指定"
+      ],
+      "needs_regenerate": false,
+      "regenerate_reason": ""
+    }
+  ],
+  "summary": {
+    "total_shots": 5,
+    "passed": 3,
+    "failed": 2,
+    "warnings": 4,
+    "regenerate_needed": []
+  },
+  "generated_at": "2026-10-02 06:03:35"
+}
