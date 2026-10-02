@@ -50,6 +50,19 @@ class HunyuanI2VRunner:
         self.comfyui_url = comfyui_url.rstrip("/")
         self.model_config = MODEL_CONFIG.copy()
 
+    def _get_comfyui_output_dir(self) -> str:
+        """获取ComfyUI输出目录（从API或默认路径）"""
+        try:
+            resp = urllib.request.urlopen(f"{self.comfyui_url}/settings", timeout=5)
+            settings = json.loads(resp.read())
+            output_dir = settings.get("output_directory", "")
+            if output_dir and os.path.isabs(output_dir):
+                return output_dir
+        except Exception:
+            pass
+        # 默认路径
+        return r"D:\Ai\ComfyUI-aki-v3.2\ComfyUI\output"
+
     def check_available(self) -> Dict[str, Any]:
         """检查混元I2V是否可用"""
         result = {
@@ -356,10 +369,15 @@ class HunyuanI2VRunner:
                     for node_out in outputs.values():
                         if "images" in node_out and node_out["images"]:
                             output_file = node_out["images"][0]["filename"]
-                            output_path = os.path.join(
-                                output_dir or os.path.dirname(image_path),
-                                output_file
-                            )
+                            # 从ComfyUI output目录复制到目标output_dir
+                            comfyui_output_dir = self._get_comfyui_output_dir()
+                            src_path = os.path.join(comfyui_output_dir, output_file)
+                            dst_dir = output_dir or os.path.dirname(image_path)
+                            os.makedirs(dst_dir, exist_ok=True)
+                            output_path = os.path.join(dst_dir, output_file)
+                            if os.path.exists(src_path) and src_path != output_path:
+                                import shutil
+                                shutil.copy2(src_path, output_path)
                             print(f"  ✅ 生成完成: {output_file}")
                             return {
                                 "status": "success",
@@ -400,10 +418,15 @@ class HunyuanI2VRunner:
                 for node_out in outputs.values():
                     if "images" in node_out and node_out["images"]:
                         output_file = node_out["images"][0]["filename"]
-                        output_path = os.path.join(
-                            output_dir or os.path.dirname(image_path),
-                            output_file
-                        )
+                        # 从ComfyUI output目录复制到目标output_dir
+                        comfyui_output_dir = self._get_comfyui_output_dir()
+                        src_path = os.path.join(comfyui_output_dir, output_file)
+                        dst_dir = output_dir or os.path.dirname(image_path)
+                        os.makedirs(dst_dir, exist_ok=True)
+                        output_path = os.path.join(dst_dir, output_file)
+                        if os.path.exists(src_path) and src_path != output_path:
+                            import shutil
+                            shutil.copy2(src_path, output_path)
                         print(f"  ✅ 任务实际已完成: {output_file}")
                         return {
                             "status": "success",
