@@ -215,6 +215,26 @@ class DualModePipeline:
         storyboard = self._generate_storyboard(script_data)
         result.stages["storyboard"] = {"shots": len(storyboard)}
 
+        # 阶段2.5: 质量门验证 + auto_fix自动修复
+        print("[2.5/6] 质量门验证 + 自动修复...")
+        try:
+            from movie_storyboard import MovieStoryboardEngine
+            sb_engine = MovieStoryboardEngine()
+            # 转换为validate需要的格式
+            sb_dict = {"title": config.project_name, "scenes": [{"scene_id": "S1", "segments": [{"segment_id": "S1_01", "shots": storyboard}]}]}
+            val_result = sb_engine.validate(sb_dict)
+            if not val_result["passed"] or val_result["diagnosis"]:
+                print(f"   质量门: {len(val_result['issues'])}问题, {len(val_result['diagnosis'])}诊断")
+                fix_result = sb_engine.auto_fix(sb_dict)
+                if fix_result["fixed"]:
+                    storyboard = fix_result["storyboard"]["scenes"][0]["segments"][0]["shots"]
+                    print(f"   ✅ 自动修复 {len(fix_result['changes'])} 项")
+                    result.stages["storyboard_fix"] = {"changes": fix_result["changes"]}
+            else:
+                print("   ✅ 质量门通过，无需修复")
+        except Exception as e:
+            print(f"   ⚠️ 质量门跳过: {e}")
+
         # 阶段3: 角色场景参考图
         print("[3/6] 角色场景参考图生成...")
         refs = self._generate_reference_images(storyboard, config)
