@@ -313,28 +313,28 @@ class InstallWizard:
         example_path = os.path.join(SKILL_ROOT, ".env.example")
 
         # 检测到的路径
-        comfyui_path = self.checker.results.get("ComfyUI", {}).get("path", "")
-        jianying_path = self.checker.results.get("剪映", {}).get("path", "")
-        blender_path = self.checker.results.get("Blender", {}).get("path", "")
-        ffmpeg_path = self.checker.results.get("ffmpeg", {}).get("path", "")
-        draft_dir = self.checker.results.get("剪映", {}).get("draft_dir", "")
+        comfyui_path = self.checker.results.get("ComfyUI", {}).get("path", "") or r"D:\Ai\ComfyUI-aki-v3.2\ComfyUI"
+        jianying_path = self.checker.results.get("剪映", {}).get("path", "") or r"C:\JianyingPro_5.9\JianyingPro.exe"
+        blender_path = self.checker.results.get("Blender", {}).get("path", "") or ""
+        ffmpeg_path = self.checker.results.get("ffmpeg", {}).get("path", "") or ""
+        draft_dir = self.checker.results.get("剪映", {}).get("draft_dir", "") or r"D:\JianyingProDrafts\JianyingPro Drafts"
 
         env_content = f"""# AI Video Editor 配置文件
 # 自动生成于 {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 # ComfyUI 配置
 COMFYUI_URL=http://127.0.0.1:8188
-COMFYUI_PATH={comfyui_path or 'D:\\\\Ai\\\\ComfyUI-aki-v3.2\\\\ComfyUI'}
+COMFYUI_PATH={comfyui_path}
 
 # 剪映配置
-JIANYING_PATH={jianying_path or 'C:\\\\JianyingPro_5.9\\\\JianyingPro.exe'}
-JIANYING_DRAFT_DIR={draft_dir or 'D:\\\\JianyingProDrafts\\\\JianyingPro Drafts'}
+JIANYING_PATH={jianying_path}
+JIANYING_DRAFT_DIR={draft_dir}
 
 # Blender 配置（可选）
-BLENDER_PATH={blender_path or ''}
+BLENDER_PATH={blender_path}
 
 # ffmpeg 配置（可选）
-FFMPEG_PATH={ffmpeg_path or ''}
+FFMPEG_PATH={ffmpeg_path}
 
 # 输出配置
 OUTPUT_DIR=./output
