@@ -373,7 +373,38 @@ class HunyuanI2VRunner:
 
             time.sleep(3)
 
-        print(f"\n  ⚠️ 超时（{timeout}秒）")
+        print(f"\n  ⚠️ 超时（{timeout}秒），最后检查一次任务状态...")
+        # 超时后再检查一次任务是否实际完成
+        try:
+            history_resp = urllib.request.urlopen(
+                f"{self.comfyui_url}/history/{prompt_id}", timeout=10
+            )
+            history = json.loads(history_resp.read())
+            if prompt_id in history:
+                outputs = history[prompt_id].get("outputs", {})
+                for node_out in outputs.values():
+                    if "animated" in node_out:
+                        files = node_out["animated"]
+                        if files:
+                            output_file = files[0]["filename"]
+                            output_path = os.path.join(
+                                output_dir or os.path.dirname(image_path),
+                                output_file
+                            )
+                            print(f"  ✅ 任务实际已完成: {output_file}")
+                            return {
+                                "status": "success",
+                                "prompt_id": prompt_id,
+                                "output_file": output_file,
+                                "num_frames": num_frames,
+                                "duration": actual_duration,
+                                "fps": fps,
+                                "resolution": f"{width}x{height}",
+                                "note": "超时后检测到任务已完成",
+                            }
+        except Exception as e:
+            print(f"  检查失败: {e}")
+
         return {"status": "timeout", "prompt_id": prompt_id}
 
 

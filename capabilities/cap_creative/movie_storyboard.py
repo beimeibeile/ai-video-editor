@@ -94,6 +94,7 @@ class Shot:
     dialogue: str = ""       # 台词
     character: str = ""      # 主要角色
     location: str = ""       # 场景
+    description: str = ""    # 镜头描述（用于展示和I2V prompt）
 
     # 生成提示词
     image_prompt: str = ""   # 分镜图提示词（含角色名）
@@ -123,6 +124,7 @@ class Shot:
             "dialogue": self.dialogue,
             "character": self.character,
             "location": self.location,
+            "description": self.description,
             "image_prompt": self.image_prompt,
             "video_prompt": self.video_prompt,
             "ref_images": self.ref_images,
@@ -463,6 +465,18 @@ class MovieStoryboardEngine:
             eyeline=character or "镜头",
             focus="主体",
         )
+
+        # 生成镜头描述
+        desc_parts = []
+        if shot.character:
+            desc_parts.append(shot.character)
+        if shot.action:
+            desc_parts.append(shot.action)
+        else:
+            desc_parts.append(f"{shot.lens}镜头")
+        if shot.location:
+            desc_parts.append(f"在{shot.location}")
+        shot.description = "，".join(desc_parts)
 
         # 生成提示词
         shot.image_prompt = self._build_image_prompt(shot, scene)
