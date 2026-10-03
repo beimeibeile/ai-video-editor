@@ -218,7 +218,14 @@ class ScriptParser:
             "什么", "怎么", "为什么", "哪里", "哪个", "谁", "怎么回事",
             "向大家", "对大家", "跟大家", "和大家", "给大家",
             "手一脚", "手一拳", "手一巴掌", "头一撞", "脚一踢",
+            # 方位短语
+            "在旁边", "在那里", "在这里", "在后面", "在前面", "在上面", "在下面",
+            "在左边", "在右边", "在中间", "在外面", "在里面", "在远处", "在近处",
+            "站在旁", "坐在旁", "躺在地", "跑过来", "走过来", "飞过来",
         }
+
+        # 介词开头过滤（这些词通常不是角色名）
+        preposition_prefixes = set("在从向对跟和给被把将由为以于")
 
         found_names = set()
         # 先匹配已知角色
@@ -232,7 +239,9 @@ class ScriptParser:
             if m not in blacklist and m not in known_chars and len(m) >= 2:
                 # 额外过滤：不以"地/的/了/着/过"结尾
                 if m[-1] not in "地的了着过":
-                    found_names.add(m)
+                    # 不以介词开头
+                    if m[0] not in preposition_prefixes:
+                        found_names.add(m)
 
         char_id = 0
         for name in found_names:
