@@ -217,6 +217,7 @@ class ScriptParser:
             "我们", "他们", "她们", "它们", "这个", "那个", "这些", "那些",
             "什么", "怎么", "为什么", "哪里", "哪个", "谁", "怎么回事",
             "向大家", "对大家", "跟大家", "和大家", "给大家",
+            "手一脚", "手一拳", "手一巴掌", "头一撞", "脚一踢",
         }
 
         found_names = set()
@@ -321,11 +322,49 @@ class ScriptParser:
         if dialogue_match:
             dialogue = dialogue_match.group(1)
 
-        # 构建角色动作
+        # 构建角色动作（施动者/受动者区分）
         char_actions = []
+
+        # 判断是否有被动/主动结构
+        has_passive = "被" in sentence
+        has_active = "把" in sentence or "将" in sentence
+
+        # 攻击类动作关键词
+        attack_keywords = ["打", "踢", "揍", "扇", "捶", "砸", "撞", "推"]
+        is_attack_scene = any(kw in sentence for kw in attack_keywords)
+
         for char in chars_in_sentence:
             action = actions[0] if actions else "站立"
             emotion = emotions[0] if emotions else char.emotion_default
+
+            # 施动者/受动者区分
+            if is_attack_scene and len(chars_in_sentence) >= 2:
+                char_pos = sentence.find(char.name)
+                if has_passive:
+                    # "A被B打" → A=被打(受动者), B=攻击(施动者)
+                    bei_pos = sentence.find("被")
+                    if char_pos < bei_pos:
+                        action = "被打"  # 受动者
+                    else:
+                        action = "攻击"  # 施动者
+                elif has_active:
+                    # "A把B打" → A=攻击(施动者), B=被打(受动者)
+                    ba_pos = sentence.find("把")
+                    if ba_pos == -1:
+                        ba_pos = sentence.find("将")
+                    if char_pos < ba_pos:
+                        action = "攻击"  # 施动者
+                    else:
+                        action = "被打"  # 受动者
+                else:
+                    # "A打B" → 前面的是施动者，后面的是受动者
+                    positions = [(c.name, sentence.find(c.name)) for c in chars_in_sentence]
+                    positions.sort(key=lambda x: x[1])
+                    if char.name == positions[0][0]:
+                        action = "攻击"  # 第一个出现的是施动者
+                    else:
+                        action = "被打"  # 后面的是受动者
+
             char_actions.append(CharacterAction(
                 character_id=char.id,
                 action=action,
