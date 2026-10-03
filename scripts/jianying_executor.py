@@ -187,6 +187,11 @@ class JianyingExecutor:
             if not seg:
                 continue
 
+            # 检查片段是否已有蒙版（一个片段只能有一个蒙版）
+            if hasattr(seg, 'mask') and seg.mask is not None:
+                print(f"  ⚠️  {target} 已有蒙版，跳过重复添加")
+                continue
+
             if mask_type == "circle":
                 success = self.add_circle_mask(
                     seg,
