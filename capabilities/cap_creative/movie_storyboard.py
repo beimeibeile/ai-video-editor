@@ -822,15 +822,43 @@ class MovieStoryboardEngine:
             # 所有镜头时长相同或接近，生成长短相间模式
             pattern = [3.0, 2.0, 4.0, 3.0, 2.5, 3.5]  # 长短相间
             for i, s in enumerate(all_shots):
-                # 保留台词爆仓修复后的时长，只调整无台词或时长充足的镜头
-                if not s.get("dialogue") or s["duration"] <= 3.0:
-                    old_dur = s["duration"]
+                old_dur = s["duration"]
+                # 有台词的镜头：在台词所需时长基础上微调（±0.5秒，不低于台词最低要求）
+                if s.get("dialogue"):
+                    dialogue_chars = len(s["dialogue"])
+                    min_dur = max(2.0, min(5.0, dialogue_chars / 4.0 + 0.5))
+                    # 围绕pattern值，但不低于台词最低要求
+                    target_dur = pattern[i % len(pattern)]
+                    new_dur = max(min_dur, target_dur)
+                    # 如果台词要求已经很长，在min_dur基础上±0.5制造变化
+                    if new_dur == min_dur and min_dur > 3.0:
+                        variation = 0.5 if i % 2 == 0 else -0.3
+                        new_dur = max(min_dur, round(min_dur + variation, 1))
+                else:
+                    # 无台词镜头：直接用pattern
                     new_dur = pattern[i % len(pattern)]
-                    # 确保不低于2秒
-                    new_dur = max(2.0, new_dur)
-                    if abs(old_dur - new_dur) > 0.3:
-                        s["duration"] = new_dur
-                        changes.append(f"{s['shot_id']}: 均匀病修复 {old_dur}s→{new_dur}s（长短相间）")
+
+                new_dur = max(2.0, round(new_dur * 2) / 2)  # 0.5倍数，不低于2秒
+                if abs(old_dur - new_dur) > 0.2:
+                    s["duration"] = new_dur
+                    changes.append(f"{s['shot_id']}: 均匀病修复 {old_dur}s→{new_dur}s（长短相间）")
+
+            # 二次检查：如果修复后仍然均匀（时长种类≤2），强制制造差异
+            new_durations = [s["duration"] for s in all_shots]
+            if len(set(new_durations)) <= 2 and len(all_shots) >= 3:
+                for i, s in enumerate(all_shots):
+                    if i % 3 == 1:  # 每3个镜头中的第2个缩短
+                        old_dur = s["duration"]
+                        new_dur = max(2.0, round(old_dur - 0.5, 1))
+                        if abs(old_dur - new_dur) > 0.2:
+                            s["duration"] = new_dur
+                            changes.append(f"{s['shot_id']}: 均匀病二次修复 {old_dur}s→{new_dur}s（强制差异）")
+                    elif i % 3 == 2:  # 每3个镜头中的第3个延长
+                        old_dur = s["duration"]
+                        new_dur = round(old_dur + 0.5, 1)
+                        if abs(old_dur - new_dur) > 0.2:
+                            s["duration"] = new_dur
+                            changes.append(f"{s['shot_id']}: 均匀病二次修复 {old_dur}s→{new_dur}s（强制差异）")
 
         # === 修复3：重新计算时间连续性 ===
         current_time = 0.0

@@ -279,7 +279,7 @@ class HunyuanI2VRunner:
                  steps: int = 30, cfg: float = 6.0,
                  seed: int = -1,
                  output_dir: str = None,
-                 timeout: int = 600,
+                 timeout: int = 1800,
                  low_vram: bool = False) -> Dict[str, Any]:
         """
         生成I2V视频
@@ -443,6 +443,45 @@ class HunyuanI2VRunner:
             print(f"  检查失败: {e}")
 
         return {"status": "timeout", "prompt_id": prompt_id}
+
+    def cleanup(self) -> bool:
+        """
+        释放ComfyUI显存资源（卸载模型）
+
+        注意：批量生成时不要在每个generate后调用，
+        应在全部生成完成后统一调用一次。
+
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            # 清空队列
+            try:
+                req = urllib.request.Request(
+                    f"{self.comfyui_url}/queue",
+                    data=json.dumps({"clear": True}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                urllib.request.urlopen(req, timeout=5)
+            except Exception:
+                pass
+
+            # 卸载模型
+            req = urllib.request.Request(
+                f"{self.comfyui_url}/free",
+                data=json.dumps({"unload_models": True, "free_memory": True}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                if resp.status == 200:
+                    print("  ✅ ComfyUI模型已卸载，显存已释放")
+                    time.sleep(2)
+                    return True
+        except Exception as e:
+            print(f"  ⚠️ 资源清理失败: {e}")
+        return False
 
 
 if __name__ == "__main__":
