@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
 from jy_wrapper import JyProject
 import pyJianYingDraft as draft
+from pyJianYingDraft.metadata.video_scene_effect import VideoSceneEffectType
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -31,6 +32,16 @@ try:
     _MASK_AVAILABLE = True
 except ImportError:
     _MASK_AVAILABLE = False
+
+
+# 特效名称映射（P24指令名 → VideoSceneEffectType枚举）
+EFFECT_NAME_MAP = {
+    "闪白": VideoSceneEffectType.闪白,
+    "闪白_II": VideoSceneEffectType.闪白_II,
+    "矩形闪白": VideoSceneEffectType.矩形闪白,
+    "震动": None,  # 震动用关键帧实现
+    "模糊": None,  # 模糊用滤镜实现
+}
 
 
 # 角色占位颜色
@@ -221,6 +232,64 @@ class JianyingExecutor:
 
         return applied
 
+    def _apply_effects(self, effect_instructions: List[Dict]) -> int:
+        """
+        应用特效指令
+
+        Args:
+            effect_instructions: 特效指令列表
+
+        Returns:
+            int: 应用的特效数
+        """
+        if not effect_instructions:
+            return 0
+
+        applied = 0
+        for effect in effect_instructions:
+            effect_type = effect.get("type", "")
+            target = effect.get("target", "")
+            params = effect.get("params", {})
+
+            # 找到目标片段
+            seg = None
+            if target.startswith("char_"):
+                char_name = target.replace("char_", "")
+                seg = self.character_segments.get(char_name)
+            elif target == "background" or target == "all":
+                # 对所有角色片段应用特效
+                for char_seg in self.character_segments.values():
+                    effect_enum = EFFECT_NAME_MAP.get(effect_type)
+                    if effect_enum:
+                        try:
+                            char_seg.add_effect(effect_enum)
+                            applied += 1
+                        except Exception as e:
+                            print(f"  ⚠️  特效失败: {e}")
+                continue
+
+            if not seg:
+                continue
+
+            # 映射特效类型
+            effect_enum = EFFECT_NAME_MAP.get(effect_type)
+            if not effect_enum:
+                # 尝试直接用名称查找
+                try:
+                    effect_enum = getattr(VideoSceneEffectType, effect_type)
+                except AttributeError:
+                    print(f"  ⚠️  未知特效: {effect_type}")
+                    continue
+
+            try:
+                seg.add_effect(effect_enum)
+                applied += 1
+                print(f"  ✅ 特效: {effect_type} → {target}")
+            except Exception as e:
+                print(f"  ⚠️  特效失败: {e}")
+
+        return applied
+
     def execute(self, instruction_sequence: Dict[str, Any],
                 project_name: str = "导演引擎输出",
                 width: int = 1080, height: int = 1920,
@@ -288,7 +357,7 @@ class JianyingExecutor:
                         print(f"  ✅ 角色: {char_name}")
 
             # 3. 应用关键帧
-            print(f"[3/5] 应用关键帧...")
+            print(f"[3/7] 应用关键帧...")
             keyframes = instruction_sequence.get("keyframe_instructions", [])
             kf_applied = 0
 
@@ -322,7 +391,7 @@ class JianyingExecutor:
             print(f"  ✅ 应用 {kf_applied} 条关键帧")
 
             # 4. 添加文字（每条用独立轨道避免重叠）
-            print(f"[4/6] 添加文字...")
+            print(f"[4/7] 添加文字...")
             texts = instruction_sequence.get("text_instructions", [])
             for i, text_item in enumerate(texts):
                 text = text_item.get("text", "")
@@ -337,14 +406,20 @@ class JianyingExecutor:
                     )
             print(f"  ✅ {len(texts)} 条文字")
 
-            # 5. 应用蒙版
-            print(f"[5/6] 应用蒙版...")
+            # 5. 应用特效
+            print(f"[5/7] 应用特效...")
+            effects = instruction_sequence.get("effect_instructions", [])
+            effects_applied = self._apply_effects(effects)
+            print(f"  ✅ {effects_applied} 个特效")
+
+            # 6. 应用蒙版
+            print(f"[6/7] 应用蒙版...")
             masks = instruction_sequence.get("mask_instructions", [])
             masks_applied = self._apply_masks(masks)
             print(f"  ✅ {masks_applied} 个蒙版")
 
-            # 6. 保存工程（带蒙版关键帧注入）
-            print(f"[6/6] 保存工程...")
+            # 7. 保存工程（带蒙版关键帧注入）
+            print(f"[7/7] 保存工程...")
             if _MASK_AVAILABLE and masks_applied > 0:
                 result = save_with_mask_keyframes(self.project, canvas_h=height)
             else:
@@ -357,6 +432,7 @@ class JianyingExecutor:
             print(f"   角色数: {len(self.character_segments)}")
             print(f"   关键帧: {kf_applied}条")
             print(f"   文字: {len(texts)}条")
+            print(f"   特效: {effects_applied}个")
             print(f"   蒙版: {masks_applied}个")
 
             return {
@@ -366,6 +442,7 @@ class JianyingExecutor:
                 "characters": list(self.character_segments.keys()),
                 "keyframes_applied": kf_applied,
                 "texts_added": len(texts),
+                "effects_applied": effects_applied,
                 "masks_applied": masks_applied,
             }
 
