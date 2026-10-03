@@ -205,6 +205,22 @@ def make_movie(
     pipeline = DualModePipeline(skill_root=SKILL_ROOT)
     result = pipeline.run(config)
 
+    # 集成快速质检（P21优化）
+    if result.draft_path and os.path.exists(result.draft_path):
+        try:
+            sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+            from quick_qc import quick_qc
+            qc_result = quick_qc(result.draft_path, output_dir=os.path.join(output_dir, "qc_preview"))
+            result.qc_issues = qc_result.get("issues", [])
+            result.qc_preview_dir = qc_result.get("preview_dir", "")
+            if verbose:
+                print(f"  质检: {len(result.qc_issues)} 个问题")
+                for issue in result.qc_issues[:5]:
+                    print(f"    {issue}")
+        except Exception as e:
+            if verbose:
+                print(f"  质检跳过: {e}")
+
     if verbose:
         print(f"\n{'='*60}")
         print(f"  生成完成")
@@ -301,6 +317,22 @@ def make_short_video(
     # 执行Pipeline
     pipeline = DualModePipeline(skill_root=SKILL_ROOT)
     result = pipeline.run(config)
+
+    # 集成快速质检（P21优化）
+    if result.draft_path and os.path.exists(result.draft_path):
+        try:
+            sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+            from quick_qc import quick_qc
+            qc_result = quick_qc(result.draft_path, output_dir=os.path.join(output_dir, "qc_preview"))
+            result.qc_issues = qc_result.get("issues", [])
+            result.qc_preview_dir = qc_result.get("preview_dir", "")
+            if verbose:
+                print(f"  质检: {len(result.qc_issues)} 个问题")
+                for issue in result.qc_issues[:5]:
+                    print(f"    {issue}")
+        except Exception as e:
+            if verbose:
+                print(f"  质检跳过: {e}")
 
     if verbose:
         print(f"\n{'='*60}")

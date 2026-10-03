@@ -135,6 +135,21 @@ class CapabilityRegistry:
             description="ffmpeg裁剪视频到精确帧边界",
             entry_point="scripts.video_frame_align", requires=["ffmpeg"],
         ))
+        self.register(Capability(
+            name="坐标验证工具", type=CapabilityType.QUALITY_CHECK, project="ai-video-editor",
+            description="生成4角+中心+头像框位置测试图，验证剪映坐标方向",
+            entry_point="scripts.coord_verify", version="1.0.0",
+        ))
+        self.register(Capability(
+            name="去背景模块", type=CapabilityType.EDIT, project="ai-video-editor",
+            description="Pillow改进版(容差+羽化)+ComfyUI RMBG，自动选择最佳方案",
+            entry_point="scripts.remove_background", version="1.0.0",
+        ))
+        self.register(Capability(
+            name="快速预览质检", type=CapabilityType.QUALITY_CHECK, project="ai-video-editor",
+            description="解析剪映工程生成预览图，检测位置超出/透明度为0/缩放异常/缺少初始关键帧",
+            entry_point="scripts.quick_qc", version="1.0.0",
+        ))
 
         # === anysearch-skill 能力 ===
         self.register(Capability(
