@@ -226,6 +226,16 @@ class TextInstruction:
 
 
 @dataclass
+class MaskInstruction:
+    """蒙版指令"""
+    target: str           # 目标轨道（如 char_豆包）
+    type: str             # 蒙版类型（circle/rect）
+    start_time: float
+    duration: float
+    params: Dict = field(default_factory=dict)  # center_x/center_y/size/feather等
+
+
+@dataclass
 class InstructionSequence:
     """指令序列（P25调度器的输入）"""
     project: Dict
@@ -234,6 +244,7 @@ class InstructionSequence:
     effect_instructions: List[EffectInstruction] = field(default_factory=list)
     audio_instructions: List[AudioInstruction] = field(default_factory=list)
     text_instructions: List[TextInstruction] = field(default_factory=list)
+    mask_instructions: List[MaskInstruction] = field(default_factory=list)
     comfyui_instructions: List[Dict] = field(default_factory=list)
     blender_instructions: List[Dict] = field(default_factory=list)
 
@@ -283,6 +294,33 @@ class InstructionTranslator:
                     duration=scene.get("duration", 5),
                     volume=ambient["volume"],
                 ))
+
+            # 2.1.1 场景蒙版（头像框内场景 → 圆形蒙版）
+            if scene_location == "头像框内":
+                # 找到该场景的主角（第一个出现的角色）
+                main_char = None
+                for shot in scene.get("shots", []):
+                    for char_action in shot.get("characters", []):
+                        char_name = self._resolve_char_name(char_action.get("character_id", ""), characters)
+                        if char_name:
+                            main_char = char_name
+                            break
+                    if main_char:
+                        break
+
+                if main_char:
+                    self.sequence.mask_instructions.append(MaskInstruction(
+                        target=f"char_{main_char}",
+                        type="circle",
+                        start_time=scene_start,
+                        duration=scene.get("duration", 5),
+                        params={
+                            "center_x": -0.542,
+                            "center_y": 0.516,
+                            "size": 0.203,
+                            "feather": 0.001,
+                        },
+                    ))
 
             # 2.2 场景转场
             transition = scene.get("transition", "硬切")
@@ -421,12 +459,14 @@ class InstructionTranslator:
             "effect_instructions": [asdict(e) for e in self.sequence.effect_instructions],
             "audio_instructions": [asdict(a) for a in self.sequence.audio_instructions],
             "text_instructions": [asdict(t) for t in self.sequence.text_instructions],
+            "mask_instructions": [asdict(m) for m in self.sequence.mask_instructions],
             "summary": {
                 "tts_count": len(self.sequence.tts_instructions),
                 "keyframe_count": len(self.sequence.keyframe_instructions),
                 "effect_count": len(self.sequence.effect_instructions),
                 "audio_count": len(self.sequence.audio_instructions),
                 "text_count": len(self.sequence.text_instructions),
+                "mask_count": len(self.sequence.mask_instructions),
             },
         }
 
@@ -468,6 +508,9 @@ class InstructionTranslator:
         print(f"\n文字指令: {len(self.sequence.text_instructions)}条")
         for t in self.sequence.text_instructions:
             print(f"  [{t.start_time:.1f}s] {t.style}: \"{t.text[:20]}\"")
+        print(f"\n蒙版指令: {len(self.sequence.mask_instructions)}条")
+        for m in self.sequence.mask_instructions:
+            print(f"  [{m.start_time:.1f}s] {m.type} → {m.target}")
         print(f"{'='*60}\n")
 
 

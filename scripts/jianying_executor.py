@@ -25,12 +25,27 @@ try:
 except ImportError:
     _PIL_AVAILABLE = False
 
+# 蒙版关键帧工具
+try:
+    from mask_keyframe import apply_mask_keyframe, save_with_mask_keyframes, apply_mask_expand
+    _MASK_AVAILABLE = True
+except ImportError:
+    _MASK_AVAILABLE = False
+
 
 # 角色占位颜色
 CHARACTER_COLORS = {
     "豆包": (255, 150, 180),    # 粉色
     "机器人": (150, 180, 255),  # 蓝色
     "女杀手": (50, 50, 50),     # 黑色
+}
+
+# 头像框圆形蒙版预设（1080x1920画布）
+AVATAR_MASK_PRESET = {
+    "center_x": -0.542,   # 水平位置（-1=左, 0=中, 1=右）
+    "center_y": 0.516,    # 垂直位置（-1=下, 0=中, 1=上）
+    "size": 0.203,        # 大小（相对画布高度比例，390px/1920px）
+    "feather": 0.001,     # 羽化
 }
 
 
@@ -104,6 +119,102 @@ class JianyingExecutor:
 
         self.project = None
         self.character_segments = {}  # 角色名 → 片段
+        self.mask_segments = {}       # 蒙版目标 → 片段
+
+    def add_circle_mask(self, segment, center_x: float = -0.542,
+                        center_y: float = 0.516, size: float = 0.203,
+                        feather: float = 0.001) -> bool:
+        """
+        给片段添加圆形蒙版（正向裁切）
+
+        Args:
+            segment: VideoSegment实例
+            center_x: 水平位置（-1=左, 0=中, 1=右）
+            center_y: 垂直位置（-1=下, 0=中, 1=上）
+            size: 大小（相对画布高度比例）
+            feather: 羽化
+
+        Returns:
+            bool: 是否成功
+        """
+        if not _MASK_AVAILABLE:
+            print("  ⚠️  蒙版工具不可用，跳过蒙版")
+            return False
+
+        try:
+            # 添加圆形蒙版（使用add_mask API）
+            # 注意：add_mask的center_x/y会被除以素材半宽，所以这里传原始比例值
+            # 后续通过inject_mask_keyframes修正
+            segment.add_mask(
+                mask_type=draft.MaskType.圆形,
+                center_x=center_x,
+                center_y=center_y,
+                size=size,
+                feather=feather * 100,  # add_mask的feather是0-100
+            )
+            return True
+        except Exception as e:
+            print(f"  ⚠️  添加蒙版失败: {e}")
+            return False
+
+    def _apply_masks(self, mask_instructions: List[Dict]) -> int:
+        """
+        应用蒙版指令
+
+        Args:
+            mask_instructions: 蒙版指令列表
+
+        Returns:
+            int: 应用的蒙版数
+        """
+        if not _MASK_AVAILABLE or not mask_instructions:
+            return 0
+
+        applied = 0
+        for mask in mask_instructions:
+            target = mask.get("target", "")  # 目标轨道/角色
+            mask_type = mask.get("type", "circle")
+            params = mask.get("params", {})
+
+            # 找到目标片段
+            seg = None
+            if target.startswith("char_"):
+                char_name = target.replace("char_", "")
+                seg = self.character_segments.get(char_name)
+            elif target in self.mask_segments:
+                seg = self.mask_segments[target]
+
+            if not seg:
+                continue
+
+            if mask_type == "circle":
+                success = self.add_circle_mask(
+                    seg,
+                    center_x=params.get("center_x", AVATAR_MASK_PRESET["center_x"]),
+                    center_y=params.get("center_y", AVATAR_MASK_PRESET["center_y"]),
+                    size=params.get("size", AVATAR_MASK_PRESET["size"]),
+                    feather=params.get("feather", AVATAR_MASK_PRESET["feather"]),
+                )
+                if success:
+                    applied += 1
+                    print(f"  ✅ 圆形蒙版: {target}")
+
+            elif mask_type == "rect":
+                # 矩形蒙版
+                try:
+                    seg.add_mask(
+                        mask_type=draft.MaskType.矩形,
+                        center_x=params.get("center_x", 0),
+                        center_y=params.get("center_y", 0),
+                        size=params.get("size", 1.0),
+                        feather=params.get("feather", 0) * 100,
+                    )
+                    applied += 1
+                    print(f"  ✅ 矩形蒙版: {target}")
+                except Exception as e:
+                    print(f"  ⚠️  矩形蒙版失败: {e}")
+
+        return applied
 
     def execute(self, instruction_sequence: Dict[str, Any],
                 project_name: str = "导演引擎输出",
@@ -206,7 +317,7 @@ class JianyingExecutor:
             print(f"  ✅ 应用 {kf_applied} 条关键帧")
 
             # 4. 添加文字（每条用独立轨道避免重叠）
-            print(f"[4/5] 添加文字...")
+            print(f"[4/6] 添加文字...")
             texts = instruction_sequence.get("text_instructions", [])
             for i, text_item in enumerate(texts):
                 text = text_item.get("text", "")
@@ -221,9 +332,18 @@ class JianyingExecutor:
                     )
             print(f"  ✅ {len(texts)} 条文字")
 
-            # 5. 保存工程
-            print(f"[5/5] 保存工程...")
-            result = self.project.save()
+            # 5. 应用蒙版
+            print(f"[5/6] 应用蒙版...")
+            masks = instruction_sequence.get("mask_instructions", [])
+            masks_applied = self._apply_masks(masks)
+            print(f"  ✅ {masks_applied} 个蒙版")
+
+            # 6. 保存工程（带蒙版关键帧注入）
+            print(f"[6/6] 保存工程...")
+            if _MASK_AVAILABLE and masks_applied > 0:
+                result = save_with_mask_keyframes(self.project, canvas_h=height)
+            else:
+                result = self.project.save()
             draft_path = result.get("draft_path", "")
 
             print(f"\n✅ 剪映工程构建完成!")
@@ -232,6 +352,7 @@ class JianyingExecutor:
             print(f"   角色数: {len(self.character_segments)}")
             print(f"   关键帧: {kf_applied}条")
             print(f"   文字: {len(texts)}条")
+            print(f"   蒙版: {masks_applied}个")
 
             return {
                 "status": "success",
@@ -240,6 +361,7 @@ class JianyingExecutor:
                 "characters": list(self.character_segments.keys()),
                 "keyframes_applied": kf_applied,
                 "texts_added": len(texts),
+                "masks_applied": masks_applied,
             }
 
         except Exception as e:
