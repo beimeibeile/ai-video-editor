@@ -817,6 +817,9 @@ Start-Sleep -Milliseconds 100
 | `scripts/coord_verify.py` | 坐标验证工具（4角+中心+头像框位置测试图，验证剪映x/y轴方向，避免位置全错） |
 | `scripts/remove_background.py` | 去背景模块（Pillow改进版容差+羽化+ComfyUI RMBG预留接口，自动选择最佳方案） |
 | `scripts/quick_qc.py` | 快速预览质检（解析剪映工程生成预览图，检测位置超出/透明度0/缩放异常/缺少初始关键帧） |
+| `scripts/prototype_analyzer.py` | 原型理解引擎（输入参考视频→自动拆解结构，输出原型卡JSON+Markdown，P21-1） |
+| `scripts/solution_planner.py` | 方案决策器（根据原型卡5方案评分+6阶段实施计划，P21-2） |
+| `scripts/phased_pipeline.py` | 分阶段验证Pipeline（5阶段checkpoint+每阶段自动质检+暂停恢复，P21-3/4） |
 | `effects/index.json` | 特效库索引v1.1（3个特效+1个工具，按transitions/text/visual/combo分类） |
 
 **脚本使用规范**：所有剪辑脚本必须放在用户当前项目根目录（或子目录），**禁止在 Skill 内部目录创建业务脚本**。复制脚本模板到项目目录后修改参数运行。

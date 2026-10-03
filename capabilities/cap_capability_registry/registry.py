@@ -150,6 +150,21 @@ class CapabilityRegistry:
             description="解析剪映工程生成预览图，检测位置超出/透明度为0/缩放异常/缺少初始关键帧",
             entry_point="scripts.quick_qc", version="1.0.0",
         ))
+        self.register(Capability(
+            name="原型理解引擎", type=CapabilityType.ANALYSIS, project="ai-video-editor",
+            description="输入参考视频自动拆解结构(角色/场景/镜头/时间轴/特效)，输出结构化原型卡",
+            entry_point="scripts.prototype_analyzer", version="1.0.0",
+        ))
+        self.register(Capability(
+            name="方案决策器", type=CapabilityType.ANALYSIS, project="ai-video-editor",
+            description="根据原型卡自动选择技术路线(2D/3D/I2V/纯剪映/混合)，评估可行性输出实施计划",
+            entry_point="scripts.solution_planner", version="1.0.0",
+        ))
+        self.register(Capability(
+            name="分阶段验证Pipeline", type=CapabilityType.EDIT, project="ai-video-editor",
+            description="5阶段验证流程(原型→素材→单镜头→全片→质检)，每阶段自动质检+checkpoint暂停恢复",
+            entry_point="scripts.phased_pipeline", version="1.0.0",
+        ))
 
         # === anysearch-skill 能力 ===
         self.register(Capability(
