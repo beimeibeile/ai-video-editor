@@ -166,8 +166,8 @@ class JianyingExecutor:
                         track_name=f"Char_{char_name}"
                     )
                     if seg:
-                        # 默认缩小到头像框大小
-                        seg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 0.2)
+                        # 默认大小（P24关键帧会覆盖）
+                        seg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 1.0)
                         self.character_segments[char_name] = seg
                         print(f"  ✅ 角色: {char_name}")
 
