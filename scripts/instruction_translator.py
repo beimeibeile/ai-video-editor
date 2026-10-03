@@ -409,10 +409,15 @@ class InstructionTranslator:
         """输出指令序列JSON"""
         if not self.sequence:
             return {}
+        # 关键帧按时间排序（同轨道内）
+        sorted_keyframes = sorted(
+            [asdict(k) for k in self.sequence.keyframe_instructions],
+            key=lambda x: (x.get("track", ""), x.get("time", 0))
+        )
         return {
             "project": self.sequence.project,
             "tts_instructions": [asdict(t) for t in self.sequence.tts_instructions],
-            "keyframe_instructions": [asdict(k) for k in self.sequence.keyframe_instructions],
+            "keyframe_instructions": sorted_keyframes,
             "effect_instructions": [asdict(e) for e in self.sequence.effect_instructions],
             "audio_instructions": [asdict(a) for a in self.sequence.audio_instructions],
             "text_instructions": [asdict(t) for t in self.sequence.text_instructions],
