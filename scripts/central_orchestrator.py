@@ -150,43 +150,26 @@ class CentralOrchestrator:
             )
             self._add_task(task)
 
-        # 4. 关键帧任务（合并为一个剪映工程构建任务）
+        # 4. 剪映工程构建任务（合并关键帧+特效+文字）
         keyframes = instruction_sequence.get("keyframe_instructions", [])
-        if keyframes:
-            task = Task(
-                id="keyframe_main",
+        effects = instruction_sequence.get("effect_instructions", [])
+        texts = instruction_sequence.get("text_instructions", [])
+
+        if keyframes or effects or texts:
+            # 把完整指令序列传给剪映执行器
+            jianying_task = Task(
+                id="jianying_build",
                 type=TaskType.KEYFRAME,
-                name=f"剪映工程: {len(keyframes)}条关键帧",
-                params={"keyframes": keyframes, "project": project},
+                name=f"剪映工程: {len(keyframes)}关键帧+{len(effects)}特效+{len(texts)}文字",
+                params={
+                    "instruction_sequence": instruction_sequence,
+                    "project": project,
+                },
                 dependencies=[media_task.id],
             )
-            self._add_task(task)
+            self._add_task(jianying_task)
 
-        # 5. 特效任务
-        effects = instruction_sequence.get("effect_instructions", [])
-        if effects:
-            task = Task(
-                id="effect_main",
-                type=TaskType.EFFECT,
-                name=f"特效: {len(effects)}个",
-                params={"effects": effects},
-                dependencies=["keyframe_main"] if "keyframe_main" in self.task_map else [media_task.id],
-            )
-            self._add_task(task)
-
-        # 6. 文字任务
-        texts = instruction_sequence.get("text_instructions", [])
-        if texts:
-            task = Task(
-                id="text_main",
-                type=TaskType.TEXT,
-                name=f"文字排版: {len(texts)}条",
-                params={"texts": texts},
-                dependencies=["keyframe_main"] if "keyframe_main" in self.task_map else [media_task.id],
-            )
-            self._add_task(task)
-
-        # 7. 最终合成任务（最后执行）
+        # 5. 最终合成任务（最后执行）
         compose_deps = [t.id for t in self.tasks if t.type != TaskType.COMPOSE]
         compose_task = Task(
             id=f"compose_{uuid.uuid4().hex[:8]}",
@@ -351,9 +334,25 @@ class CentralOrchestrator:
         return {"output_path": f"{self.work_dir}/tts/{task.id}.wav"}
 
     def _execute_keyframe(self, task: Task) -> Dict:
-        """剪映关键帧执行器（占位）"""
-        # 实际实现：调用JyProject构建剪映工程
-        return {"draft_path": f"{self.work_dir}/drafts/{task.id}"}
+        """剪映工程构建执行器（调用实际的jianying_executor）"""
+        try:
+            from jianying_executor import JianyingExecutor
+        except ImportError:
+            # 占位实现
+            return {"draft_path": f"{self.work_dir}/drafts/{task.id}", "placeholder": True}
+
+        instructions = task.params.get("instruction_sequence", {})
+        project = task.params.get("project", {})
+        project_name = project.get("title", task.id)
+        duration = project.get("duration", 20)
+
+        executor = JianyingExecutor(work_dir=self.work_dir)
+        result = executor.execute(
+            instructions,
+            project_name=project_name,
+            duration=duration,
+        )
+        return result
 
     def _execute_effect(self, task: Task) -> Dict:
         """特效执行器（占位）"""
