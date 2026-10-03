@@ -333,37 +333,60 @@ class ScriptParser:
         attack_keywords = ["打", "踢", "揍", "扇", "捶", "砸", "撞", "推"]
         is_attack_scene = any(kw in sentence for kw in attack_keywords)
 
+        # 预计算所有角色位置（按位置排序）
+        char_positions = [(c.name, sentence.find(c.name)) for c in chars_in_sentence]
+        char_positions.sort(key=lambda x: x[1])
+
+        # 确定受动者和施动者
+        patient_name = None  # 受动者（被打）
+        agent_name = None    # 施动者（攻击）
+
+        if is_attack_scene and len(chars_in_sentence) >= 2:
+            if has_passive:
+                # "A被B打" 或 "..., A被打得..." → A是受动者
+                bei_pos = sentence.find("被")
+                # 找"被"字前面最近的角色
+                for name, pos in reversed(char_positions):
+                    if pos < bei_pos:
+                        patient_name = name
+                        break
+                # 找"被"字后面的角色（如果有）作为施动者
+                for name, pos in char_positions:
+                    if pos > bei_pos:
+                        agent_name = name
+                        break
+                # 如果"被"字后面没有角色，第一个出现的角色（非受动者）是施动者
+                if not agent_name:
+                    for name, _ in char_positions:
+                        if name != patient_name:
+                            agent_name = name
+                            break
+            elif has_active:
+                # "A把B打" → A是施动者，B是受动者
+                ba_pos = sentence.find("把")
+                if ba_pos == -1:
+                    ba_pos = sentence.find("将")
+                for name, pos in char_positions:
+                    if pos < ba_pos:
+                        agent_name = name
+                    elif pos > ba_pos and not patient_name:
+                        patient_name = name
+            else:
+                # "A打B" → 第一个是施动者，后面的是受动者
+                agent_name = char_positions[0][0]
+                if len(char_positions) > 1:
+                    patient_name = char_positions[1][0]
+
         for char in chars_in_sentence:
             action = actions[0] if actions else "站立"
             emotion = emotions[0] if emotions else char.emotion_default
 
-            # 施动者/受动者区分
+            # 应用动作归属
             if is_attack_scene and len(chars_in_sentence) >= 2:
-                char_pos = sentence.find(char.name)
-                if has_passive:
-                    # "A被B打" → A=被打(受动者), B=攻击(施动者)
-                    bei_pos = sentence.find("被")
-                    if char_pos < bei_pos:
-                        action = "被打"  # 受动者
-                    else:
-                        action = "攻击"  # 施动者
-                elif has_active:
-                    # "A把B打" → A=攻击(施动者), B=被打(受动者)
-                    ba_pos = sentence.find("把")
-                    if ba_pos == -1:
-                        ba_pos = sentence.find("将")
-                    if char_pos < ba_pos:
-                        action = "攻击"  # 施动者
-                    else:
-                        action = "被打"  # 受动者
-                else:
-                    # "A打B" → 前面的是施动者，后面的是受动者
-                    positions = [(c.name, sentence.find(c.name)) for c in chars_in_sentence]
-                    positions.sort(key=lambda x: x[1])
-                    if char.name == positions[0][0]:
-                        action = "攻击"  # 第一个出现的是施动者
-                    else:
-                        action = "被打"  # 后面的是受动者
+                if char.name == patient_name:
+                    action = "被打"
+                elif char.name == agent_name:
+                    action = "攻击"
 
             char_actions.append(CharacterAction(
                 character_id=char.id,
