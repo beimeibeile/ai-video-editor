@@ -1037,5 +1037,12 @@ if __name__ == "__main__":
     parser.print_summary()
 
     # 保存
-    out = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\parsed_script.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(_up, "Videos", "剪映导出", "Doubao_Jianying-editor", "director_engine_test")
+    os.makedirs(test_dir, exist_ok=True)
+    out = os.path.join(test_dir, "parsed_script.json")
     parser.save_json(out)

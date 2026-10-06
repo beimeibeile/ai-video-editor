@@ -36,6 +36,7 @@ PATHS: Dict[str, str] = {
     "output_dir": os.path.join(PROJECT_ROOT, "out"),
     "debug_dir": os.path.join(PROJECT_ROOT, "debug"),
     "knowledge_base": os.path.join(PROJECT_ROOT, "knowledge_base"),
+    "test_dir": os.path.join(PROJECT_ROOT, "director_engine_test"),
 
     # Skill目录
     "skill_root": _env("AI_VIDEO_EDITOR_SKILL",

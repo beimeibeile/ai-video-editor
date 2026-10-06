@@ -792,7 +792,13 @@ class CentralOrchestrator:
 
 if __name__ == "__main__":
     # 测试：用P24输出的指令序列做调度
-    instr_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\instruction_sequence.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(_up, "Videos", "剪映导出", "Doubao_Jianying-editor", "director_engine_test")
+    instr_path = os.path.join(test_dir, "instruction_sequence.json")
 
     if os.path.exists(instr_path):
         with open(instr_path, "r", encoding="utf-8") as f:

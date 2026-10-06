@@ -17,7 +17,8 @@ try:
     from paths import PATHS
     JY_SKILL = PATHS.get("jianying_skill_root", "")
 except ImportError:
-    JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
+    _la = os.environ.get("LOCALAPPDATA", os.path.join(os.environ.get("USERPROFILE", r"C:\Users\Administrator"), "AppData", "Local"))
+    JY_SKILL = os.path.join(_la, "Doubao", "User Data", "Default", ".doubao", "agent_mode", "workspace", ".user_skills", "jianying-editor")
 if JY_SKILL:
     sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
@@ -948,7 +949,13 @@ class JianyingExecutor:
 
 if __name__ == "__main__":
     # 测试：用导演引擎输出的指令序列构建剪映工程
-    instr_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\e2e_instruction_sequence.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(_up, "Videos", "剪映导出", "Doubao_Jianying-editor", "director_engine_test")
+    instr_path = os.path.join(test_dir, "e2e_instruction_sequence.json")
 
     if os.path.exists(instr_path):
         with open(instr_path, "r", encoding="utf-8") as f:

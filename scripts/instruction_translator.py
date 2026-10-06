@@ -882,7 +882,13 @@ class InstructionTranslator:
 
 if __name__ == "__main__":
     # 测试：用P23解析的豆包被打分镜做翻译
-    parsed_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\parsed_script.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(_up, "Videos", "剪映导出", "Doubao_Jianying-editor", "director_engine_test")
+    parsed_path = os.path.join(test_dir, "parsed_script.json")
 
     if os.path.exists(parsed_path):
         with open(parsed_path, "r", encoding="utf-8") as f:
@@ -892,7 +898,7 @@ if __name__ == "__main__":
         sequence = translator.translate(parsed_script)
         translator.print_summary()
 
-        out_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\instruction_sequence.json"
+        out_path = os.path.join(test_dir, "instruction_sequence.json")
         translator.save_json(out_path)
     else:
         print(f"❌ 分镜文件不存在: {parsed_path}")
