@@ -1,0 +1,113 @@
+======================================================================
+硬编码路径迁移报告
+======================================================================
+扫描文件: 53个
+发现硬编码路径: 185处
+  可安全替换: 120处
+  需手动处理: 65处
+
+----------------------------------------------------------------------
+可安全替换的路径:
+----------------------------------------------------------------------
+  anysearch_inspiration.py:78
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["localappdata"]
+  anysearch_inspiration.py:78
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["localappdata"]
+  anysearch_inspiration.py:79
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["localappdata"]
+  anysearch_inspiration.py:79
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["localappdata"]
+  artistic_subtitle.py:8
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  artistic_subtitle.py:8
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  asset_index.py:503
+    原: C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\ma
+    替: PATHS["userprofile"]
+  asset_index.py:503
+    原: C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\ma
+    替: PATHS["userprofile"]
+  auto_beat.py:504
+    原: D:\JianyingProDrafts\JianyingPro Drafts\卡点123
+    替: PATHS["jianying_drafts_d_drive"]
+  auto_beat.py:504
+    原: D:\JianyingProDrafts\JianyingPro Drafts\卡点123
+    替: PATHS["jianying_drafts_d_drive"]
+  blinds_transition.py:20
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  blinds_transition.py:20
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  build_video.py:72
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  build_video.py:72
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  build_video.py:73
+    原: C:\Users\Administrator\AppData\Local\DoubaoWork\User Data\De
+    替: PATHS["localappdata"]
+  build_video.py:73
+    原: C:\Users\Administrator\AppData\Local\DoubaoWork\User Data\De
+    替: PATHS["localappdata"]
+  camera_moves.py:18
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  camera_moves.py:18
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  central_orchestrator.py:717
+    原: C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\di
+    替: PATHS["userprofile"]
+  central_orchestrator.py:717
+    原: C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\di
+    替: PATHS["userprofile"]
+  character_card.py:21
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  character_card.py:21
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  character_intro.py:19
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  character_intro.py:19
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  character_semantic.py:22
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["skill_root"]
+  character_semantic.py:22
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["skill_root"]
+  circle_mask.py:29
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  circle_mask.py:29
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  circular_date_badge.py:22
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  circular_date_badge.py:22
+    原: C:\Users\Administrator\AppData\Local\Doubao\User Data\Defaul
+    替: PATHS["jianying_skill_root"]
+  ... 还有90处
+
+----------------------------------------------------------------------
+需手动处理的路径:
+----------------------------------------------------------------------
+  D:/Ai/ffmpeg-master-latest-win64-gpl (32处)
+  C:/Windows/Fonts (14处)
+  D:/Ai/ComfyUI-aki-v3.2 (8处)
+  D:// (4处)
+  D://JianyingProDrafts (3处)
+  D:/JianyingProDrafts/MyProject (2处)
+  C:/Program Files/JianyingPro (2处)

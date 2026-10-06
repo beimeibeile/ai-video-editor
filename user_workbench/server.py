@@ -19,7 +19,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # 技能路径
-SKILL_ROOT = r"C:\Users\Administrator\AppData\Local\DoubaoWork\User Data\Default\.doubaowork\agent_mode\workspace\.user_skills\ai-video-editor"
+SKILL_ROOT = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\ai-video-editor-runtime"
 WORKBENCH_DIR = os.path.join(SKILL_ROOT, "user_workbench")
 PROJECTS_DB = os.path.join(WORKBENCH_DIR, "projects.json")
 
@@ -209,7 +209,7 @@ class UserWorkbenchHandler(BaseHTTPRequestHandler):
         pass  # 静默日志
 
 
-def start_server(port=8080):
+def start_server(port=8000):
     """启动用户工作台服务"""
     os.makedirs(WORKBENCH_DIR, exist_ok=True)
     server = HTTPServer(('0.0.0.0', port), UserWorkbenchHandler)
@@ -223,4 +223,4 @@ def start_server(port=8080):
 
 
 if __name__ == "__main__":
-    start_server(8080)
+    start_server(8000)

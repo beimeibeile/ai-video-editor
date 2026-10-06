@@ -1,0 +1,57 @@
+{
+  "3": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "stable_audio_3_small_sfx.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "t5gemma_b_b_ul2.safetensors",
+      "type": "stable_audio"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "PROMPT_PLACEHOLDER",
+      "clip": ["4", 0]
+    }
+  },
+  "6": {
+    "class_type": "StableAudio3Sampler",
+    "inputs": {
+      "model": ["3", 0],
+      "positive": ["5", 0],
+      "negative": ["7", 0],
+      "seed": 42,
+      "steps": 50,
+      "cfg": 7.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "duration": 5.0
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "low quality, noisy, distorted",
+      "clip": ["4", 0]
+    }
+  },
+  "8": {
+    "class_type": "StableAudio3Decode",
+    "inputs": {
+      "model": ["3", 0],
+      "samples": ["6", 0]
+    }
+  },
+  "9": {
+    "class_type": "SaveAudio",
+    "inputs": {
+      "audio": ["8", 0],
+      "filename_prefix": "sfx_gen"
+    }
+  }
+}
