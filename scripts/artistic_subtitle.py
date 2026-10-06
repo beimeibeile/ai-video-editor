@@ -5,10 +5,27 @@
 import os
 import sys
 
-skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
-sys.path.insert(0, os.path.join(skill_root, "scripts"))
-from jy_wrapper import JyProject
-import pyJianYingDraft as draft
+# 动态查找jianying-editor skill路径
+def _find_jianying_skill():
+    """查找jianying-editor skill路径"""
+    candidates = [
+        os.path.expandvars(r"%USERPROFILE%\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"),
+        os.path.expandvars(r"%USERPROFILE%\AppData\Local\DoubaoWork\User Data\Default\.doubaowork\agent_mode\workspace\.user_skills\jianying-editor"),
+    ]
+    for p in candidates:
+        if os.path.exists(os.path.join(p, "scripts", "jy_wrapper.py")):
+            return p
+    return None
+
+_jy_skill = _find_jianying_skill()
+if _jy_skill:
+    sys.path.insert(0, os.path.join(_jy_skill, "scripts"))
+    from jy_wrapper import JyProject
+    import pyJianYingDraft as draft
+    JIANYING_AVAILABLE = True
+else:
+    JIANYING_AVAILABLE = False
+    print("⚠️ artistic_subtitle: 未找到jianying-editor skill，字幕功能不可用")
 
 
 def add_artistic_subtitle(
@@ -111,6 +128,30 @@ def add_artistic_subtitle(
             anim_in=narr_cfg["anim_in"],
             track_name="ArtNarration",
         )
+
+
+def get_available_styles() -> list:
+    """获取可用的字幕风格列表"""
+    return ["epic", "warm", "fun", "minimal"]
+
+
+def get_style_info(style: str) -> dict:
+    """获取指定风格的详细信息"""
+    styles_info = {
+        "epic": {"name": "国风史诗", "desc": "金色主标题+扫光动画，适合开场/高潮", "colors": ["金色", "白色"]},
+        "warm": {"name": "温暖治愈", "desc": "暖色调+弹入动画，适合情感/回忆", "colors": ["暖橙", "米白"]},
+        "fun": {"name": "趣味卡点", "desc": "青蓝色+弹性动画，适合搞笑/卡点", "colors": ["青蓝", "亮黄"]},
+        "minimal": {"name": "极简", "desc": "白色+渐显，适合旁白/纪录片", "colors": ["白色", "灰色"]},
+    }
+    return styles_info.get(style, {})
+
+
+def get_available_animations() -> dict:
+    """获取可用的字幕动画效果列表"""
+    return {
+        "入场动画": ["放大", "弹入", "渐显", "向上滑动", "打字机_I", "逐字显影", "弹性伸缩", "随机弹跳", "逐字旋转"],
+        "循环动画": ["扫光", "彩虹", "晃动"],
+    }
 
 
 def add_ken_burns(segment, start_us, duration_us, zoom_in=True, intensity=0.12):
