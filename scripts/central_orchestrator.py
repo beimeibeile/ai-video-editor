@@ -39,6 +39,8 @@ class TaskType(Enum):
     TEXT = "text"                  # 文字排版
     COMFYUI = "comfyui"            # ComfyUI视频生成
     BLENDER = "blender"            # Blender动画
+    REMOTION = "remotion"          # Remotion代码驱动动画
+    PRPROJ = "prproj"              # Pr工程生成
     MEDIA = "media"                # 素材准备
     ASSET = "asset"                # 素材生成（角色图/场景图/道具图）
     COMPOSE = "compose"            # 最终合成
@@ -101,6 +103,8 @@ class CentralOrchestrator:
         self.executors[TaskType.TEXT] = self._execute_text
         self.executors[TaskType.COMFYUI] = self._execute_comfyui
         self.executors[TaskType.BLENDER] = self._execute_blender
+        self.executors[TaskType.REMOTION] = self._execute_remotion
+        self.executors[TaskType.PRPROJ] = self._execute_prproj
         self.executors[TaskType.MEDIA] = self._execute_media
         self.executors[TaskType.ASSET] = self._execute_asset
         self.executors[TaskType.COMPOSE] = self._execute_compose
@@ -608,6 +612,80 @@ class CentralOrchestrator:
     def _execute_blender(self, task: Task) -> Dict:
         """Blender执行器（占位）"""
         return {"animation_path": f"{self.work_dir}/animations/{task.id}.mp4"}
+
+    def _execute_remotion(self, task: Task) -> Dict:
+        """Remotion动画执行器：生成带透明背景的ProRes 4444视频"""
+        try:
+            from remotion_executor import RemotionExecutor
+        except ImportError:
+            return {"output_path": None, "error": "remotion_executor不可用", "skipped": True}
+
+        comp = task.params.get("comp", "ComponentTest")
+        duration = task.params.get("duration", 3)
+        fps = task.params.get("fps", 30)
+        output_name = task.params.get("output_name", f"remotion_{task.id}")
+
+        out_dir = os.path.join(self.work_dir, "remotion")
+        os.makedirs(out_dir, exist_ok=True)
+        output_path = os.path.join(out_dir, f"{output_name}.mov")
+
+        try:
+            executor = RemotionExecutor()
+            result = executor.render_animation(
+                comp=comp,
+                output=output_path,
+                duration=duration,
+                fps=fps,
+            )
+            if result.get("success"):
+                return {
+                    "output_path": result["output"],
+                    "alpha": result.get("alpha", True),
+                    "duration": duration,
+                    "fps": fps,
+                    "comp": comp,
+                }
+            else:
+                return {"output_path": None, "error": result.get("error", "渲染失败"), "skipped": True}
+        except Exception as e:
+            return {"output_path": None, "error": str(e), "skipped": True}
+
+    def _execute_prproj(self, task: Task) -> Dict:
+        """Pr工程执行器：基于模板生成可导入剪映的.prproj文件"""
+        try:
+            from prproj_executor import PrprojExecutor
+        except ImportError:
+            return {"output_path": None, "error": "prproj_executor不可用", "skipped": True}
+
+        template = task.params.get("template")
+        media_map = task.params.get("media_map")
+        replace_all = task.params.get("replace_all")
+        output_name = task.params.get("output_name", f"prproj_{task.id}")
+
+        out_dir = os.path.join(self.work_dir, "prproj")
+        os.makedirs(out_dir, exist_ok=True)
+        output_path = os.path.join(out_dir, f"{output_name}.prproj")
+
+        try:
+            executor = PrprojExecutor()
+            result = executor.create_project(
+                output=output_path,
+                template=template,
+                media_map=media_map,
+                replace_all=replace_all,
+            )
+            if result.get("success"):
+                return {
+                    "output_path": result["output"],
+                    "template": result["template"],
+                    "media_replaced": result.get("media_replaced", 0),
+                    "sequences": result.get("sequences", 0),
+                    "next_step": result.get("next_step", ""),
+                }
+            else:
+                return {"output_path": None, "error": result.get("error", "生成失败"), "skipped": True}
+        except Exception as e:
+            return {"output_path": None, "error": str(e), "skipped": True}
 
     def _execute_media(self, task: Task) -> Dict:
         """素材准备执行器（占位）"""
