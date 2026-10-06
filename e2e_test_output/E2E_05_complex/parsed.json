@@ -1,0 +1,241 @@
+{
+  "project": {
+    "title": "完整复杂剧本",
+    "duration": 15.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "搞笑短剧"
+  },
+  "characters": [
+    {
+      "id": "char_0",
+      "name": "字幕",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_1",
+      "name": "豆包",
+      "description": "短发红围巾黑西装女性",
+      "voice": "年轻女性/活泼",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_2",
+      "name": "用户",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_3",
+      "name": "解答",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_4",
+      "name": "用户说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_5",
+      "name": "豆包说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_00",
+      "start": 0.0,
+      "duration": 12.0,
+      "location": "抖音主页",
+      "atmosphere": "日常",
+      "shots": [
+        {
+          "id": "shot_001",
+          "start": 0.0,
+          "duration": 1.7,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_5",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "大家好，我是豆包"
+            }
+          ],
+          "sfx": [],
+          "environment": "抖音主页"
+        },
+        {
+          "id": "shot_002",
+          "start": 1.7,
+          "duration": 1.1,
+          "camera": "固定",
+          "characters": [],
+          "sfx": [],
+          "environment": "抖音主页"
+        },
+        {
+          "id": "shot_003",
+          "start": 2.8,
+          "duration": 1.5,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_4",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "你能做什么"
+            }
+          ],
+          "sfx": [],
+          "environment": "抖音主页"
+        },
+        {
+          "id": "shot_004",
+          "start": 4.3,
+          "duration": 2.5,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_5",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "我可以帮你写代码、做视频、解答问题"
+            }
+          ],
+          "sfx": [
+            "写字声"
+          ],
+          "environment": "抖音主页"
+        },
+        {
+          "id": "shot_005",
+          "start": 6.8,
+          "duration": 1.1,
+          "camera": "固定",
+          "characters": [],
+          "sfx": [],
+          "environment": "抖音主页"
+        },
+        {
+          "id": "shot_006",
+          "start": 7.9,
+          "duration": 1.4,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_4",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "真的吗"
+            }
+          ],
+          "sfx": [],
+          "environment": "抖音主页"
+        },
+        {
+          "id": "shot_007",
+          "start": 9.3,
+          "duration": 1.3,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_5",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "当然"
+            }
+          ],
+          "sfx": [],
+          "environment": "抖音主页"
+        },
+        {
+          "id": "shot_008",
+          "start": 10.6,
+          "duration": 1.4,
+          "camera": "固定",
+          "characters": [],
+          "sfx": [],
+          "environment": "抖音主页"
+        }
+      ],
+      "transition": "硬切"
+    },
+    {
+      "id": "scene_01",
+      "start": 12.0,
+      "duration": 3.1,
+      "location": "工作台",
+      "atmosphere": "中性",
+      "shots": [
+        {
+          "id": "shot_010",
+          "start": 12.0,
+          "duration": 1.5,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_5",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "看我的厉害"
+            }
+          ],
+          "sfx": [],
+          "environment": "工作台"
+        },
+        {
+          "id": "shot_011",
+          "start": 13.5,
+          "duration": 1.6,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_0",
+              "action": "站立",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "AI全能助手"
+            }
+          ],
+          "sfx": [],
+          "environment": "工作台"
+        }
+      ],
+      "transition": "硬切"
+    }
+  ],
+  "audio_mix": {
+    "bgm": "通用BGM",
+    "ambient": [],
+    "sfx_timeline": [
+      {
+        "time": 4.3,
+        "type": "写字声",
+        "intensity": 0.7
+      }
+    ]
+  },
+  "text_layout": {
+    "logo": {},
+    "subtitles": []
+  }
+}

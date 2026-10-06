@@ -1,0 +1,181 @@
+{
+  "total_tasks": 19,
+  "success_count": 19,
+  "failed_count": 0,
+  "skipped_count": 0,
+  "total_duration": 1.9087896347045898,
+  "tasks": [
+    {
+      "id": "media_6f0ca295",
+      "type": "media",
+      "name": "素材准备: 多场景对话",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_000",
+      "type": "asset",
+      "name": "角色图: 张三",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_001",
+      "type": "asset",
+      "name": "角色图: 李四",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_002",
+      "type": "asset",
+      "name": "角色图: 王五",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_003",
+      "type": "asset",
+      "name": "角色图: 王五说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_004",
+      "type": "asset",
+      "name": "角色图: 李四说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_005",
+      "type": "asset",
+      "name": "角色图: 张三说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_006",
+      "type": "asset",
+      "name": "角色图: 赵六",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_007",
+      "type": "asset",
+      "name": "角色图: 赵六说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_scene_000",
+      "type": "asset",
+      "name": "场景图: 办公室",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_scene_001",
+      "type": "asset",
+      "name": "场景图: 会议室",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_000",
+      "type": "tts",
+      "name": "TTS: 张三说 - 这个方案怎么样",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_001",
+      "type": "tts",
+      "name": "TTS: 李四说 - 我觉得需要修改",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_002",
+      "type": "tts",
+      "name": "TTS: 张三说 - 大家有什么意见",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_003",
+      "type": "tts",
+      "name": "TTS: 王五说 - 我同意李四的看法",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_004",
+      "type": "tts",
+      "name": "TTS: 赵六说 - 我有不同意见",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "audio_000",
+      "type": "audio",
+      "name": "音轨: 办公室环境音+键盘声",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "audio_001",
+      "type": "audio",
+      "name": "音轨: 通用BGM",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "compose_d12eda87",
+      "type": "compose",
+      "name": "最终合成: 多场景对话",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    }
+  ],
+  "output_path": ""
+}

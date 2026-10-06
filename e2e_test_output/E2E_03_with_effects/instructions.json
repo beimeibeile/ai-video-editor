@@ -1,0 +1,369 @@
+{
+  "project": {
+    "title": "带特效转场",
+    "duration": 8.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "动感",
+    "characters": [
+      {
+        "id": "char_0",
+        "name": "小红说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_1",
+        "name": "小明",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_2",
+        "name": "小明说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_3",
+        "name": "小红",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene_00",
+        "start": 0.0,
+        "duration": 6.6,
+        "location": "街头",
+        "atmosphere": "中性",
+        "shots": [
+          {
+            "id": "shot_001",
+            "start": 0.0,
+            "duration": 1.2,
+            "camera": "固定",
+            "characters": [],
+            "sfx": [],
+            "environment": "街头"
+          },
+          {
+            "id": "shot_002",
+            "start": 1.2,
+            "duration": 1.4,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_2",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "快看"
+              }
+            ],
+            "sfx": [],
+            "environment": "街头"
+          },
+          {
+            "id": "shot_003",
+            "start": 2.6,
+            "duration": 1.2,
+            "camera": "固定",
+            "characters": [],
+            "sfx": [],
+            "environment": "街头"
+          },
+          {
+            "id": "shot_004",
+            "start": 3.8,
+            "duration": 1.6,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_0",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "那是什么"
+              }
+            ],
+            "sfx": [],
+            "environment": "街头"
+          },
+          {
+            "id": "shot_005",
+            "start": 5.4,
+            "duration": 1.2,
+            "camera": "固定",
+            "characters": [],
+            "sfx": [],
+            "environment": "街头"
+          }
+        ],
+        "transition": "硬切"
+      },
+      {
+        "id": "scene_01",
+        "start": 6.6,
+        "duration": 1.5,
+        "location": "天空",
+        "atmosphere": "中性",
+        "shots": [
+          {
+            "id": "shot_007",
+            "start": 6.6,
+            "duration": 1.5,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_2",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "是飞碟"
+              }
+            ],
+            "sfx": [],
+            "environment": "天空"
+          }
+        ],
+        "transition": "硬切"
+      }
+    ]
+  },
+  "tts_instructions": [
+    {
+      "character": "小明说",
+      "text": "快看",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 1.2,
+      "duration": 0.8
+    },
+    {
+      "character": "小红说",
+      "text": "那是什么",
+      "voice_id": "default",
+      "pitch": 1.3,
+      "speed": 1.1,
+      "energy": 0.8,
+      "voice_style": "surprise",
+      "start_time": 3.8,
+      "duration": 1.1
+    },
+    {
+      "character": "小明说",
+      "text": "是飞碟",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 6.6,
+      "duration": 0.95
+    }
+  ],
+  "keyframe_instructions": [
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 1.2,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 1.7,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 2.2,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 6.6,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 7.1,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 7.6,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 3.8,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 4.3,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 4.8,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    }
+  ],
+  "effect_instructions": [
+    {
+      "type": "fade_in",
+      "start_time": 1.2,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 3.8,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 6.6,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    }
+  ],
+  "audio_instructions": [
+    {
+      "type": "bgm",
+      "name": "通用BGM",
+      "start_time": 0,
+      "duration": 8.0,
+      "volume": 0.4,
+      "channel": "stereo"
+    }
+  ],
+  "sfx_instructions": [],
+  "text_instructions": [
+    {
+      "text": "快看",
+      "style": "底部对白",
+      "start_time": 1.2,
+      "duration": 0.8,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "那是什么",
+      "style": "底部对白",
+      "start_time": 3.8,
+      "duration": 1.1,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "是飞碟",
+      "style": "底部对白",
+      "start_time": 6.6,
+      "duration": 0.95,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    }
+  ],
+  "mask_instructions": [],
+  "summary": {
+    "tts_count": 3,
+    "keyframe_count": 9,
+    "effect_count": 3,
+    "audio_count": 1,
+    "sfx_count": 0,
+    "text_count": 3,
+    "mask_count": 0
+  }
+}

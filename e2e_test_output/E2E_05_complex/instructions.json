@@ -1,0 +1,712 @@
+{
+  "project": {
+    "title": "完整复杂剧本",
+    "duration": 15.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "搞笑短剧",
+    "characters": [
+      {
+        "id": "char_0",
+        "name": "字幕",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_1",
+        "name": "豆包",
+        "description": "短发红围巾黑西装女性",
+        "voice": "年轻女性/活泼",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_2",
+        "name": "用户",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_3",
+        "name": "解答",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_4",
+        "name": "用户说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_5",
+        "name": "豆包说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene_00",
+        "start": 0.0,
+        "duration": 12.0,
+        "location": "抖音主页",
+        "atmosphere": "日常",
+        "shots": [
+          {
+            "id": "shot_001",
+            "start": 0.0,
+            "duration": 1.7,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_5",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "大家好，我是豆包"
+              }
+            ],
+            "sfx": [],
+            "environment": "抖音主页"
+          },
+          {
+            "id": "shot_002",
+            "start": 1.7,
+            "duration": 1.1,
+            "camera": "固定",
+            "characters": [],
+            "sfx": [],
+            "environment": "抖音主页"
+          },
+          {
+            "id": "shot_003",
+            "start": 2.8,
+            "duration": 1.5,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_4",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "你能做什么"
+              }
+            ],
+            "sfx": [],
+            "environment": "抖音主页"
+          },
+          {
+            "id": "shot_004",
+            "start": 4.3,
+            "duration": 2.5,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_5",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "我可以帮你写代码、做视频、解答问题"
+              }
+            ],
+            "sfx": [
+              "写字声"
+            ],
+            "environment": "抖音主页"
+          },
+          {
+            "id": "shot_005",
+            "start": 6.8,
+            "duration": 1.1,
+            "camera": "固定",
+            "characters": [],
+            "sfx": [],
+            "environment": "抖音主页"
+          },
+          {
+            "id": "shot_006",
+            "start": 7.9,
+            "duration": 1.4,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_4",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "真的吗"
+              }
+            ],
+            "sfx": [],
+            "environment": "抖音主页"
+          },
+          {
+            "id": "shot_007",
+            "start": 9.3,
+            "duration": 1.3,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_5",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "当然"
+              }
+            ],
+            "sfx": [],
+            "environment": "抖音主页"
+          },
+          {
+            "id": "shot_008",
+            "start": 10.6,
+            "duration": 1.4,
+            "camera": "固定",
+            "characters": [],
+            "sfx": [],
+            "environment": "抖音主页"
+          }
+        ],
+        "transition": "硬切"
+      },
+      {
+        "id": "scene_01",
+        "start": 12.0,
+        "duration": 3.1,
+        "location": "工作台",
+        "atmosphere": "中性",
+        "shots": [
+          {
+            "id": "shot_010",
+            "start": 12.0,
+            "duration": 1.5,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_5",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "看我的厉害"
+              }
+            ],
+            "sfx": [],
+            "environment": "工作台"
+          },
+          {
+            "id": "shot_011",
+            "start": 13.5,
+            "duration": 1.6,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_0",
+                "action": "站立",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "AI全能助手"
+              }
+            ],
+            "sfx": [],
+            "environment": "工作台"
+          }
+        ],
+        "transition": "硬切"
+      }
+    ]
+  },
+  "tts_instructions": [
+    {
+      "character": "豆包说",
+      "text": "大家好，我是豆包",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 0.0,
+      "duration": 1.7
+    },
+    {
+      "character": "用户说",
+      "text": "你能做什么",
+      "voice_id": "default",
+      "pitch": 1.3,
+      "speed": 1.1,
+      "energy": 0.8,
+      "voice_style": "surprise",
+      "start_time": 2.8,
+      "duration": 1.25
+    },
+    {
+      "character": "豆包说",
+      "text": "我可以帮你写代码、做视频、解答问题",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 4.3,
+      "duration": 2.5
+    },
+    {
+      "character": "用户说",
+      "text": "真的吗",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 7.9,
+      "duration": 0.95
+    },
+    {
+      "character": "豆包说",
+      "text": "当然",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 9.3,
+      "duration": 0.8
+    },
+    {
+      "character": "豆包说",
+      "text": "看我的厉害",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 12.0,
+      "duration": 1.25
+    },
+    {
+      "character": "字幕",
+      "text": "AI全能助手",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 13.5,
+      "duration": 1.4
+    }
+  ],
+  "keyframe_instructions": [
+    {
+      "track": "char_用户说",
+      "property": "scale",
+      "time": 2.8,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_用户说",
+      "property": "scale",
+      "time": 3.3,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_用户说",
+      "property": "scale",
+      "time": 3.8,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_用户说",
+      "property": "scale",
+      "time": 7.9,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_用户说",
+      "property": "scale",
+      "time": 8.4,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_用户说",
+      "property": "scale",
+      "time": 8.9,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 0.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 0.5,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 1.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 4.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 4.8,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 5.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 9.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 9.8,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 10.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 12.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 12.5,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_豆包说",
+      "property": "scale",
+      "time": 13.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    }
+  ],
+  "effect_instructions": [
+    {
+      "type": "fade_in",
+      "start_time": 0.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 2.8,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 4.3,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 7.9,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 9.3,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 12.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 13.5,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    }
+  ],
+  "audio_instructions": [
+    {
+      "type": "ambient",
+      "name": "室内环境音",
+      "start_time": 0.0,
+      "duration": 12.0,
+      "volume": 0.15,
+      "channel": "stereo"
+    },
+    {
+      "type": "sfx",
+      "name": "写字声",
+      "start_time": 4.3,
+      "duration": 0.5,
+      "volume": 0.85,
+      "channel": "stereo"
+    },
+    {
+      "type": "bgm",
+      "name": "通用BGM",
+      "start_time": 0,
+      "duration": 15.0,
+      "volume": 0.4,
+      "channel": "stereo"
+    }
+  ],
+  "sfx_instructions": [],
+  "text_instructions": [
+    {
+      "text": "大家好，我是豆包",
+      "style": "底部对白",
+      "start_time": 0.0,
+      "duration": 1.7,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "你能做什么",
+      "style": "底部对白",
+      "start_time": 2.8,
+      "duration": 1.25,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "我可以帮你写代码、做视频、解答问题",
+      "style": "底部对白",
+      "start_time": 4.3,
+      "duration": 2.5,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "真的吗",
+      "style": "底部对白",
+      "start_time": 7.9,
+      "duration": 0.95,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "当然",
+      "style": "底部对白",
+      "start_time": 9.3,
+      "duration": 0.8,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "看我的厉害",
+      "style": "底部对白",
+      "start_time": 12.0,
+      "duration": 1.25,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "AI全能助手",
+      "style": "底部对白",
+      "start_time": 13.5,
+      "duration": 1.4,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    }
+  ],
+  "mask_instructions": [],
+  "summary": {
+    "tts_count": 7,
+    "keyframe_count": 18,
+    "effect_count": 7,
+    "audio_count": 3,
+    "sfx_count": 0,
+    "text_count": 7,
+    "mask_count": 0
+  }
+}

@@ -1,0 +1,249 @@
+{
+  "project": {
+    "title": "最简单场景",
+    "duration": 5.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "极简",
+    "characters": [
+      {
+        "id": "char_0",
+        "name": "小红说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_1",
+        "name": "小明",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_2",
+        "name": "小明说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_3",
+        "name": "小红",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene_00",
+        "start": 0.0,
+        "duration": 4.6,
+        "location": "客厅",
+        "atmosphere": "中性",
+        "shots": [
+          {
+            "id": "shot_001",
+            "start": 0.0,
+            "duration": 2.3,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_2",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "你好"
+              }
+            ],
+            "sfx": [],
+            "environment": "客厅"
+          },
+          {
+            "id": "shot_002",
+            "start": 2.3,
+            "duration": 2.3,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_0",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "你好"
+              }
+            ],
+            "sfx": [],
+            "environment": "客厅"
+          }
+        ],
+        "transition": "硬切"
+      }
+    ]
+  },
+  "tts_instructions": [
+    {
+      "character": "小明说",
+      "text": "你好",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 0.0,
+      "duration": 0.8
+    },
+    {
+      "character": "小红说",
+      "text": "你好",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 2.3,
+      "duration": 0.8
+    }
+  ],
+  "keyframe_instructions": [
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 0.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 0.5,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 1.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 2.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 2.8,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 3.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    }
+  ],
+  "effect_instructions": [
+    {
+      "type": "fade_in",
+      "start_time": 0.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 2.3,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    }
+  ],
+  "audio_instructions": [
+    {
+      "type": "bgm",
+      "name": "通用BGM",
+      "start_time": 0,
+      "duration": 5.0,
+      "volume": 0.4,
+      "channel": "stereo"
+    }
+  ],
+  "sfx_instructions": [],
+  "text_instructions": [
+    {
+      "text": "你好",
+      "style": "底部对白",
+      "start_time": 0.0,
+      "duration": 0.8,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "你好",
+      "style": "底部对白",
+      "start_time": 2.3,
+      "duration": 0.8,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    }
+  ],
+  "mask_instructions": [],
+  "summary": {
+    "tts_count": 2,
+    "keyframe_count": 6,
+    "effect_count": 2,
+    "audio_count": 1,
+    "sfx_count": 0,
+    "text_count": 2,
+    "mask_count": 0
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "total": 5,
+  "passed": 5,
+  "failed": 0,
+  "total_time": 7.452088832855225,
+  "results": [
+    {
+      "name": "E2E_01_minimal",
+      "passed": true,
+      "duration": 1.0104811191558838,
+      "stages": {
+        "剧本解析": {
+          "success": true,
+          "detail": "1场景, 4角色"
+        },
+        "指令翻译": {
+          "success": true,
+          "detail": "TTS:2 KF:6 特效:2 文本:2"
+        },
+        "中央调度": {
+          "success": true,
+          "detail": "10任务, 成功10, 失败0"
+        },
+        "预期验证": {
+          "success": true,
+          "detail": "全部符合预期"
+        }
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "E2E_02_multi_scene",
+      "passed": true,
+      "duration": 1.9128334522247314,
+      "stages": {
+        "剧本解析": {
+          "success": true,
+          "detail": "2场景, 8角色"
+        },
+        "指令翻译": {
+          "success": true,
+          "detail": "TTS:5 KF:15 特效:5 文本:5"
+        },
+        "中央调度": {
+          "success": true,
+          "detail": "19任务, 成功19, 失败0"
+        },
+        "预期验证": {
+          "success": true,
+          "detail": "全部符合预期"
+        }
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "E2E_03_with_effects",
+      "passed": true,
+      "duration": 1.2084603309631348,
+      "stages": {
+        "剧本解析": {
+          "success": true,
+          "detail": "2场景, 4角色"
+        },
+        "指令翻译": {
+          "success": true,
+          "detail": "TTS:3 KF:9 特效:3 文本:3"
+        },
+        "中央调度": {
+          "success": true,
+          "detail": "12任务, 成功12, 失败0"
+        },
+        "预期验证": {
+          "success": true,
+          "detail": "全部符合预期"
+        }
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "E2E_04_with_subtitles",
+      "passed": true,
+      "duration": 1.3091793060302734,
+      "stages": {
+        "剧本解析": {
+          "success": true,
+          "detail": "1场景, 5角色"
+        },
+        "指令翻译": {
+          "success": true,
+          "detail": "TTS:4 KF:6 特效:4 文本:4"
+        },
+        "中央调度": {
+          "success": true,
+          "detail": "13任务, 成功13, 失败0"
+        },
+        "预期验证": {
+          "success": true,
+          "detail": "全部符合预期"
+        }
+      },
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "E2E_05_complex",
+      "passed": true,
+      "duration": 2.011134624481201,
+      "stages": {
+        "剧本解析": {
+          "success": true,
+          "detail": "2场景, 6角色"
+        },
+        "指令翻译": {
+          "success": true,
+          "detail": "TTS:7 KF:18 特效:7 文本:7"
+        },
+        "中央调度": {
+          "success": true,
+          "detail": "20任务, 成功20, 失败0"
+        },
+        "预期验证": {
+          "success": true,
+          "detail": "全部符合预期"
+        }
+      },
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}

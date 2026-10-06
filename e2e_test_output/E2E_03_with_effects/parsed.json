@@ -1,0 +1,151 @@
+{
+  "project": {
+    "title": "带特效转场",
+    "duration": 8.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "动感"
+  },
+  "characters": [
+    {
+      "id": "char_0",
+      "name": "小红说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_1",
+      "name": "小明",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_2",
+      "name": "小明说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_3",
+      "name": "小红",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_00",
+      "start": 0.0,
+      "duration": 6.6,
+      "location": "街头",
+      "atmosphere": "中性",
+      "shots": [
+        {
+          "id": "shot_001",
+          "start": 0.0,
+          "duration": 1.2,
+          "camera": "固定",
+          "characters": [],
+          "sfx": [],
+          "environment": "街头"
+        },
+        {
+          "id": "shot_002",
+          "start": 1.2,
+          "duration": 1.4,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_2",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "快看"
+            }
+          ],
+          "sfx": [],
+          "environment": "街头"
+        },
+        {
+          "id": "shot_003",
+          "start": 2.6,
+          "duration": 1.2,
+          "camera": "固定",
+          "characters": [],
+          "sfx": [],
+          "environment": "街头"
+        },
+        {
+          "id": "shot_004",
+          "start": 3.8,
+          "duration": 1.6,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_0",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "那是什么"
+            }
+          ],
+          "sfx": [],
+          "environment": "街头"
+        },
+        {
+          "id": "shot_005",
+          "start": 5.4,
+          "duration": 1.2,
+          "camera": "固定",
+          "characters": [],
+          "sfx": [],
+          "environment": "街头"
+        }
+      ],
+      "transition": "硬切"
+    },
+    {
+      "id": "scene_01",
+      "start": 6.6,
+      "duration": 1.5,
+      "location": "天空",
+      "atmosphere": "中性",
+      "shots": [
+        {
+          "id": "shot_007",
+          "start": 6.6,
+          "duration": 1.5,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_2",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "是飞碟"
+            }
+          ],
+          "sfx": [],
+          "environment": "天空"
+        }
+      ],
+      "transition": "硬切"
+    }
+  ],
+  "audio_mix": {
+    "bgm": "通用BGM",
+    "ambient": [],
+    "sfx_timeline": []
+  },
+  "text_layout": {
+    "logo": {},
+    "subtitles": []
+  }
+}

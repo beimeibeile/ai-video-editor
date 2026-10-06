@@ -1,0 +1,381 @@
+{
+  "project": {
+    "title": "带字幕",
+    "duration": 6.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "温馨",
+    "characters": [
+      {
+        "id": "char_0",
+        "name": "字幕",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_1",
+        "name": "小明",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_2",
+        "name": "小红",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_3",
+        "name": "小明说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_4",
+        "name": "小红说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene_00",
+        "start": 0.0,
+        "duration": 5.9,
+        "location": "公园",
+        "atmosphere": "中性",
+        "shots": [
+          {
+            "id": "shot_001",
+            "start": 0.0,
+            "duration": 1.3,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_0",
+                "action": "站立",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "春天来了"
+              }
+            ],
+            "sfx": [],
+            "environment": "公园"
+          },
+          {
+            "id": "shot_002",
+            "start": 1.3,
+            "duration": 1.5,
+            "camera": "缓推",
+            "characters": [
+              {
+                "character_id": "char_3",
+                "action": "说话",
+                "emotion": "愤怒",
+                "position": "",
+                "dialogue": "今天天气真好"
+              }
+            ],
+            "sfx": [],
+            "environment": "公园"
+          },
+          {
+            "id": "shot_003",
+            "start": 2.8,
+            "duration": 1.7,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_4",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "是啊，我们去散步吧"
+              }
+            ],
+            "sfx": [],
+            "environment": "公园"
+          },
+          {
+            "id": "shot_004",
+            "start": 4.5,
+            "duration": 1.4,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_0",
+                "action": "站立",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "美好的一天"
+              }
+            ],
+            "sfx": [],
+            "environment": "公园"
+          }
+        ],
+        "transition": "硬切"
+      }
+    ]
+  },
+  "tts_instructions": [
+    {
+      "character": "字幕",
+      "text": "春天来了",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 0.0,
+      "duration": 1.1
+    },
+    {
+      "character": "小明说",
+      "text": "今天天气真好",
+      "voice_id": "default",
+      "pitch": 1.3,
+      "speed": 1.2,
+      "energy": 1.0,
+      "voice_style": "angry",
+      "start_time": 1.3,
+      "duration": 1.4
+    },
+    {
+      "character": "小红说",
+      "text": "是啊，我们去散步吧",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 2.8,
+      "duration": 1.7
+    },
+    {
+      "character": "字幕",
+      "text": "美好的一天",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "不紧不慢",
+      "start_time": 4.5,
+      "duration": 1.25
+    }
+  ],
+  "keyframe_instructions": [
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 1.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 1.8,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小明说",
+      "property": "scale",
+      "time": 2.3,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 2.8,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 3.3,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_小红说",
+      "property": "scale",
+      "time": 3.8,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    }
+  ],
+  "effect_instructions": [
+    {
+      "type": "fade_in",
+      "start_time": 0.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "shake",
+      "start_time": 1.3,
+      "duration": 0.5,
+      "params": {
+        "intensity": 0.15,
+        "frequency": 8
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 2.8,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 4.5,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    }
+  ],
+  "audio_instructions": [
+    {
+      "type": "bgm",
+      "name": "通用BGM",
+      "start_time": 0,
+      "duration": 6.0,
+      "volume": 0.4,
+      "channel": "stereo"
+    }
+  ],
+  "sfx_instructions": [],
+  "text_instructions": [
+    {
+      "text": "春天来了",
+      "style": "底部对白",
+      "start_time": 0.0,
+      "duration": 1.1,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "今天天气真好",
+      "style": "底部对白",
+      "start_time": 1.3,
+      "duration": 1.4,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "是啊，我们去散步吧",
+      "style": "底部对白",
+      "start_time": 2.8,
+      "duration": 1.7,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "美好的一天",
+      "style": "底部对白",
+      "start_time": 4.5,
+      "duration": 1.25,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    }
+  ],
+  "mask_instructions": [],
+  "summary": {
+    "tts_count": 4,
+    "keyframe_count": 6,
+    "effect_count": 4,
+    "audio_count": 1,
+    "sfx_count": 0,
+    "text_count": 4,
+    "mask_count": 0
+  }
+}

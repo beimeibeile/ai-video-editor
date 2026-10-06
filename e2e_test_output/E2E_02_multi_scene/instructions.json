@@ -1,0 +1,544 @@
+{
+  "project": {
+    "title": "多场景对话",
+    "duration": 10.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "剧情",
+    "characters": [
+      {
+        "id": "char_0",
+        "name": "张三",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_1",
+        "name": "李四",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_2",
+        "name": "王五",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_3",
+        "name": "王五说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_4",
+        "name": "李四说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_5",
+        "name": "张三说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_6",
+        "name": "赵六",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      },
+      {
+        "id": "char_7",
+        "name": "赵六说",
+        "description": "未指定角色",
+        "voice": "中性",
+        "emotion_default": "平静"
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene_00",
+        "start": 0.0,
+        "duration": 4.0,
+        "location": "办公室",
+        "atmosphere": "中性",
+        "shots": [
+          {
+            "id": "shot_001",
+            "start": 0.0,
+            "duration": 2.0,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_5",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "这个方案怎么样"
+              }
+            ],
+            "sfx": [],
+            "environment": "办公室"
+          },
+          {
+            "id": "shot_002",
+            "start": 2.0,
+            "duration": 2.0,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_4",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "我觉得需要修改"
+              }
+            ],
+            "sfx": [],
+            "environment": "办公室"
+          }
+        ],
+        "transition": "硬切"
+      },
+      {
+        "id": "scene_01",
+        "start": 4.0,
+        "duration": 6.0,
+        "location": "会议室",
+        "atmosphere": "中性",
+        "shots": [
+          {
+            "id": "shot_004",
+            "start": 4.0,
+            "duration": 2.0,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_5",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "大家有什么意见"
+              }
+            ],
+            "sfx": [],
+            "environment": "会议室"
+          },
+          {
+            "id": "shot_005",
+            "start": 6.0,
+            "duration": 2.1,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_3",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "我同意李四的看法"
+              }
+            ],
+            "sfx": [],
+            "environment": "会议室"
+          },
+          {
+            "id": "shot_006",
+            "start": 8.1,
+            "duration": 1.9,
+            "camera": "固定",
+            "characters": [
+              {
+                "character_id": "char_7",
+                "action": "说话",
+                "emotion": "平静",
+                "position": "",
+                "dialogue": "我有不同意见"
+              }
+            ],
+            "sfx": [],
+            "environment": "会议室"
+          }
+        ],
+        "transition": "硬切"
+      }
+    ]
+  },
+  "tts_instructions": [
+    {
+      "character": "张三说",
+      "text": "这个方案怎么样",
+      "voice_id": "default",
+      "pitch": 1.1,
+      "speed": 1.0,
+      "energy": 0.7,
+      "voice_style": "得意洋洋",
+      "start_time": 0.0,
+      "duration": 1.55
+    },
+    {
+      "character": "李四说",
+      "text": "我觉得需要修改",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 2.0,
+      "duration": 1.55
+    },
+    {
+      "character": "张三说",
+      "text": "大家有什么意见",
+      "voice_id": "default",
+      "pitch": 1.3,
+      "speed": 1.1,
+      "energy": 0.8,
+      "voice_style": "surprise",
+      "start_time": 4.0,
+      "duration": 1.55
+    },
+    {
+      "character": "王五说",
+      "text": "我同意李四的看法",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 6.0,
+      "duration": 1.7
+    },
+    {
+      "character": "赵六说",
+      "text": "我有不同意见",
+      "voice_id": "default",
+      "pitch": 1.0,
+      "speed": 1.0,
+      "energy": 0.5,
+      "voice_style": "calm",
+      "start_time": 8.1,
+      "duration": 1.4
+    }
+  ],
+  "keyframe_instructions": [
+    {
+      "track": "char_张三说",
+      "property": "scale",
+      "time": 0.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_张三说",
+      "property": "scale",
+      "time": 0.5,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_张三说",
+      "property": "scale",
+      "time": 1.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_张三说",
+      "property": "scale",
+      "time": 4.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_张三说",
+      "property": "scale",
+      "time": 4.5,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_张三说",
+      "property": "scale",
+      "time": 5.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_李四说",
+      "property": "scale",
+      "time": 2.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_李四说",
+      "property": "scale",
+      "time": 2.5,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_李四说",
+      "property": "scale",
+      "time": 3.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_王五说",
+      "property": "scale",
+      "time": 6.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_王五说",
+      "property": "scale",
+      "time": 6.5,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_王五说",
+      "property": "scale",
+      "time": 7.0,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_赵六说",
+      "property": "scale",
+      "time": 8.1,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_赵六说",
+      "property": "scale",
+      "time": 8.6,
+      "value": 1.02,
+      "curve": "EASE_OUT"
+    },
+    {
+      "track": "char_赵六说",
+      "property": "scale",
+      "time": 9.1,
+      "value": 1.0,
+      "curve": "EASE_OUT"
+    }
+  ],
+  "effect_instructions": [
+    {
+      "type": "fade_in",
+      "start_time": 0.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 2.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 4.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 6.0,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    },
+    {
+      "type": "fade_in",
+      "start_time": 8.1,
+      "duration": 0.5,
+      "params": {
+        "intensity": 1.0
+      }
+    }
+  ],
+  "audio_instructions": [
+    {
+      "type": "ambient",
+      "name": "办公室环境音+键盘声",
+      "start_time": 0.0,
+      "duration": 4.0,
+      "volume": 0.2,
+      "channel": "stereo"
+    },
+    {
+      "type": "bgm",
+      "name": "通用BGM",
+      "start_time": 0,
+      "duration": 10.0,
+      "volume": 0.4,
+      "channel": "stereo"
+    }
+  ],
+  "sfx_instructions": [],
+  "text_instructions": [
+    {
+      "text": "这个方案怎么样",
+      "style": "底部对白",
+      "start_time": 0.0,
+      "duration": 1.55,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "我觉得需要修改",
+      "style": "底部对白",
+      "start_time": 2.0,
+      "duration": 1.55,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "大家有什么意见",
+      "style": "底部对白",
+      "start_time": 4.0,
+      "duration": 1.55,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "我同意李四的看法",
+      "style": "底部对白",
+      "start_time": 6.0,
+      "duration": 1.7,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    },
+    {
+      "text": "我有不同意见",
+      "style": "底部对白",
+      "start_time": 8.1,
+      "duration": 1.4,
+      "params": {
+        "font": "黑体简",
+        "size": 5.5,
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "position_y": -0.75,
+        "background": {
+          "color": [
+            0,
+            0,
+            0,
+            0.5
+          ],
+          "height": 0.08
+        },
+        "anim_in": "渐显"
+      }
+    }
+  ],
+  "mask_instructions": [],
+  "summary": {
+    "tts_count": 5,
+    "keyframe_count": 15,
+    "effect_count": 5,
+    "audio_count": 2,
+    "sfx_count": 0,
+    "text_count": 5,
+    "mask_count": 0
+  }
+}

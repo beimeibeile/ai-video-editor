@@ -1,0 +1,190 @@
+{
+  "total_tasks": 20,
+  "success_count": 20,
+  "failed_count": 0,
+  "skipped_count": 0,
+  "total_duration": 2.006932497024536,
+  "tasks": [
+    {
+      "id": "media_f76b6d77",
+      "type": "media",
+      "name": "素材准备: 完整复杂剧本",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_000",
+      "type": "asset",
+      "name": "角色图: 字幕",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_001",
+      "type": "asset",
+      "name": "角色图: 豆包",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_002",
+      "type": "asset",
+      "name": "角色图: 用户",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_003",
+      "type": "asset",
+      "name": "角色图: 解答",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_004",
+      "type": "asset",
+      "name": "角色图: 用户说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_005",
+      "type": "asset",
+      "name": "角色图: 豆包说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_scene_000",
+      "type": "asset",
+      "name": "场景图: 抖音主页",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_scene_001",
+      "type": "asset",
+      "name": "场景图: 工作台",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_000",
+      "type": "tts",
+      "name": "TTS: 豆包说 - 大家好，我是豆包",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_001",
+      "type": "tts",
+      "name": "TTS: 用户说 - 你能做什么",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_002",
+      "type": "tts",
+      "name": "TTS: 豆包说 - 我可以帮你写代码、做视频、解答问题",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_003",
+      "type": "tts",
+      "name": "TTS: 用户说 - 真的吗",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_004",
+      "type": "tts",
+      "name": "TTS: 豆包说 - 当然",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_005",
+      "type": "tts",
+      "name": "TTS: 豆包说 - 看我的厉害",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_006",
+      "type": "tts",
+      "name": "TTS: 字幕 - AI全能助手",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "audio_000",
+      "type": "audio",
+      "name": "音轨: 室内环境音",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "audio_001",
+      "type": "audio",
+      "name": "音轨: 写字声",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "audio_002",
+      "type": "audio",
+      "name": "音轨: 通用BGM",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "compose_b1f46574",
+      "type": "compose",
+      "name": "最终合成: 完整复杂剧本",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    }
+  ],
+  "output_path": ""
+}

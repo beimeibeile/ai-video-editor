@@ -1,0 +1,127 @@
+{
+  "total_tasks": 13,
+  "success_count": 13,
+  "failed_count": 0,
+  "skipped_count": 0,
+  "total_duration": 1.3058428764343262,
+  "tasks": [
+    {
+      "id": "media_fe1bfd7a",
+      "type": "media",
+      "name": "素材准备: 带字幕",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_000",
+      "type": "asset",
+      "name": "角色图: 字幕",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_001",
+      "type": "asset",
+      "name": "角色图: 小明",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_002",
+      "type": "asset",
+      "name": "角色图: 小红",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_003",
+      "type": "asset",
+      "name": "角色图: 小明说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_004",
+      "type": "asset",
+      "name": "角色图: 小红说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_scene_000",
+      "type": "asset",
+      "name": "场景图: 公园",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_000",
+      "type": "tts",
+      "name": "TTS: 字幕 - 春天来了",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_001",
+      "type": "tts",
+      "name": "TTS: 小明说 - 今天天气真好",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_002",
+      "type": "tts",
+      "name": "TTS: 小红说 - 是啊，我们去散步吧",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_003",
+      "type": "tts",
+      "name": "TTS: 字幕 - 美好的一天",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "audio_000",
+      "type": "audio",
+      "name": "音轨: 通用BGM",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "compose_de9f45cf",
+      "type": "compose",
+      "name": "最终合成: 带字幕",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    }
+  ],
+  "output_path": ""
+}

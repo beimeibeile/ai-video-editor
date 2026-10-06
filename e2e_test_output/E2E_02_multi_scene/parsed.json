@@ -1,0 +1,186 @@
+{
+  "project": {
+    "title": "多场景对话",
+    "duration": 10.0,
+    "fps": 30,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "style": "剧情"
+  },
+  "characters": [
+    {
+      "id": "char_0",
+      "name": "张三",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_1",
+      "name": "李四",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_2",
+      "name": "王五",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_3",
+      "name": "王五说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_4",
+      "name": "李四说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_5",
+      "name": "张三说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_6",
+      "name": "赵六",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    },
+    {
+      "id": "char_7",
+      "name": "赵六说",
+      "description": "未指定角色",
+      "voice": "中性",
+      "emotion_default": "平静"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_00",
+      "start": 0.0,
+      "duration": 4.0,
+      "location": "办公室",
+      "atmosphere": "中性",
+      "shots": [
+        {
+          "id": "shot_001",
+          "start": 0.0,
+          "duration": 2.0,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_5",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "这个方案怎么样"
+            }
+          ],
+          "sfx": [],
+          "environment": "办公室"
+        },
+        {
+          "id": "shot_002",
+          "start": 2.0,
+          "duration": 2.0,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_4",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "我觉得需要修改"
+            }
+          ],
+          "sfx": [],
+          "environment": "办公室"
+        }
+      ],
+      "transition": "硬切"
+    },
+    {
+      "id": "scene_01",
+      "start": 4.0,
+      "duration": 6.0,
+      "location": "会议室",
+      "atmosphere": "中性",
+      "shots": [
+        {
+          "id": "shot_004",
+          "start": 4.0,
+          "duration": 2.0,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_5",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "大家有什么意见"
+            }
+          ],
+          "sfx": [],
+          "environment": "会议室"
+        },
+        {
+          "id": "shot_005",
+          "start": 6.0,
+          "duration": 2.1,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_3",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "我同意李四的看法"
+            }
+          ],
+          "sfx": [],
+          "environment": "会议室"
+        },
+        {
+          "id": "shot_006",
+          "start": 8.1,
+          "duration": 1.9,
+          "camera": "固定",
+          "characters": [
+            {
+              "character_id": "char_7",
+              "action": "说话",
+              "emotion": "平静",
+              "position": "",
+              "dialogue": "我有不同意见"
+            }
+          ],
+          "sfx": [],
+          "environment": "会议室"
+        }
+      ],
+      "transition": "硬切"
+    }
+  ],
+  "audio_mix": {
+    "bgm": "通用BGM",
+    "ambient": [],
+    "sfx_timeline": []
+  },
+  "text_layout": {
+    "logo": {},
+    "subtitles": []
+  }
+}

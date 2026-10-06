@@ -1,0 +1,118 @@
+{
+  "total_tasks": 12,
+  "success_count": 12,
+  "failed_count": 0,
+  "skipped_count": 0,
+  "total_duration": 1.2051267623901367,
+  "tasks": [
+    {
+      "id": "media_cdd266b0",
+      "type": "media",
+      "name": "素材准备: 带特效转场",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_000",
+      "type": "asset",
+      "name": "角色图: 小红说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_001",
+      "type": "asset",
+      "name": "角色图: 小明",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_002",
+      "type": "asset",
+      "name": "角色图: 小明说",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_char_003",
+      "type": "asset",
+      "name": "角色图: 小红",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_scene_000",
+      "type": "asset",
+      "name": "场景图: 街头",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "asset_scene_001",
+      "type": "asset",
+      "name": "场景图: 天空",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_000",
+      "type": "tts",
+      "name": "TTS: 小明说 - 快看",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_001",
+      "type": "tts",
+      "name": "TTS: 小红说 - 那是什么",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "tts_002",
+      "type": "tts",
+      "name": "TTS: 小明说 - 是飞碟",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "audio_000",
+      "type": "audio",
+      "name": "音轨: 通用BGM",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    },
+    {
+      "id": "compose_e4457d01",
+      "type": "compose",
+      "name": "最终合成: 带特效转场",
+      "status": "success",
+      "duration": 0.1,
+      "error": "",
+      "retry_count": 0
+    }
+  ],
+  "output_path": ""
+}
