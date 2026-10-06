@@ -486,6 +486,166 @@ def apply_beat_cuts(project, video_clips: list, timeline: dict,
     return segments
 
 
+def analyze_audio_segments(audio_path: str, fps: int = 10,
+                            min_segment_duration: float = 3.0) -> Dict:
+    """
+    BGM段落结构分析：识别前奏/主歌/副歌/间奏/尾奏等段落
+
+    基于音频能量曲线的变化检测段落边界，根据能量水平和变化模式识别段落类型。
+
+    Args:
+        audio_path: 音频文件路径
+        fps: 能量采样率
+        min_segment_duration: 最短视频时长（秒）
+
+    Returns:
+        {
+            "segments": [
+                {"type": "intro/verse/chorus/bridge/outro",
+                 "start": 0.0, "end": 8.0, "duration": 8.0,
+                 "avg_energy": 0.3, "energy_trend": "rising/stable/falling"},
+                ...
+            ],
+            "total_duration": 20.0,
+            "segment_count": 4,
+            "energy_curve": [...],
+        }
+    """
+    # 分析音频能量
+    energies = analyze_audio_energy(audio_path, fps=fps)
+    if not isinstance(energies, list):
+        energies = energies.get("energies", []) if isinstance(energies, dict) else []
+
+    # 获取音频时长
+    duration = 0
+    try:
+        cmd = [FFPROBE, "-v", "error", "-show_entries", "format=duration",
+               "-of", "default=noprint_wrappers=1:nokey=1", audio_path]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        duration = float(result.stdout.strip())
+    except Exception:
+        duration = len(energies) / fps if energies else 0
+
+    if not energies or duration <= 0:
+        return {"segments": [], "total_duration": 0, "segment_count": 0, "energy_curve": []}
+
+    # 平滑能量曲线（移动平均，窗口=1秒）
+    window = max(1, fps)
+    smoothed = []
+    for i in range(len(energies)):
+        start = max(0, i - window // 2)
+        end = min(len(energies), i + window // 2 + 1)
+        smoothed.append(sum(energies[start:end]) / (end - start))
+
+    # 计算能量变化率（导数）
+    changes = [0.0]
+    for i in range(1, len(smoothed)):
+        changes.append(smoothed[i] - smoothed[i - 1])
+
+    # 检测段落边界：能量变化率超过阈值的点
+    avg_abs_change = sum(abs(c) for c in changes) / len(changes) if changes else 0
+    threshold = max(avg_abs_change * 2.5, 0.02)  # 突变阈值，最低0.02
+
+    boundaries = [0.0]  # 从0开始
+    for i in range(1, len(changes) - 1):
+        if abs(changes[i]) > threshold:
+            time_sec = i / fps
+            # 确保在音频时长范围内
+            if time_sec >= duration:
+                break
+            # 确保段落间隔足够长
+            if time_sec - boundaries[-1] >= min_segment_duration:
+                boundaries.append(time_sec)
+
+    # 确保最后一个边界是duration（如果最后一个边界离结尾太近则合并）
+    if boundaries[-1] < duration - 0.5:
+        boundaries.append(duration)
+    else:
+        boundaries[-1] = duration
+
+    # 识别每个段落的类型
+    segments = []
+    for i in range(len(boundaries) - 1):
+        start = boundaries[i]
+        end = boundaries[i + 1]
+        seg_duration = end - start
+
+        # 计算该段落的平均能量
+        start_idx = int(start * fps)
+        end_idx = min(int(end * fps), len(smoothed))
+        seg_energies = smoothed[start_idx:end_idx]
+        avg_energy = sum(seg_energies) / len(seg_energies) if seg_energies else 0
+
+        # 计算能量趋势
+        if len(seg_energies) >= 3:
+            first_third = sum(seg_energies[:len(seg_energies) // 3]) / (len(seg_energies) // 3)
+            last_third = sum(seg_energies[-len(seg_energies) // 3:]) / (len(seg_energies) // 3)
+            if last_third - first_third > 0.1:
+                trend = "rising"
+            elif first_third - last_third > 0.1:
+                trend = "falling"
+            else:
+                trend = "stable"
+        else:
+            trend = "stable"
+
+        # 识别段落类型
+        if i == 0:
+            # 第一段：前奏（能量较低或上升）
+            seg_type = "intro" if avg_energy < 0.5 or trend == "rising" else "verse"
+        elif i == len(boundaries) - 2:
+            # 最后一段：尾奏（能量下降或较低）
+            seg_type = "outro" if trend == "falling" or avg_energy < 0.4 else "chorus"
+        else:
+            # 中间段落
+            if avg_energy >= 0.6:
+                seg_type = "chorus"  # 高能量=副歌
+            elif trend in ("rising", "falling") and abs(avg_energy - 0.5) < 0.15:
+                seg_type = "bridge"  # 过渡段
+            else:
+                seg_type = "verse"  # 主歌
+
+        segments.append({
+            "type": seg_type,
+            "start": round(start, 2),
+            "end": round(end, 2),
+            "duration": round(seg_duration, 2),
+            "avg_energy": round(avg_energy, 3),
+            "energy_trend": trend,
+            "index": i,
+        })
+
+    return {
+        "segments": segments,
+        "total_duration": round(duration, 2),
+        "segment_count": len(segments),
+        "energy_curve": [round(e, 3) for e in smoothed],
+        "boundaries": [round(b, 2) for b in boundaries],
+    }
+
+
+def print_segment_analysis(result: Dict):
+    """打印BGM段落分析结果"""
+    print("\n" + "=" * 60)
+    print("BGM段落结构分析")
+    print("=" * 60)
+    print(f"总时长: {result.get('total_duration', 0):.1f}秒")
+    print(f"段落数: {result.get('segment_count', 0)}")
+    print(f"\n{'序号':<4} {'类型':<8} {'开始':<8} {'结束':<8} {'时长':<8} {'能量':<8} {'趋势':<8}")
+    print("-" * 60)
+    for seg in result.get("segments", []):
+        type_names = {
+            "intro": "前奏", "verse": "主歌", "chorus": "副歌",
+            "bridge": "间奏", "outro": "尾奏",
+        }
+        type_cn = type_names.get(seg["type"], seg["type"])
+        trend_names = {"rising": "上升", "stable": "稳定", "falling": "下降"}
+        trend_cn = trend_names.get(seg["energy_trend"], seg["energy_trend"])
+        print(f"{seg['index']:<4} {type_cn:<8} {seg['start']:<8.1f} {seg['end']:<8.1f} "
+              f"{seg['duration']:<8.1f} {seg['avg_energy']:<8.2f} {trend_cn:<8}")
+    print("=" * 60)
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("自动卡点模块 v2")
