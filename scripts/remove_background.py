@@ -20,6 +20,13 @@ try:
 except ImportError:
     PIL_OK = False
 
+try:
+    import cv2
+    import numpy as np
+    OPENCV_OK = True
+except ImportError:
+    OPENCV_OK = False
+
 # ComfyUI配置
 COMFYUI_URL = "http://127.0.0.1:8188"
 RMBG_MODEL_DIR = r"D:\Ai\ComfyUI-aki-v3.2\ComfyUI\models\RMBG"
@@ -31,6 +38,17 @@ def check_rmbg_available() -> bool:
         return False
     models = [f for f in os.listdir(RMBG_MODEL_DIR) if f.endswith(('.pth', '.safetensors', '.ckpt'))]
     return len(models) > 0
+
+
+def check_comfyui_birefnet() -> bool:
+    """检查ComfyUI中BiRefNet节点是否可用"""
+    try:
+        req = urllib.request.Request(f"{COMFYUI_URL}/object_info/BiRefNet")
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = json.loads(r.read())
+        return bool(data.get("BiRefNet"))
+    except Exception:
+        return False
 
 
 def remove_bg_pillow(
@@ -96,6 +114,71 @@ def remove_bg_pillow(
         return None
 
 
+def remove_bg_opencv(
+    input_path: str,
+    output_path: str,
+    iterations: int = 5,
+) -> Optional[str]:
+    """
+    OpenCV GrabCut去背景（比Pillow颜色容差更准确）
+
+    Args:
+        input_path: 输入图片路径
+        output_path: 输出图片路径
+        iterations: GrabCut迭代次数（越多越精细但越慢）
+
+    Returns:
+        输出路径或None
+    """
+    if not OPENCV_OK:
+        print("  ⚠️ OpenCV不可用，回退到Pillow")
+        return None
+
+    try:
+        # OpenCV imread不支持中文路径，用numpy.fromfile + imdecode
+        img = cv2.imdecode(np.fromfile(input_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if img is None:
+            print(f"  ❌ 无法读取图片: {input_path}")
+            return None
+
+        h, w = img.shape[:2]
+        mask = np.zeros((h, w), np.uint8)
+
+        # 初始化：假设中心区域为前景，边缘为背景
+        rect = (int(w * 0.05), int(h * 0.05),
+                int(w * 0.9), int(h * 0.9))
+
+        bgd_model = np.zeros((1, 65), np.float64)
+        fgd_model = np.zeros((1, 65), np.float64)
+
+        cv2.grabCut(img, mask, rect, bgd_model, fgd_model,
+                    iterations, cv2.GC_INIT_WITH_RECT)
+
+        # 生成alpha通道：确定前景+可能前景=不透明
+        alpha = np.where((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 255, 0).astype(np.uint8)
+
+        # 边缘羽化
+        alpha = cv2.GaussianBlur(alpha, (3, 3), 0)
+
+        # 合并为RGBA
+        b, g, r = cv2.split(img)
+        rgba = cv2.merge([r, g, b, alpha])
+
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        # cv2.imwrite不支持中文路径，用imencode + tofile
+        ext = os.path.splitext(output_path)[1] or '.png'
+        success, buf = cv2.imencode(ext, rgba)
+        if success:
+            buf.tofile(output_path)
+        else:
+            cv2.imwrite(output_path, rgba)
+        print(f"  ✅ OpenCV GrabCut去背景: {os.path.basename(output_path)} (迭代={iterations})")
+        return output_path
+    except Exception as e:
+        print(f"  ❌ OpenCV去背景失败: {e}")
+        return None
+
+
 def remove_bg_comfyui(
     input_path: str,
     output_path: str,
@@ -113,13 +196,84 @@ def remove_bg_comfyui(
         输出路径或None
     """
     if not check_rmbg_available():
-        print("  ⚠️ ComfyUI RMBG模型不可用，回退到Pillow")
+        print("  ⚠️ ComfyUI RMBG模型不可用")
         return None
 
-    # TODO: 实现ComfyUI RMBG API调用
-    # 需要先上传图片到ComfyUI，然后运行RMBG工作流，再下载结果
-    print("  ⚠️ ComfyUI RMBG接口待实现，回退到Pillow")
-    return None
+    if not check_comfyui_birefnet():
+        print("  ⚠️ ComfyUI BiRefNet节点未安装，回退到OpenCV")
+        return None
+
+    # ComfyUI RMBG API调用（BiRefNet节点可用时）
+    try:
+        import uuid
+        client_id = str(uuid.uuid4())
+
+        # 1. 上传图片
+        with open(input_path, 'rb') as f:
+            img_data = f.read()
+        boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
+        body = (f'--{boundary}\r\n'
+                f'Content-Disposition: form-data; name="image"; filename="input.png"\r\n'
+                f'Content-Type: image/png\r\n\r\n').encode() + img_data + f'\r\n--{boundary}--\r\n'.encode()
+
+        req = urllib.request.Request(
+            f"{COMFYUI_URL}/upload/image",
+            data=body,
+            headers={'Content-Type': f'multipart/form-data; boundary={boundary}'}
+        )
+        with urllib.request.urlopen(req, timeout=30) as r:
+            upload_result = json.loads(r.read())
+        uploaded_name = upload_result.get('name', 'input.png')
+
+        # 2. 构建工作流
+        workflow = {
+            "1": {"class_type": "LoadImage", "inputs": {"image": uploaded_name}},
+            "2": {"class_type": "BiRefNet", "inputs": {
+                "image": ["1", 0],
+                "device": "cuda",
+            }},
+            "3": {"class_type": "SaveImage", "inputs": {
+                "images": ["2", 0],
+                "filename_prefix": "rmbg_output",
+            }},
+        }
+
+        # 3. 提交工作流
+        prompt_data = json.dumps({"prompt": workflow, "client_id": client_id}).encode()
+        req = urllib.request.Request(
+            f"{COMFYUI_URL}/prompt",
+            data=prompt_data,
+            headers={'Content-Type': 'application/json'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            prompt_result = json.loads(r.read())
+        prompt_id = prompt_result.get('prompt_id')
+
+        # 4. 轮询结果
+        import time
+        for _ in range(60):  # 最多等60秒
+            time.sleep(1)
+            try:
+                with urllib.request.urlopen(f"{COMFYUI_URL}/history/{prompt_id}", timeout=5) as r:
+                    history = json.loads(r.read())
+                if prompt_id in history:
+                    outputs = history[prompt_id].get('outputs', {})
+                    for node_id, node_out in outputs.items():
+                        if 'images' in node_out:
+                            img_info = node_out['images'][0]
+                            img_url = f"{COMFYUI_URL}/view?filename={img_info['filename']}&subfolder={img_info.get('subfolder', '')}&type={img_info.get('type', 'output')}"
+                            urllib.request.urlretrieve(img_url, output_path)
+                            print(f"  ✅ ComfyUI RMBG去背景: {os.path.basename(output_path)}")
+                            return output_path
+                    break
+            except Exception:
+                continue
+
+        print("  ⚠️ ComfyUI RMBG超时，回退到OpenCV")
+        return None
+    except Exception as e:
+        print(f"  ❌ ComfyUI RMBG失败: {e}，回退到OpenCV")
+        return None
 
 
 def remove_bg(
@@ -148,8 +302,10 @@ def remove_bg(
     print(f"  方法: {method}")
 
     if method == "auto":
-        if check_rmbg_available():
+        if check_rmbg_available() and check_comfyui_birefnet():
             method = "comfyui"
+        elif OPENCV_OK:
+            method = "opencv"
         else:
             method = "pillow"
         print(f"  自动选择: {method}")
@@ -158,13 +314,16 @@ def remove_bg(
         result = remove_bg_comfyui(input_path, output_path, **kwargs)
         if result:
             return result
+        print("  回退到OpenCV")
+
+    if method in ("comfyui", "opencv"):
+        result = remove_bg_opencv(input_path, output_path, **kwargs)
+        if result:
+            return result
         print("  回退到Pillow")
 
-    if method == "pillow":
-        return remove_bg_pillow(input_path, output_path, **kwargs)
-
-    print(f"❌ 未知方法: {method}")
-    return None
+    # 最终兜底：Pillow
+    return remove_bg_pillow(input_path, output_path, **kwargs)
 
 
 def batch_remove_bg(
