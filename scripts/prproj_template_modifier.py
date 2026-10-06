@@ -175,6 +175,84 @@ class PrprojTemplateModifier:
             print(f"  - {m['filename']}")
         print("=" * 60)
 
+    def extract_clips(self) -> List[Dict]:
+        """提取模板中的所有剪辑信息（实验性功能）
+
+        注意：Pr工程XML结构复杂，此功能可能不完整。
+        建议使用get_media_summary获取媒体使用统计。
+
+        Returns:
+            剪辑列表，每个剪辑包含：媒体文件名、入点、出点、时长
+        """
+        clips = []
+        # 查找VideoClipTrackItem元素（实际剪辑项）
+        clip_pattern = r'<VideoClipTrackItem[^>]*ObjectUID="([^"]+)"[^>]*>'
+        for m in re.finditer(clip_pattern, self.content):
+            clip_uid = m.group(1)
+            nearby = self.content[m.start():m.start()+5000]
+
+            # 查找媒体引用（通过ProjectItemRef或MediaRef）
+            file_match = re.search(r'<FilePath>([^<]+)</FilePath>', nearby)
+            filename = os.path.basename(file_match.group(1)) if file_match else "unknown"
+
+            # 查找时间信息
+            in_match = re.search(r'<StartUnit>(\d+)</StartUnit>', nearby)
+            out_match = re.search(r'<EndUnit>(\d+)</EndUnit>', nearby)
+            in_point = int(in_match.group(1)) if in_match else 0
+            out_point = int(out_match.group(1)) if out_match else 0
+            duration = out_point - in_point
+
+            clips.append({
+                'clip_uid': clip_uid,
+                'media_file': filename,
+                'in_point': in_point,
+                'out_point': out_point,
+                'duration_us': duration,
+                'duration_sec': round(duration / 254016000000, 3) if duration else 0,
+            })
+        return clips
+
+    def get_media_summary(self) -> Dict:
+        """获取媒体使用摘要
+
+        Returns:
+            媒体使用统计：每个媒体被引用的次数
+        """
+        usage = {}
+        for media in self.media_files:
+            count = self.content.count(f'<FilePath>{media["path"]}</FilePath>')
+            usage[media['filename']] = {
+                'path': media['path'],
+                'reference_count': count,
+            }
+        return {
+            'total_media': len(self.media_files),
+            'total_references': sum(v['reference_count'] for v in usage.values()),
+            'media_usage': usage,
+        }
+
+    def replace_media_by_index(self, index: int, new_path: str) -> bool:
+        """按索引替换媒体
+
+        Args:
+            index: 媒体索引（从0开始，按media_files顺序）
+            new_path: 新的媒体文件路径
+
+        Returns:
+            是否成功
+        """
+        if index < 0 or index >= len(self.media_files):
+            print(f"❌ 媒体索引超出范围: {index} (共{len(self.media_files)}个)")
+            return False
+        media = self.media_files[index]
+        old_fp = f'<FilePath>{media["path"]}</FilePath>'
+        new_fp = f'<FilePath>{new_path}</FilePath>'
+        if old_fp in self.content:
+            self.content = self.content.replace(old_fp, new_fp)
+            print(f"  ✅ 替换[{index}]: {media['filename']} -> {os.path.basename(new_path)}")
+            return True
+        return False
+
 
 def main():
     """命令行测试"""
