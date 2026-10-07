@@ -1,4 +1,4 @@
-"""
+﻿"""
 导演引擎统一入口（Director Engine）
 系统核心：读懂人类剧本 → 翻译成机器指令 → 指挥调度执行
 
@@ -36,8 +36,7 @@ class DirectorEngine:
 
     def __init__(self, work_dir: str = None, use_llm: bool = True):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "director_engine_output"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output"
         )
         os.makedirs(self.work_dir, exist_ok=True)
 

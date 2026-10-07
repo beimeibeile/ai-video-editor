@@ -1,4 +1,4 @@
-"""
+﻿"""
 P25执行器: 文字排版
 支持多种文字样式和动画，生成文字素材或定义剪映文字参数
 """
@@ -49,8 +49,7 @@ ANIMATION_MAP = {
 class TextExecutor:
     def __init__(self, output_dir: str = None):
         self.output_dir = output_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "director_engine_output", "text"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output", "text"
         )
         os.makedirs(self.output_dir, exist_ok=True)
 

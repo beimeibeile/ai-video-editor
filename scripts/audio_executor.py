@@ -1,4 +1,4 @@
-"""
+﻿"""
 P25执行器: 音频合成
 基于ffmpeg生成BGM/音效/环境音
 """
@@ -15,8 +15,7 @@ FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
 class AudioExecutor:
     def __init__(self, output_dir: str = None):
         self.output_dir = output_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "director_engine_output", "audio"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output", "audio"
         )
         os.makedirs(self.output_dir, exist_ok=True)
 

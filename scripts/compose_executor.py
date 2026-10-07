@@ -10,8 +10,10 @@ import subprocess
 from typing import Dict, Any, List, Optional
 
 
-RUNTIME_DIR = r"D:\DobaoWork_Project\Ai_Video_Editor\ai-video-editor-runtime\scripts"
-sys.path.insert(0, RUNTIME_DIR)
+# skill内部scripts目录（已包含所有依赖模块）
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
 
 FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
 
@@ -35,8 +37,7 @@ def get_audio_duration(audio_path: str) -> float:
 class ComposeExecutor:
     def __init__(self, work_dir: str = None):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "director_engine_output"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output"
         )
         self.tts_dir = os.path.join(self.work_dir, "tts")
         self.audio_dir = os.path.join(self.work_dir, "audio")

@@ -1,4 +1,4 @@
-"""
+﻿"""
 创意字幕增强模块
 - 半透明字幕条（背景条+文字多轨道叠加）
 - 动态发光文字（多层文字叠加模拟发光）
@@ -39,7 +39,7 @@ def create_subtitle_bar(width: int = 1080, height: int = 120,
     """
     if output_path is None:
         output_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "..",
-                                    "Videos", "剪映导出", "Doubao_Jianying-editor",
+                                    "Videos", "ai-video-editor-output",
                                     "material", "Reuse materials", "subtitle_bar.png")
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

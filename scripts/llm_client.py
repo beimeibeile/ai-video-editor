@@ -1,4 +1,4 @@
-"""
+﻿"""
 P23增强: LLM客户端封装 v2.0
 支持多种LLM后端，优先级：宿主LLM > 云端API > 本地Ollama > Mock
 
@@ -121,8 +121,7 @@ class LLMClient:
 
         # 5. 检查配置文件
         config_path = os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "llm_config.json"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "llm_config.json"
         )
         if os.path.exists(config_path):
             try:

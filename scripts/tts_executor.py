@@ -1,4 +1,4 @@
-"""
+﻿"""
 P25执行器: TTS语音合成（Qwen3-TTS ComfyUI后端）
 通过ComfyUI API调用Qwen3-TTS生成高质量语音，支持9种内置音色+风格指令
 """
@@ -85,8 +85,7 @@ COMFY_INPUT_DIR = r"D:\Ai\ComfyUI-aki-v3.2\ComfyUI\input"
 class TTSExecutor:
     def __init__(self, output_dir: str = None):
         self.output_dir = output_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "director_engine_output", "tts"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output", "tts"
         )
         os.makedirs(self.output_dir, exist_ok=True)
         self._comfyui_available = None

@@ -1,4 +1,4 @@
-"""
+﻿"""
 音效库管理模块
 SQLite存储音效元数据，支持标签检索、评级管理、复用缓存
 
@@ -22,8 +22,7 @@ class SoundLibrary:
     def __init__(self, db_path: str = None):
         if db_path is None:
             db_path = os.path.join(
-                os.path.expanduser("~"), "Videos", "剪映导出",
-                "Doubao_Jianying-editor", "ai-video-editor-runtime", "data", "sound_library.db"
+                os.path.expanduser("~"), "Videos", "ai-video-editor-output", "ai-video-editor-runtime", "data", "sound_library.db"
             )
         self.db_path = db_path
         os.makedirs(os.path.dirname(db_path), exist_ok=True)

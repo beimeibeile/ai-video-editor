@@ -1,4 +1,4 @@
-"""
+﻿"""
 P25: 中央调度器（Central Orchestrator）
 导演引擎的第三模块：按依赖关系执行指令序列，调度各工具协同工作
 
@@ -78,7 +78,7 @@ class CentralOrchestrator:
 
     def __init__(self, work_dir: str = None):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出", "Doubao_Jianying-editor",
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output",
             "director_engine_output"
         )
         os.makedirs(self.work_dir, exist_ok=True)

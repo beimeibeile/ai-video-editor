@@ -1,4 +1,4 @@
-"""
+﻿"""
 剧本改写记忆与自学习引擎 v1.0
 
 核心功能：
@@ -94,8 +94,7 @@ class RewriteMemory:
     def __init__(self, memory_path: str = None):
         if memory_path is None:
             memory_path = os.path.join(
-                os.path.expanduser("~"), "Videos", "剪映导出",
-                "Doubao_Jianying-editor", "rewrite_memory.json"
+                os.path.expanduser("~"), "Videos", "ai-video-editor-output", "rewrite_memory.json"
             )
         self.memory_path = memory_path
         self.records: List[RewriteRecord] = []

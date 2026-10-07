@@ -32,10 +32,10 @@ from adapters.jianying_adapter import (
 )
 draft = None  # 已迁移到适配层，保留变量名避免引用错误
 
-# 统一特效API（运行时路径）
-_RUNTIME_SCRIPTS = r"D:\DobaoWork_Project\Ai_Video_Editor\ai-video-editor-runtime\scripts"
-if _RUNTIME_SCRIPTS not in sys.path:
-    sys.path.insert(0, _RUNTIME_SCRIPTS)
+# 统一特效API（skill内部scripts目录，已包含jianying_effect_api.py）
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
 try:
     from jianying_effect_api import JianyingEffectAPI
     _EFFECT_API = JianyingEffectAPI()
@@ -184,8 +184,7 @@ class JianyingExecutor:
 
     def __init__(self, work_dir: str = None):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "director_engine_output"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output"
         )
         self.asset_dir = os.path.join(self.work_dir, "assets")
         os.makedirs(self.asset_dir, exist_ok=True)

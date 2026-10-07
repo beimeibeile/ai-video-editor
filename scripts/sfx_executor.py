@@ -1,4 +1,4 @@
-"""
+﻿"""
 音效执行器（SFX Executor）
 三层音效生成架构：
   层1: TTS拟声词（砰/啪/嗖/叮咚，Qwen3-TTS，零延迟）
@@ -86,8 +86,7 @@ class SFXExecutor:
 
     def __init__(self, work_dir: str = None, comfyui_url: str = "http://127.0.0.1:8188"):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "剪映导出",
-            "Doubao_Jianying-editor", "ai-video-editor-runtime", "sfx_output"
+            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "ai-video-editor-runtime", "sfx_output"
         )
         os.makedirs(self.work_dir, exist_ok=True)
         self.library = SoundLibrary()
