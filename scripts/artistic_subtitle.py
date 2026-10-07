@@ -8,7 +8,11 @@ import sys
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-import pyJianYingDraft as draft
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+from adapters.jianying_adapter import TextShadow
 
 
 def add_artistic_subtitle(
@@ -75,10 +79,10 @@ def add_artistic_subtitle(
         main_text, start_time=start_time, duration=duration,
         font_size=main_cfg["size"],
         color_rgb=main_cfg["color"],
-        style=draft.TextStyle(size=main_cfg["size"], bold=main_cfg["bold"]),
-        border=draft.TextBorder(color=(0, 0, 0), width=main_cfg["border_w"]) if main_cfg["border_w"] > 0 else None,
-        shadow=draft.TextShadow(color=(0, 0, 0), distance=8, diffuse=15) if main_cfg["border_w"] > 30 else None,
-        clip_settings=draft.ClipSettings(transform_y=main_cfg["y"]),
+        style=TextStyle(size=main_cfg["size"], bold=main_cfg["bold"]),
+        border=TextBorder(color=(0, 0, 0), width=main_cfg["border_w"]) if main_cfg["border_w"] > 0 else None,
+        shadow=TextShadow(color=(0, 0, 0), distance=8, diffuse=15) if main_cfg["border_w"] > 30 else None,
+        clip_settings=ClipSettings(transform_y=main_cfg["y"]),
         anim_in=main_cfg["anim_in"],
         anim_loop=main_cfg.get("anim_loop"),
         track_name="ArtTitle",
@@ -91,9 +95,9 @@ def add_artistic_subtitle(
             sub_text, start_time=start_time, duration=duration,
             font_size=sub_cfg["size"],
             color_rgb=sub_cfg["color"],
-            style=draft.TextStyle(size=sub_cfg["size"], bold=sub_cfg["bold"]),
-            border=draft.TextBorder(color=(0, 0, 0), width=sub_cfg["border_w"]) if sub_cfg["border_w"] > 0 else None,
-            clip_settings=draft.ClipSettings(transform_y=sub_cfg["y"]),
+            style=TextStyle(size=sub_cfg["size"], bold=sub_cfg["bold"]),
+            border=TextBorder(color=(0, 0, 0), width=sub_cfg["border_w"]) if sub_cfg["border_w"] > 0 else None,
+            clip_settings=ClipSettings(transform_y=sub_cfg["y"]),
             anim_in=sub_cfg["anim_in"],
             track_name="ArtSubtitle",
         )
@@ -105,9 +109,9 @@ def add_artistic_subtitle(
             narration, start_time=start_time, duration=duration,
             font_size=narr_cfg["size"],
             color_rgb=narr_cfg["color"],
-            style=draft.TextStyle(size=narr_cfg["size"]),
-            border=draft.TextBorder(color=(0, 0, 0), width=narr_cfg["border_w"]) if narr_cfg["border_w"] > 0 else None,
-            clip_settings=draft.ClipSettings(transform_y=narr_cfg["y"]),
+            style=TextStyle(size=narr_cfg["size"]),
+            border=TextBorder(color=(0, 0, 0), width=narr_cfg["border_w"]) if narr_cfg["border_w"] > 0 else None,
+            clip_settings=ClipSettings(transform_y=narr_cfg["y"]),
             anim_in=narr_cfg["anim_in"],
             track_name="ArtNarration",
         )
@@ -117,11 +121,11 @@ def add_ken_burns(segment, start_us, duration_us, zoom_in=True, intensity=0.12):
     """给图片片段添加Ken Burns效果"""
     end_us = start_us + duration_us
     if zoom_in:
-        segment.add_keyframe(draft.KeyframeProperty.uniform_scale, start_us, 1.0, **draft.Keyframe.EASE_IN_OUT)
-        segment.add_keyframe(draft.KeyframeProperty.uniform_scale, end_us, 1.0 + intensity, **draft.Keyframe.EASE_IN_OUT)
+        segment.add_keyframe(KeyframeProperty.uniform_scale, start_us, 1.0, **Keyframe.EASE_IN_OUT)
+        segment.add_keyframe(KeyframeProperty.uniform_scale, end_us, 1.0 + intensity, **Keyframe.EASE_IN_OUT)
     else:
-        segment.add_keyframe(draft.KeyframeProperty.uniform_scale, start_us, 1.0 + intensity, **draft.Keyframe.EASE_IN_OUT)
-        segment.add_keyframe(draft.KeyframeProperty.uniform_scale, end_us, 1.0, **draft.Keyframe.EASE_IN_OUT)
+        segment.add_keyframe(KeyframeProperty.uniform_scale, start_us, 1.0 + intensity, **Keyframe.EASE_IN_OUT)
+        segment.add_keyframe(KeyframeProperty.uniform_scale, end_us, 1.0, **Keyframe.EASE_IN_OUT)
 
 
 if __name__ == "__main__":

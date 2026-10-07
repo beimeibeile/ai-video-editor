@@ -43,6 +43,9 @@ python easy_build.py --input ./素材 --theme 国风 --output 我的视频
 - cap_keyframe_engine — 8种运镜预设（推近/拉远/左移/右移/上移/下移/组合），淡入淡出
 - cap_subtitle_designer — 5种艺术字幕风格，三层叠加（主标题/副标题/旁白）
 - cap_effect_library — 10种转场+8种滤镜，7种主题风格自动匹配
+- **script_understanding_engine（P23深度语义增强）** — 深度剧本理解与二创编排引擎：原视频深度逆向分析（镜头结构/运镜/特效/情绪节奏）、剧本结构化解析（故事线/人物/冲突/转折）、二创编排决策（模板化/创意化/风格化改编）、情绪-视觉映射（BGM情绪→镜头节奏→视觉效果）
+- **multi_track_mixer（多音轨混音优化）** — 人声+音乐+环境音+音效的专业混音：6种预设（vlog/music_video/drama/comedy/cinematic/album_template）、sidechaincompress闪避（人声自动压低BGM）、淡入淡出、高通/低通滤波、动态压缩、EBU R128响度标准化（-16 LUFS短视频标准）、剪映工程音频优化器
+- **asset_generator（ComfyUI素材生成执行器）** — 角色图/场景图/道具图/特效图/背景图生成：7种风格预设（写实/卡通/动漫/3D/像素/水墨/油画）、文生图+图生图、自动模型选择、LoRA支持、批量生成、素材评级入库（1-5星）、标签检索、工作流快照
 
 ## 搜索能力（AnySearch）
 

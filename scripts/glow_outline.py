@@ -22,7 +22,10 @@ from typing import List, Dict, Any, Optional, Tuple
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-import pyJianYingDraft as draft
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 
 try:
     from PIL import Image, ImageFilter, ImageOps

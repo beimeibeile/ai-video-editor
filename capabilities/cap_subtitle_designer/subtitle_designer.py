@@ -26,7 +26,13 @@ def _ensure_jy_path():
 _ensure_jy_path()
 
 try:
-    import pyJianYingDraft as draft
+    # pyJianYingDraft已迁移到适配层
+    import os as _os, sys as _sys
+    _AVR = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+    from adapters.jianying_adapter import TextSegment, TextStyle, TextBorder, TextShadow
+    from adapters.jianying_adapter import Timerange, tim, TrackType
+    from adapters.jianying_adapter import IntroType, TextLoopAnim
     HAS_JY = True
 except ImportError:
     HAS_JY = False
@@ -109,10 +115,10 @@ def add_artistic_subtitle(project, main_text: str, start_time, duration,
         main_text, start_time=start_time, duration=duration,
         font_size=main_cfg["size"],
         color_rgb=main_cfg["color"],
-        style=draft.TextStyle(size=main_cfg["size"], bold=main_cfg["bold"]),
-        border=draft.TextBorder(color=(0, 0, 0), width=main_cfg["border_w"]) if main_cfg["border_w"] > 0 else None,
+        style=TextStyle(size=main_cfg["size"], bold=main_cfg["bold"]),
+        border=TextBorder(color=(0, 0, 0), width=main_cfg["border_w"]) if main_cfg["border_w"] > 0 else None,
         shadow=draft.TextShadow(color=(0, 0, 0), distance=8, diffuse=15) if main_cfg["border_w"] > 30 else None,
-        clip_settings=draft.ClipSettings(transform_y=main_cfg["y"]),
+        clip_settings=ClipSettings(transform_y=main_cfg["y"]),
         anim_in=main_cfg["anim_in"],
         anim_loop=main_cfg.get("anim_loop"),
         track_name="ArtTitle",
@@ -125,9 +131,9 @@ def add_artistic_subtitle(project, main_text: str, start_time, duration,
             sub_text, start_time=start_time, duration=duration,
             font_size=sub_cfg["size"],
             color_rgb=sub_cfg["color"],
-            style=draft.TextStyle(size=sub_cfg["size"], bold=sub_cfg["bold"]),
-            border=draft.TextBorder(color=(0, 0, 0), width=sub_cfg["border_w"]) if sub_cfg["border_w"] > 0 else None,
-            clip_settings=draft.ClipSettings(transform_y=sub_cfg["y"]),
+            style=TextStyle(size=sub_cfg["size"], bold=sub_cfg["bold"]),
+            border=TextBorder(color=(0, 0, 0), width=sub_cfg["border_w"]) if sub_cfg["border_w"] > 0 else None,
+            clip_settings=ClipSettings(transform_y=sub_cfg["y"]),
             anim_in=sub_cfg["anim_in"],
             track_name="ArtSubtitle",
         )
@@ -139,9 +145,9 @@ def add_artistic_subtitle(project, main_text: str, start_time, duration,
             narration, start_time=start_time, duration=duration,
             font_size=narr_cfg["size"],
             color_rgb=narr_cfg["color"],
-            style=draft.TextStyle(size=narr_cfg["size"]),
-            border=draft.TextBorder(color=(0, 0, 0), width=narr_cfg["border_w"]) if narr_cfg["border_w"] > 0 else None,
-            clip_settings=draft.ClipSettings(transform_y=narr_cfg["y"]),
+            style=TextStyle(size=narr_cfg["size"]),
+            border=TextBorder(color=(0, 0, 0), width=narr_cfg["border_w"]) if narr_cfg["border_w"] > 0 else None,
+            clip_settings=ClipSettings(transform_y=narr_cfg["y"]),
             anim_in=narr_cfg["anim_in"],
             track_name="ArtNarration",
         )
@@ -169,9 +175,9 @@ def add_simple_subtitle(project, text: str, start_time, duration,
         text, start_time=start_time, duration=duration,
         font_size=size,
         color_rgb=color,
-        style=draft.TextStyle(size=size),
-        border=draft.TextBorder(color=(0, 0, 0), width=30),
-        clip_settings=draft.ClipSettings(transform_y=y),
+        style=TextStyle(size=size),
+        border=TextBorder(color=(0, 0, 0), width=30),
+        clip_settings=ClipSettings(transform_y=y),
         anim_in="渐显",
         track_name="Subtitle",
     )

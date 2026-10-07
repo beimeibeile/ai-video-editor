@@ -75,7 +75,10 @@ def execute_task(task_path):
 def run_editing(config, materials):
     """执行剪辑任务（调用pipeline或特效库）"""
     from jy_wrapper import JyProject
-    import pyJianYingDraft as draft
+    # pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 
     project_name = config.get("project_name", "工作台任务")
     width = config.get("width", 1080)

@@ -11,8 +11,11 @@ import subprocess
 JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
-import pyJianYingDraft as draft
-from pyJianYingDraft import KeyframeProperty as KP
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+from adapters.jianying_adapter import KeyframeProperty as KP, TextShadow
 
 
 FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
@@ -106,7 +109,7 @@ def add_subtitle_with_bar(project, text: str, start_time: str, duration: str,
         )
         if bar_seg:
             # 设置背景条位置和缩放
-            bar_seg.clip_settings = draft.ClipSettings(
+            bar_seg.clip_settings = ClipSettings(
                 transform_y=y_position,
                 scale_x=1.0,
                 scale_y=bar_height / 1920 * 2,  # 适配画布高度
@@ -123,9 +126,9 @@ def add_subtitle_with_bar(project, text: str, start_time: str, duration: str,
             duration=duration,
             font_size=font_size,
             color_rgb=text_color,
-            style=draft.TextStyle(size=font_size, bold=True),
-            border=draft.TextBorder(color=(0, 0, 0), width=30),
-            clip_settings=draft.ClipSettings(transform_y=y_position),
+            style=TextStyle(size=font_size, bold=True),
+            border=TextBorder(color=(0, 0, 0), width=30),
+            clip_settings=ClipSettings(transform_y=y_position),
             anim_in=anim_in,
             anim_loop=anim_loop,
             track_name=f"{track_prefix}_Text",
@@ -180,8 +183,8 @@ def add_glowing_text(project, text: str, start_time: str, duration: str,
                 duration=duration,
                 font_size=layer_size,
                 color_rgb=glow_color,
-                style=draft.TextStyle(size=layer_size, bold=True),
-                clip_settings=draft.ClipSettings(
+                style=TextStyle(size=layer_size, bold=True),
+                clip_settings=ClipSettings(
                     transform_y=y_position,
                     alpha=min(layer_alpha, 0.5),
                 ),
@@ -200,10 +203,10 @@ def add_glowing_text(project, text: str, start_time: str, duration: str,
             duration=duration,
             font_size=font_size,
             color_rgb=core_color,
-            style=draft.TextStyle(size=font_size, bold=True),
-            border=draft.TextBorder(color=(0, 0, 0), width=40),
-            shadow=draft.TextShadow(color=glow_color, distance=10, diffuse=20),
-            clip_settings=draft.ClipSettings(transform_y=y_position),
+            style=TextStyle(size=font_size, bold=True),
+            border=TextBorder(color=(0, 0, 0), width=40),
+            shadow=TextShadow(color=glow_color, distance=10, diffuse=20),
+            clip_settings=ClipSettings(transform_y=y_position),
             anim_in=anim_in,
             anim_loop=anim_loop,
             track_name="GlowCore",

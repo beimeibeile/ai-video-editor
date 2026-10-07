@@ -28,7 +28,10 @@ sys.path.insert(0, str(JY_SKILL_ROOT / "scripts"))
 sys.path.insert(0, str(SKILL_ROOT))
 
 from jy_wrapper import JyProject
-import pyJianYingDraft as draft
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 
 from capabilities.cap_keyframe_engine import auto_keyframe_for_still_image, add_ken_burns
 from capabilities.cap_subtitle_designer import add_artistic_subtitle, add_hook_title
@@ -242,7 +245,7 @@ def easy_build(input_dir: str, theme: str = "极简", output_name: str = None,
                     duration=duration_us,
                     font_size=6.0,
                     color_rgb=(1.0, 1.0, 1.0),
-                    clip_settings=draft.ClipSettings(transform_y=-0.7),
+                    clip_settings=ClipSettings(transform_y=-0.7),
                     anim_in="渐显",
                     track_name="ShotSubtitle",
                 )

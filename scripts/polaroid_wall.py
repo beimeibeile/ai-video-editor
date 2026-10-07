@@ -22,7 +22,10 @@ from typing import List, Dict, Optional, Tuple
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-import pyJianYingDraft as draft
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -160,7 +163,7 @@ def create_polaroid_wall(
 
         if seg:
             # 设置旋转和位置
-            seg.clip_settings = draft.ClipSettings(
+            seg.clip_settings = ClipSettings(
                 transform_x=x,
                 transform_y=y,
                 rotation=rot,
@@ -169,24 +172,24 @@ def create_polaroid_wall(
             )
             # 入场动画：旋转+缩放
             seg.add_keyframe(
-                draft.KeyframeProperty.uniform_scale,
+                KeyframeProperty.uniform_scale,
                 0, 0.0,
-                **draft.Keyframe.EASE_OUT,
+                **Keyframe.EASE_OUT,
             )
             seg.add_keyframe(
-                draft.KeyframeProperty.uniform_scale,
+                KeyframeProperty.uniform_scale,
                 int(0.5 * 1_000_000), scale,
-                **draft.Keyframe.EASE_OUT,
+                **Keyframe.EASE_OUT,
             )
             seg.add_keyframe(
-                draft.KeyframeProperty.rotation,
+                KeyframeProperty.rotation,
                 0, rot - 30,
-                **draft.Keyframe.EASE_OUT,
+                **Keyframe.EASE_OUT,
             )
             seg.add_keyframe(
-                draft.KeyframeProperty.rotation,
+                KeyframeProperty.rotation,
                 int(0.5 * 1_000_000), rot,
-                **draft.Keyframe.EASE_OUT,
+                **Keyframe.EASE_OUT,
             )
             print(f"  ✅ 照片 [{i}]: 位置({x:.2f},{y:.2f}) 旋转{rot:.0f}° 缩放{scale:.2f}")
 
@@ -262,12 +265,12 @@ def add_polaroid_photos_to_project(
         )
 
         if seg:
-            seg.clip_settings = draft.ClipSettings(
+            seg.clip_settings = ClipSettings(
                 transform_x=x, transform_y=y,
                 rotation=rot, scale_x=scale, scale_y=scale,
             )
-            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 0.0, **draft.Keyframe.EASE_OUT)
-            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, int(0.5 * 1e6), scale, **draft.Keyframe.EASE_OUT)
+            seg.add_keyframe(KeyframeProperty.uniform_scale, 0, 0.0, **Keyframe.EASE_OUT)
+            seg.add_keyframe(KeyframeProperty.uniform_scale, int(0.5 * 1e6), scale, **Keyframe.EASE_OUT)
             added.append({"photo": photo_path, "start": seg_start, "rotation": rot})
 
     return {

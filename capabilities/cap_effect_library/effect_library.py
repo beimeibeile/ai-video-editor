@@ -25,8 +25,11 @@ def _ensure_jy_path():
 _ensure_jy_path()
 
 try:
-    import pyJianYingDraft as draft
-    from pyJianYingDraft import TransitionType
+    # pyJianYingDraft已迁移到适配层
+    import os as _os, sys as _sys
+    _AVR = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+    from adapters.jianying_adapter import TransitionType
     HAS_JY = True
 except ImportError:
     HAS_JY = False

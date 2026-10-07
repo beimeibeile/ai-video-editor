@@ -18,9 +18,12 @@ import os
 JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
-import pyJianYingDraft as draft
-from pyJianYingDraft import KeyframeProperty as KP
-from pyJianYingDraft import Keyframe
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+from adapters.jianying_adapter import KeyframeProperty as KP
+from adapters.jianying_adapter import Keyframe
 
 
 # 缓动曲线预设
@@ -57,18 +60,30 @@ def add_camera_move(segment, move_type: str, duration_us: int,
         segment.add_keyframe(KP.uniform_scale, t_end, 1.0, **ease_params)
 
     elif move_type == "pan_left":
+        base_scale = 1.0 + intensity * 1.5
+        segment.add_keyframe(KP.uniform_scale, t_start, base_scale, **ease_params)
+        segment.add_keyframe(KP.uniform_scale, t_end, base_scale, **ease_params)
         segment.add_keyframe(KP.position_x, t_start, intensity, **ease_params)
         segment.add_keyframe(KP.position_x, t_end, -intensity, **ease_params)
 
     elif move_type == "pan_right":
+        base_scale = 1.0 + intensity * 1.5
+        segment.add_keyframe(KP.uniform_scale, t_start, base_scale, **ease_params)
+        segment.add_keyframe(KP.uniform_scale, t_end, base_scale, **ease_params)
         segment.add_keyframe(KP.position_x, t_start, -intensity, **ease_params)
         segment.add_keyframe(KP.position_x, t_end, intensity, **ease_params)
 
     elif move_type == "tilt_up":
+        base_scale = 1.0 + intensity * 1.5
+        segment.add_keyframe(KP.uniform_scale, t_start, base_scale, **ease_params)
+        segment.add_keyframe(KP.uniform_scale, t_end, base_scale, **ease_params)
         segment.add_keyframe(KP.position_y, t_start, -intensity, **ease_params)
         segment.add_keyframe(KP.position_y, t_end, intensity, **ease_params)
 
     elif move_type == "tilt_down":
+        base_scale = 1.0 + intensity * 1.5
+        segment.add_keyframe(KP.uniform_scale, t_start, base_scale, **ease_params)
+        segment.add_keyframe(KP.uniform_scale, t_end, base_scale, **ease_params)
         segment.add_keyframe(KP.position_y, t_start, intensity, **ease_params)
         segment.add_keyframe(KP.position_y, t_end, -intensity, **ease_params)
 
@@ -88,14 +103,17 @@ def add_camera_move(segment, move_type: str, duration_us: int,
         segment.add_keyframe(KP.uniform_scale, t_end, 1.0, **ease_params)
 
     elif move_type == "push_pan":
-        # 推+右摇组合
-        segment.add_keyframe(KP.uniform_scale, t_start, 1.0, **ease_params)
-        segment.add_keyframe(KP.uniform_scale, t_end, 1.0 + intensity, **ease_params)
+        # 推+右摇组合（起始带缩放补偿防黑边）
+        segment.add_keyframe(KP.uniform_scale, t_start, 1.0 + intensity, **ease_params)
+        segment.add_keyframe(KP.uniform_scale, t_end, 1.0 + intensity * 1.5, **ease_params)
         segment.add_keyframe(KP.position_x, t_start, -intensity * 0.5, **ease_params)
         segment.add_keyframe(KP.position_x, t_end, intensity * 0.5, **ease_params)
 
     elif move_type == "handheld":
-        # 手持晃动：多段微颤
+        # 手持晃动：多段微颤（基础缩放防黑边）
+        base_scale = 1.0 + intensity
+        segment.add_keyframe(KP.uniform_scale, t_start, base_scale, curve_type="Line")
+        segment.add_keyframe(KP.uniform_scale, t_end, base_scale, curve_type="Line")
         num_shakes = 6
         for i in range(num_shakes):
             t1 = int(t_end * i / num_shakes)
@@ -111,8 +129,8 @@ def add_camera_move(segment, move_type: str, duration_us: int,
             segment.add_keyframe(KP.position_y, t3, 0.0, curve_type="Line")
 
     elif move_type == "dolly_zoom":
-        # 希区柯克变焦：缩放+反向位移
-        segment.add_keyframe(KP.uniform_scale, t_start, 1.0, **ease_params)
+        # 希区柯克变焦：缩放+反向位移（起始带缩放补偿防黑边）
+        segment.add_keyframe(KP.uniform_scale, t_start, 1.0 + intensity * 0.5, **ease_params)
         segment.add_keyframe(KP.uniform_scale, t_end, 1.0 + intensity, **ease_params)
         segment.add_keyframe(KP.position_x, t_start, 0.0, **ease_params)
         segment.add_keyframe(KP.position_x, t_end, -intensity * 0.3, **ease_params)

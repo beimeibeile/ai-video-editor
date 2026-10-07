@@ -671,10 +671,10 @@ class E2EPipeline:
             start_time="0.3s", duration=f"{max(duration - 0.5, 0.5)}s",
             font_size=cfg["main_size"],
             color_rgb=cfg["main_color"],
-            style=draft.TextStyle(size=cfg["main_size"], bold=True),
-            border=draft.TextBorder(color=(0, 0, 0), width=50),
+            style=TextStyle(size=cfg["main_size"], bold=True),
+            border=TextBorder(color=(0, 0, 0), width=50),
             shadow=draft.TextShadow(color=(0, 0, 0), distance=8, diffuse=15),
-            clip_settings=draft.ClipSettings(transform_y=cfg["y"]),
+            clip_settings=ClipSettings(transform_y=cfg["y"]),
             anim_in=cfg["anim"],
             track_name="IntroTitle",
         )
@@ -685,7 +685,7 @@ class E2EPipeline:
             start_time="0.8s", duration=f"{max(duration - 1.0, 0.5)}s",
             font_size=6.0,
             color_rgb=(0.8, 0.8, 0.8),
-            clip_settings=draft.ClipSettings(transform_y=cfg["y"] - 0.25),
+            clip_settings=ClipSettings(transform_y=cfg["y"] - 0.25),
             anim_in="渐显",
             track_name="IntroSub",
         )
@@ -860,7 +860,6 @@ class E2EPipeline:
         """剪映合成（含片头集成）"""
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
         from jy_wrapper import JyProject
-        import pyJianYingDraft as draft
 
         # 艺术字幕 + 运镜预设库
         sys.path.insert(0, os.path.join(SKILL_ROOT, "..", "scripts"))
@@ -1126,8 +1125,8 @@ class E2EPipeline:
                                 continue
                             # 淡出
                             end_us = int(shot.transition_duration * 1e6)
-                            flash_seg.add_keyframe(draft.KeyframeProperty.alpha, int(end_us * 0.7), 1.0, **draft.Keyframe.EASE_OUT)
-                            flash_seg.add_keyframe(draft.KeyframeProperty.alpha, end_us, 0.0, **draft.Keyframe.EASE_OUT)
+                            flash_seg.add_keyframe(KeyframeProperty.alpha, int(end_us * 0.7), 1.0, **Keyframe.EASE_OUT)
+                            flash_seg.add_keyframe(KeyframeProperty.alpha, end_us, 0.0, **Keyframe.EASE_OUT)
                     flash_count += 1
                     continue
                 except Exception as e:
@@ -1141,7 +1140,7 @@ class E2EPipeline:
                 }
                 trans_type = trans_map.get(shot.transition_in, "叠化")
                 segments[i-1].add_transition(
-                    getattr(draft.TransitionType, trans_type, draft.TransitionType.叠化),
+                    getattr(TransitionType, trans_type, TransitionType.叠化),
                     duration=int(shot.transition_duration * 1_000_000)
                 )
                 trans_count += 1

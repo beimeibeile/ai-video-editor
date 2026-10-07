@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-10-07 20:49:37",
+  "total": 41,
+  "passed": 40,
+  "warnings": 1,
+  "failed": 0,
+  "failed_items": [],
+  "warning_items": [
+    "硬编码路径扫描: 发现2处硬编码路径（适配层中可接受）"
+  ]
+}

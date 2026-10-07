@@ -28,7 +28,10 @@ SKILL_ROOT = next((p for p in [
 if SKILL_ROOT:
     sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
     from jy_wrapper import JyProject
-    import pyJianYingDraft as draft
+    # pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 else:
     raise ImportError("Could not find jianying-editor skill root.")
 
@@ -50,6 +53,7 @@ def create_gradient_bar(
     alpha: int = 204,  # 80%不透明 = 204/255
     radius: int = None,  # None则自动为高度的一半（药丸形）
     gradient_angle: float = 0,  # 渐变角度，0=水平，90=垂直
+    highlight: bool = False,  # 是否在内部左侧绘制高光
     output_path: str = None,
 ) -> str:
     """生成半透明渐变圆角矩形PNG
@@ -110,6 +114,37 @@ def create_gradient_bar(
 
     # 应用蒙版
     img.paste(grad, (0, 0), mask)
+
+    # 绘制立体球高光（内部左侧，径向渐变+左上高光点）
+    if highlight:
+        hl_radius = int(height * 0.50)
+        hl_cx = int(height * 0.50)
+        hl_cy = height // 2
+        hl_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        hl_draw = ImageDraw.Draw(hl_layer)
+        # 球体基底：径向渐变（中心亮，边缘暗）
+        for r in range(hl_radius, 0, -1):
+            t = r / hl_radius
+            br = int(color_start[0] * (1 - t * 0.4) + 30 * (1 - t))
+            bg = int(color_start[1] * (1 - t * 0.4) + 30 * (1 - t))
+            bb = int(color_start[2] * (1 - t * 0.4) + 30 * (1 - t))
+            a = int(alpha * (1 - t * t * 0.7))
+            hl_draw.ellipse(
+                [(hl_cx - r, hl_cy - r), (hl_cx + r, hl_cy + r)],
+                fill=(min(255, br), min(255, bg), min(255, bb), a)
+            )
+        # 左上高光点（小亮点）
+        spot_r = int(hl_radius * 0.25)
+        spot_x = hl_cx - int(hl_radius * 0.3)
+        spot_y = hl_cy - int(hl_radius * 0.3)
+        for r in range(spot_r, 0, -1):
+            t = r / spot_r
+            a = int(180 * (1 - t * t))
+            hl_draw.ellipse(
+                [(spot_x - r, spot_y - r), (spot_x + r, spot_y + r)],
+                fill=(255, 255, 255, a)
+            )
+        img = Image.alpha_composite(img, hl_layer)
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     img.save(output_path, "PNG")
@@ -256,20 +291,11 @@ def add_subtitle_bar(
         color_start=cfg["color_start"], color_end=cfg["color_end"],
         alpha=cfg["alpha"], radius=cfg["radius"],
         gradient_angle=cfg["gradient_angle"],
+        highlight=cfg.get("highlight", False),
         output_path=bar_path,
     )
 
     # 2. 生成高光
-    highlight_path = None
-    if cfg.get("highlight"):
-        highlight_path = os.path.join(output_dir, f"highlight_{style}.png")
-        create_highlight_circle(
-            size=int(cfg["height"] * 0.9),
-            color=cfg["color_start"],
-            alpha=150,
-            output_path=highlight_path,
-        )
-
     # 3. 添加背景条到画中画轨道
     bar_seg = project.add_media_safe(
         bar_path,
@@ -280,34 +306,18 @@ def add_subtitle_bar(
 
     if bar_seg:
         # 设置位置
-        bar_seg.clip_settings = draft.ClipSettings(
+        bar_seg.clip_settings = ClipSettings(
             transform_x=0.0,
             transform_y=position_y,
         )
         # 入场动画
         if anim_in:
             try:
-                bar_seg.add_animation(draft.IntroType[anim_in] if hasattr(draft.IntroType, anim_in) else None, 0, 500000)
+                bar_seg.add_animation(IntroType[anim_in] if hasattr(IntroType, anim_in) else None, 0, 500000)
             except Exception:
                 pass
 
-    # 4. 添加高光
-    highlight_seg = None
-    if highlight_path and bar_seg:
-        highlight_seg = project.add_media_safe(
-            highlight_path,
-            start_time=start_time,
-            duration=duration,
-            track_name="SubtitleBar_HL",
-        )
-        if highlight_seg:
-            # 高光放在背景条左上角
-            hl_x = -0.35
-            hl_y = position_y + 0.02
-            highlight_seg.clip_settings = draft.ClipSettings(
-                transform_x=hl_x,
-                transform_y=hl_y,
-            )
+    # 4. 高光已内置在背景条PNG中
 
     # 5. 添加文字
     text_seg = project.add_text_simple(
@@ -316,10 +326,10 @@ def add_subtitle_bar(
         duration=duration,
         font_size=cfg["text_size"],
         color_rgb=cfg["text_color"],
-        style=draft.TextStyle(size=cfg["text_size"], bold=True),
-        border=draft.TextBorder(color=(0, 0, 0), width=30),
-        clip_settings=draft.ClipSettings(transform_y=position_y),
-        anim_in=anim_in if anim_in else "渐显",
+        style=TextStyle(size=cfg["text_size"], bold=True),
+        border=TextBorder(color=(0, 0, 0), width=30),
+        clip_settings=ClipSettings(transform_x=0.0, transform_y=position_y),
+        anim_in="向左滑动",
         track_name="SubtitleBar_Text",
     )
 
@@ -327,7 +337,6 @@ def add_subtitle_bar(
         "text": text,
         "style": style,
         "bar_segment": bar_seg,
-        "highlight_segment": highlight_seg,
         "text_segment": text_seg,
         "bar_path": bar_path,
     }

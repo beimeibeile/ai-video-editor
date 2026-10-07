@@ -19,7 +19,10 @@ from typing import List, Dict, Optional, Tuple
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-import pyJianYingDraft as draft
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -158,31 +161,31 @@ def add_card_entrance_animation(
     anim_dur = int(duration_us * 0.4)  # 前40%做入场动画
 
     # 缩放：0→1
-    segment.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 0.3, **draft.Keyframe.EASE_OUT)
-    segment.add_keyframe(draft.KeyframeProperty.uniform_scale, anim_dur, 1.0, **draft.Keyframe.EASE_OUT)
+    segment.add_keyframe(KeyframeProperty.uniform_scale, 0, 0.3, **Keyframe.EASE_OUT)
+    segment.add_keyframe(KeyframeProperty.uniform_scale, anim_dur, 1.0, **Keyframe.EASE_OUT)
 
     # 位移
     if direction == "up":
-        segment.add_keyframe(draft.KeyframeProperty.position_y, 0, -0.5, **draft.Keyframe.EASE_OUT)
-        segment.add_keyframe(draft.KeyframeProperty.position_y, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_y, 0, -0.5, **Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_y, anim_dur, 0.0, **Keyframe.EASE_OUT)
     elif direction == "down":
-        segment.add_keyframe(draft.KeyframeProperty.position_y, 0, 0.5, **draft.Keyframe.EASE_OUT)
-        segment.add_keyframe(draft.KeyframeProperty.position_y, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_y, 0, 0.5, **Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_y, anim_dur, 0.0, **Keyframe.EASE_OUT)
     elif direction == "left":
-        segment.add_keyframe(draft.KeyframeProperty.position_x, 0, -0.5, **draft.Keyframe.EASE_OUT)
-        segment.add_keyframe(draft.KeyframeProperty.position_x, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_x, 0, -0.5, **Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_x, anim_dur, 0.0, **Keyframe.EASE_OUT)
     elif direction == "right":
-        segment.add_keyframe(draft.KeyframeProperty.position_x, 0, 0.5, **draft.Keyframe.EASE_OUT)
-        segment.add_keyframe(draft.KeyframeProperty.position_x, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_x, 0, 0.5, **Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.position_x, anim_dur, 0.0, **Keyframe.EASE_OUT)
 
     # 旋转（如果有）
     if rotation != 0:
-        segment.add_keyframe(draft.KeyframeProperty.rotation, 0, rotation, **draft.Keyframe.EASE_OUT)
-        segment.add_keyframe(draft.KeyframeProperty.rotation, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.rotation, 0, rotation, **Keyframe.EASE_OUT)
+        segment.add_keyframe(KeyframeProperty.rotation, anim_dur, 0.0, **Keyframe.EASE_OUT)
 
     # 透明度
-    segment.add_keyframe(draft.KeyframeProperty.alpha, 0, 0.0, **draft.Keyframe.EASE_OUT)
-    segment.add_keyframe(draft.KeyframeProperty.alpha, int(anim_dur * 0.5), 1.0, **draft.Keyframe.EASE_OUT)
+    segment.add_keyframe(KeyframeProperty.alpha, 0, 0.0, **Keyframe.EASE_OUT)
+    segment.add_keyframe(KeyframeProperty.alpha, int(anim_dur * 0.5), 1.0, **Keyframe.EASE_OUT)
 
 
 def create_character_intro(
@@ -265,7 +268,7 @@ def create_character_intro(
         if seg:
             # 设置卡片位置（垂直排列，错开）
             y_offset = (i - len(framed_images) / 2 + 0.5) * 0.35
-            seg.clip_settings = draft.ClipSettings(
+            seg.clip_settings = ClipSettings(
                 transform_x=0.0,
                 transform_y=y_offset,
             )
@@ -286,9 +289,9 @@ def create_character_intro(
                 duration=f"{card_dur - 0.2}s",
                 font_size=cfg["name_size"],
                 color_rgb=tuple(c / 255 for c in name_color),
-                style=draft.TextStyle(size=cfg["name_size"], bold=True),
-                border=draft.TextBorder(color=(0, 0, 0), width=40),
-                clip_settings=draft.ClipSettings(transform_y=name_y),
+                style=TextStyle(size=cfg["name_size"], bold=True),
+                border=TextBorder(color=(0, 0, 0), width=40),
+                clip_settings=ClipSettings(transform_y=name_y),
                 anim_in="弹入",
                 track_name=f"Name_{i}",
             )
@@ -301,8 +304,8 @@ def create_character_intro(
                     duration=f"{card_dur - 0.4}s",
                     font_size=6.0,
                     color_rgb=(200, 200, 200),
-                    style=draft.TextStyle(size=6.0),
-                    clip_settings=draft.ClipSettings(transform_y=name_y - 0.12),
+                    style=TextStyle(size=6.0),
+                    clip_settings=ClipSettings(transform_y=name_y - 0.12),
                     anim_in="渐显",
                     track_name=f"Sub_{i}",
                 )
@@ -399,7 +402,7 @@ def add_character_intro_to_project(
 
         if seg:
             y_offset = (i - len(framed_images) / 2 + 0.5) * 0.35
-            seg.clip_settings = draft.ClipSettings(
+            seg.clip_settings = ClipSettings(
                 transform_x=0.0,
                 transform_y=y_offset,
             )
@@ -419,9 +422,9 @@ def add_character_intro_to_project(
                 duration=f"{card_dur - 0.2:.2f}s",
                 font_size=cfg["name_size"],
                 color_rgb=tuple(c / 255 for c in name_color),
-                style=draft.TextStyle(size=cfg["name_size"], bold=True),
-                border=draft.TextBorder(color=(0, 0, 0), width=40),
-                clip_settings=draft.ClipSettings(transform_y=name_y),
+                style=TextStyle(size=cfg["name_size"], bold=True),
+                border=TextBorder(color=(0, 0, 0), width=40),
+                clip_settings=ClipSettings(transform_y=name_y),
                 anim_in="弹入",
                 track_name=f"CharName_{i}",
             )
@@ -434,8 +437,8 @@ def add_character_intro_to_project(
                     duration=f"{card_dur - 0.4:.2f}s",
                     font_size=6.0,
                     color_rgb=(200, 200, 200),
-                    style=draft.TextStyle(size=6.0),
-                    clip_settings=draft.ClipSettings(transform_y=name_y - 0.12),
+                    style=TextStyle(size=6.0),
+                    clip_settings=ClipSettings(transform_y=name_y - 0.12),
                     anim_in="渐显",
                     track_name=f"CharSub_{i}",
                 )

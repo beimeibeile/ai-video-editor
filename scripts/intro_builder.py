@@ -25,14 +25,21 @@ SKILL_ROOT = next((p for p in [
 if SKILL_ROOT:
     sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
     from jy_wrapper import JyProject
-    import pyJianYingDraft as draft
+    # pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 else:
     raise ImportError("Could not find jianying-editor skill root.")
 
 # 导入特效模块
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, MODULE_DIR)
-from mask_flash_transition import create_solid_color_image, add_expand_animation
+from mask_flash_transition import create_solid_color_image
+try:
+    from mask_flash_transition import add_expand_animation
+except ImportError:
+    add_expand_animation = None  # 旧版接口已移除，使用蒙版关键帧替代
 from subtitle_bar import add_subtitle_bar, BAR_STYLES
 
 
@@ -180,7 +187,7 @@ def create_intro(
                 track_name=f"Flash_{i}",
             )
 
-            if seg:
+            if seg and add_expand_animation:
                 # 添加展开动画
                 add_expand_animation(
                     seg,
@@ -191,8 +198,8 @@ def create_intro(
                 # 淡出
                 end_us = int(flash_dur * 1e6)
                 fade_start = int(end_us * 0.7)
-                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start, 1.0, **draft.Keyframe.EASE_OUT)
-                seg.add_keyframe(draft.KeyframeProperty.alpha, end_us, 0.0, **draft.Keyframe.EASE_OUT)
+                seg.add_keyframe(KeyframeProperty.alpha, fade_start, 1.0, **Keyframe.EASE_OUT)
+                seg.add_keyframe(KeyframeProperty.alpha, end_us, 0.0, **Keyframe.EASE_OUT)
 
         print(f"  ✅ 快闪: {len(colors)}色块, {stagger:.2f}s错开")
 
@@ -221,8 +228,8 @@ def create_intro(
             duration=f"{sub_duration:.2f}s",
             font_size=6.0,
             color_rgb=(200, 200, 200),
-            style=draft.TextStyle(size=6.0),
-            clip_settings=draft.ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
+            style=TextStyle(size=6.0),
+            clip_settings=ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
             anim_in="渐显",
             track_name="Subtitle",
         )
@@ -345,7 +352,7 @@ def add_intro_to_project(
                 track_name=f"IntroFlash_{i}",
             )
 
-            if seg:
+            if seg and add_expand_animation:
                 add_expand_animation(
                     seg,
                     direction=direction,
@@ -354,8 +361,8 @@ def add_intro_to_project(
                 )
                 end_us = int(flash_dur * 1e6)
                 fade_start = int(end_us * 0.7)
-                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start, 1.0, **draft.Keyframe.EASE_OUT)
-                seg.add_keyframe(draft.KeyframeProperty.alpha, end_us, 0.0, **draft.Keyframe.EASE_OUT)
+                seg.add_keyframe(KeyframeProperty.alpha, fade_start, 1.0, **Keyframe.EASE_OUT)
+                seg.add_keyframe(KeyframeProperty.alpha, end_us, 0.0, **Keyframe.EASE_OUT)
 
     # 3. 添加字幕条标题
     bar_start = start_time + duration * 0.3
@@ -381,8 +388,8 @@ def add_intro_to_project(
             duration=f"{sub_duration:.2f}s",
             font_size=6.0,
             color_rgb=(200, 200, 200),
-            style=draft.TextStyle(size=6.0),
-            clip_settings=draft.ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
+            style=TextStyle(size=6.0),
+            clip_settings=ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
             anim_in="渐显",
             track_name="IntroSub",
         )

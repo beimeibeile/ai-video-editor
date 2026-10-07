@@ -33,7 +33,10 @@ SKILL_ROOT = next((p for p in [
 if SKILL_ROOT:
     sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
     from jy_wrapper import JyProject
-    import pyJianYingDraft as draft
+    # pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 else:
     raise ImportError("Could not find jianying-editor skill root.")
 
@@ -93,7 +96,7 @@ def add_rect_mask_to_segment(segment, canvas_w: int = 1080, canvas_h: int = 1920
     """
     try:
         segment.add_mask(
-            draft.MaskType.矩形,
+            MaskType.矩形,
             center_x=0.0,   # 画面中心（半素材宽为单位）
             center_y=0.0,   # 画面中心（半素材高为单位）
             size=canvas_h,  # 蒙版高度=画布高度
@@ -206,8 +209,8 @@ def create_mask_flash_basic(
             # 出场淡出
             fade_start_us = int((block_duration - 0.2) * 1e6)
             if fade_start_us > expand_us:
-                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start_us, 1.0)
-                seg.add_keyframe(draft.KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
+                seg.add_keyframe(KeyframeProperty.alpha, fade_start_us, 1.0)
+                seg.add_keyframe(KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
 
             segments.append(seg)
             print(f"  ✅ 色块 {i}: 方向={direction}, 起始={start_time:.2f}s")
@@ -246,35 +249,35 @@ def _add_scale_expand(
 ):
     """使用scale+transform模拟蒙版展开（回退方案）"""
     end_us = start_us + duration_us
-    curve_preset = getattr(draft.Keyframe, curve, draft.Keyframe.EASE_OUT)
+    curve_preset = getattr(Keyframe, curve, Keyframe.EASE_OUT)
 
     if direction in ("left", "right"):
-        segment.add_keyframe(draft.KeyframeProperty.scale_x, start_us, 0.01, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.scale_x, end_us, 1.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_x, start_us, 0.01, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_x, end_us, 1.0, **curve_preset)
         segment.uniform_scale = False
         tx = -0.5 if direction == "left" else 0.5
-        segment.add_keyframe(draft.KeyframeProperty.position_x, start_us, tx, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.position_x, end_us, 0.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.position_x, start_us, tx, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.position_x, end_us, 0.0, **curve_preset)
     elif direction in ("top", "bottom"):
-        segment.add_keyframe(draft.KeyframeProperty.scale_y, start_us, 0.01, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.scale_y, end_us, 1.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_y, start_us, 0.01, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_y, end_us, 1.0, **curve_preset)
         segment.uniform_scale = False
         ty = -0.5 if direction == "top" else 0.5
-        segment.add_keyframe(draft.KeyframeProperty.position_y, start_us, ty, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.position_y, end_us, 0.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.position_y, start_us, ty, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.position_y, end_us, 0.0, **curve_preset)
     elif direction == "center":
-        segment.add_keyframe(draft.KeyframeProperty.scale_x, start_us, 0.01, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.scale_x, end_us, 1.0, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.scale_y, start_us, 0.01, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.scale_y, end_us, 1.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_x, start_us, 0.01, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_x, end_us, 1.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_y, start_us, 0.01, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_y, end_us, 1.0, **curve_preset)
         segment.uniform_scale = False
     elif direction == "horizontal":
-        segment.add_keyframe(draft.KeyframeProperty.scale_x, start_us, 0.01, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.scale_x, end_us, 1.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_x, start_us, 0.01, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_x, end_us, 1.0, **curve_preset)
         segment.uniform_scale = False
     elif direction == "vertical":
-        segment.add_keyframe(draft.KeyframeProperty.scale_y, start_us, 0.01, **curve_preset)
-        segment.add_keyframe(draft.KeyframeProperty.scale_y, end_us, 1.0, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_y, start_us, 0.01, **curve_preset)
+        segment.add_keyframe(KeyframeProperty.scale_y, end_us, 1.0, **curve_preset)
         segment.uniform_scale = False
 
 
@@ -343,7 +346,7 @@ def create_stripe_flash(
 
         if seg:
             # 设置初始位置和缩放（条纹布局）
-            seg.clip_settings = draft.ClipSettings(
+            seg.clip_settings = ClipSettings(
                 transform_x=0.0,
                 transform_y=y_pos,
                 scale_x=1.0,
@@ -547,8 +550,8 @@ def create_mask_flash_v4(
             # 出场淡出
             fade_start_us = int((block_duration - 0.15) * 1e6)
             if fade_start_us > expand_us:
-                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start_us, 1.0)
-                seg.add_keyframe(draft.KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
+                seg.add_keyframe(KeyframeProperty.alpha, fade_start_us, 1.0)
+                seg.add_keyframe(KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
 
             segments.append(seg)
             corner_name = ["左上", "右上", "左下", "右下"][i]
@@ -656,7 +659,7 @@ def create_mask_flash_v5(
 
         if seg:
             # 设置初始位置（网格四分之一）
-            seg.clip_settings = draft.ClipSettings(
+            seg.clip_settings = ClipSettings(
                 transform_x=px,
                 transform_y=py,
                 scale_x=0.5,
@@ -682,8 +685,8 @@ def create_mask_flash_v5(
             # 出场淡出
             fade_start_us = int((block_duration - 0.15) * 1e6)
             if fade_start_us > expand_us:
-                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start_us, 1.0)
-                seg.add_keyframe(draft.KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
+                seg.add_keyframe(KeyframeProperty.alpha, fade_start_us, 1.0)
+                seg.add_keyframe(KeyframeProperty.alpha, int(block_duration * 1e6), 0.0)
 
             segments.append(seg)
             corner = ["左上", "右上", "左下", "右下"][color_idx]

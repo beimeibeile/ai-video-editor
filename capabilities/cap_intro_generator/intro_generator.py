@@ -137,7 +137,6 @@ class IntroGenerator:
         # 2. 初始化剪映
         sys.path.insert(0, os.path.join(self.jy_skill, "scripts"))
         from jy_wrapper import JyProject
-        import pyJianYingDraft as draft
 
         project = JyProject(project_name, width=width, height=height, overwrite=True)
 
@@ -159,10 +158,10 @@ class IntroGenerator:
             start_time=f"{main_start}s", duration=f"{main_dur}s",
             font_size=main_cfg["size"],
             color_rgb=main_cfg["color"],
-            style=draft.TextStyle(size=main_cfg["size"], bold=main_cfg["bold"]),
-            border=draft.TextBorder(color=(0, 0, 0), width=main_cfg["border_w"]) if main_cfg["border_w"] > 0 else None,
+            style=TextStyle(size=main_cfg["size"], bold=main_cfg["bold"]),
+            border=TextBorder(color=(0, 0, 0), width=main_cfg["border_w"]) if main_cfg["border_w"] > 0 else None,
             shadow=draft.TextShadow(color=(0, 0, 0), distance=8, diffuse=15) if main_cfg["border_w"] > 30 else None,
-            clip_settings=draft.ClipSettings(transform_y=main_cfg["y"]),
+            clip_settings=ClipSettings(transform_y=main_cfg["y"]),
             anim_in=main_cfg["anim_in"],
             anim_loop=main_cfg.get("anim_loop"),
             track_name="IntroMain",
@@ -175,9 +174,9 @@ class IntroGenerator:
                 start_time=f"{sub_start}s", duration=f"{sub_dur}s",
                 font_size=sub_cfg["size"],
                 color_rgb=sub_cfg["color"],
-                style=draft.TextStyle(size=sub_cfg["size"], bold=sub_cfg["bold"]),
-                border=draft.TextBorder(color=(0, 0, 0), width=sub_cfg["border_w"]) if sub_cfg["border_w"] > 0 else None,
-                clip_settings=draft.ClipSettings(transform_y=sub_cfg["y"]),
+                style=TextStyle(size=sub_cfg["size"], bold=sub_cfg["bold"]),
+                border=TextBorder(color=(0, 0, 0), width=sub_cfg["border_w"]) if sub_cfg["border_w"] > 0 else None,
+                clip_settings=ClipSettings(transform_y=sub_cfg["y"]),
                 anim_in=sub_cfg["anim_in"],
                 track_name="IntroSub",
             )

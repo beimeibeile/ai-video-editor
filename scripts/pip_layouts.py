@@ -16,8 +16,11 @@ import sys
 JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
-import pyJianYingDraft as draft
-from pyJianYingDraft import ClipSettings
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+from adapters.jianying_adapter import ClipSettings
 
 
 def _add_clip_to_track(project, media_path: str, start_time: str, duration: str,
@@ -222,16 +225,16 @@ def layout_comparison(project, before_media: str, after_media: str,
         project.add_text_simple(
             label_before, start_time=start_time, duration=duration,
             font_size=6.0, color_rgb=(1, 1, 1),
-            style=draft.TextStyle(size=6.0, bold=True),
-            border=draft.TextBorder(color=(0, 0, 0), width=30),
+            style=TextStyle(size=6.0, bold=True),
+            border=TextBorder(color=(0, 0, 0), width=30),
             clip_settings=ClipSettings(transform_x=-0.5, transform_y=0.4),
             anim_in="渐显", track_name="PIP_Label_L",
         )
         project.add_text_simple(
             label_after, start_time=start_time, duration=duration,
             font_size=6.0, color_rgb=(1, 1, 1),
-            style=draft.TextStyle(size=6.0, bold=True),
-            border=draft.TextBorder(color=(0, 0, 0), width=30),
+            style=TextStyle(size=6.0, bold=True),
+            border=TextBorder(color=(0, 0, 0), width=30),
             clip_settings=ClipSettings(transform_x=0.5, transform_y=0.4),
             anim_in="渐显", track_name="PIP_Label_R",
         )

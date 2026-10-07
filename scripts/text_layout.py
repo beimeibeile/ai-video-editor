@@ -19,7 +19,10 @@ from typing import List, Dict, Optional, Tuple
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-import pyJianYingDraft as draft
+# pyJianYingDraft已迁移到适配层
+import os as _os, sys as _sys
+_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -139,9 +142,9 @@ def add_text_layout(
             duration=f"{col_duration:.2f}s",
             font_size=size,
             color_rgb=color,
-            style=draft.TextStyle(size=size, bold=True),
-            border=draft.TextBorder(color=(0, 0, 0), width=30),
-            clip_settings=draft.ClipSettings(
+            style=TextStyle(size=size, bold=True),
+            border=TextBorder(color=(0, 0, 0), width=30),
+            clip_settings=ClipSettings(
                 transform_x=x_off,
                 transform_y=y_off,
             ),

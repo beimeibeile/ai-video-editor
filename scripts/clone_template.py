@@ -111,7 +111,11 @@ if not skill_root:
     raise ImportError("Could not find jianying-editor skill root.")
 
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
-from jy_wrapper import JyProject, draft
+from jy_wrapper import JyProject
+# 适配层导入
+_AVR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _AVR not in sys.path: sys.path.insert(0, _AVR)
+from adapters.jianying_adapter import ClipSettings
 
 
 def time_to_seconds(t):
@@ -262,7 +266,7 @@ def main():
         try:
             project.add_text_simple(
                 text, start_time=start, duration=duration,
-                clip_settings=draft.ClipSettings(transform_y=y),
+                clip_settings=ClipSettings(transform_y=y),
                 font_size=size, color_rgb=color
             )
             print(f"    ✅ {text[:20]}")
