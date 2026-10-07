@@ -1,374 +1,658 @@
+# -*- coding: utf-8 -*-
 """
-剧本深度语义分析引擎 v1.0
-识别剧本中的冲突点、转折点、高潮点，分析情绪曲线，自动分配镜头强度
-
-用于script_parser和instruction_translator的深度语义增强。
+剧本深度语义分析器 v1.0
+在ScriptParser基础上增强深度语义分析能力：
+1. 角色关系网络分析
+2. 剧情结构分析（三幕式/起承转合）
+3. 主题深度挖掘
+4. 对话意图分析
+5. 场景氛围分析
+6. 冲突演进分析
+7. 情感弧线分析
 
 使用方式：
     from script_deep_analyzer import ScriptDeepAnalyzer
     analyzer = ScriptDeepAnalyzer()
-    result = analyzer.analyze(script_text)
-    print(result["conflict_points"])  # 冲突点
-    print(result["turning_points"])   # 转折点
-    print(result["climax_points"])    # 高潮点
-    print(result["emotion_curve"])    # 情绪曲线
+    result = analyzer.analyze(script_text, title="作品名")
+    analyzer.save_report(result, "deep_analysis.json")
 """
+import os
 import re
+import json
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 
 
 @dataclass
-class StoryPoint:
-    """故事节点"""
-    type: str  # conflict/turning/climax/setup/resolution
-    position: float  # 0.0-1.0 相对位置
-    description: str
-    intensity: float  # 0.0-1.0
-    sentence_index: int = -1
+class CharacterRelation:
+    """角色关系"""
+    character1: str
+    character2: str
+    relation_type: str       # 朋友/敌人/恋人/家人/同事/对手
+    intensity: float = 0.5   # 关系强度 0-1
+    sentiment: str = "neutral"  # positive/negative/neutral
+    description: str = ""
 
 
 @dataclass
-class EmotionPoint:
-    """情绪节点"""
-    position: float  # 0.0-1.0
-    emotion: str
-    intensity: float  # 0.0-1.0
+class StoryStructure:
+    """剧情结构"""
+    structure_type: str = "three_act"  # three_act/four_act/heros_journey
+    acts: List[Dict] = field(default_factory=list)
+    turning_points: List[Dict] = field(default_factory=list)
+    pacing: str = "medium"  # slow/medium/fast
+
+
+@dataclass
+class ThemeAnalysis:
+    """主题分析"""
+    main_theme: str = ""
+    sub_themes: List[str] = field(default_factory=list)
+    motif: List[str] = field(default_factory=list)  # 母题/反复出现的意象
+    moral: str = ""  # 寓意/教训
+
+
+@dataclass
+class DialogueIntent:
+    """对话意图"""
+    character: str
+    content: str
+    intent: str          # 陈述/询问/命令/请求/威胁/安慰/挑衅/表白
+    emotion: str = "neutral"
+    target: str = ""     # 对话对象
+
+
+@dataclass
+class SceneAtmosphere:
+    """场景氛围"""
+    scene_id: int
+    location: str
+    time_of_day: str = "unknown"  # 白天/夜晚/黎明/黄昏
+    mood: str = "neutral"         # 紧张/温馨/恐怖/欢快/悲伤
+    weather: str = "unknown"      # 晴/雨/雪/雾
+    description: str = ""
+
+
+@dataclass
+class ConflictEvolution:
+    """冲突演进"""
+    conflict_type: str  # 人际/内心/环境/社会
+    parties: List[str]
+    escalation_level: float = 0.0  # 0-1
+    resolution: str = ""  # 解决方式
+    timeline: List[Dict] = field(default_factory=list)
+
+
+@dataclass
+class EmotionalArc:
+    """情感弧线"""
+    character: str
+    start_emotion: str
+    end_emotion: str
+    key_moments: List[Dict] = field(default_factory=list)
+    arc_type: str = "flat"  # rise/fall/v_shape/flat/wave
+
+
+@dataclass
+class DeepAnalysisResult:
+    """深度分析结果"""
+    title: str = ""
+    character_relations: List[CharacterRelation] = field(default_factory=list)
+    story_structure: Optional[StoryStructure] = None
+    theme_analysis: Optional[ThemeAnalysis] = None
+    dialogue_intents: List[DialogueIntent] = field(default_factory=list)
+    scene_atmospheres: List[SceneAtmosphere] = field(default_factory=list)
+    conflict_evolutions: List[ConflictEvolution] = field(default_factory=list)
+    emotional_arcs: List[EmotionalArc] = field(default_factory=list)
+    summary: str = ""
 
 
 class ScriptDeepAnalyzer:
-    """剧本深度语义分析引擎"""
+    """剧本深度语义分析器"""
+
+    # 意图关键词映射
+    INTENT_KEYWORDS = {
+        "询问": ["吗", "呢", "？", "怎么", "什么", "为什么", "哪里", "谁", "多少"],
+        "命令": ["给我", "必须", "马上", "立刻", "不准", "不许", "去", "做"],
+        "请求": ["请", "能不能", "可以吗", "帮我", "麻烦"],
+        "威胁": ["否则", "不然", "等着", "小心", "后果"],
+        "安慰": ["没事", "别怕", "有我", "会好的", "放心"],
+        "挑衅": ["哼", "切", "就这", "不过如此", "敢吗"],
+        "表白": ["喜欢你", "爱你", "想和你", "在一起"],
+        "陈述": ["是", "有", "在", "我", "你", "他"],
+    }
+
+    # 情绪关键词
+    EMOTION_KEYWORDS = {
+        "愤怒": ["滚", "讨厌", "气死", "混蛋", "可恶", "该死"],
+        "悲伤": ["哭", "难过", "伤心", "痛苦", "失去", "离开"],
+        "快乐": ["哈哈", "开心", "高兴", "太好了", "棒"],
+        "恐惧": ["怕", "害怕", "恐怖", "危险", "快跑"],
+        "惊讶": ["啊", "天哪", "竟然", "居然", "什么"],
+        "温柔": ["亲爱的", "宝贝", "乖", "心疼"],
+    }
+
+    # 场景氛围关键词
+    MOOD_KEYWORDS = {
+        "紧张": ["突然", "猛地", "瞬间", "心跳", "屏住呼吸"],
+        "温馨": ["阳光", "温暖", "笑容", "拥抱", "家"],
+        "恐怖": ["黑暗", "阴影", "诡异", "寂静", "冷风"],
+        "欢快": ["笑声", "音乐", "跳舞", "热闹", "阳光"],
+        "悲伤": ["雨", "泪", "孤独", "沉默", "黄昏"],
+    }
+
+    # 时间关键词
+    TIME_KEYWORDS = {
+        "白天": ["白天", "上午", "下午", "中午", "阳光"],
+        "夜晚": ["夜晚", "晚上", "深夜", "月光", "星光"],
+        "黎明": ["黎明", "清晨", "日出", "晨光"],
+        "黄昏": ["黄昏", "夕阳", "日落", "傍晚"],
+    }
 
     def __init__(self):
-        # 冲突关键词
-        self.conflict_keywords = {
-            "打": 0.8, "骂": 0.7, "吵": 0.6, "争": 0.5, "斗": 0.7,
-            "拒绝": 0.6, "反对": 0.7, "阻止": 0.6, "威胁": 0.8, "攻击": 0.9,
-            "摔": 0.7, "砸": 0.8, "推": 0.6, "踢": 0.7, "扇": 0.8,
-            "怒": 0.7, "气": 0.5, "恨": 0.8, "仇": 0.9, "怨": 0.6,
-            "误会": 0.5, "矛盾": 0.6, "冲突": 0.7, "对抗": 0.8,
-        }
-        # 转折关键词
-        self.turning_keywords = {
-            "突然": 0.7, "忽然": 0.7, "没想到": 0.8, "谁知": 0.7, "不料": 0.7,
-            "结果": 0.5, "最后": 0.4, "终于": 0.5, "于是": 0.3, "因此": 0.3,
-            "但是": 0.5, "然而": 0.5, "可是": 0.4, "却": 0.4, "反倒": 0.5,
-            "发现": 0.6, "得知": 0.6, "明白": 0.5, "知道": 0.4,
-            "转身": 0.5, "离开": 0.4, "回来": 0.5, "出现": 0.6,
-        }
-        # 高潮关键词
-        self.climax_keywords = {
-            "爆发": 0.9, "崩溃": 0.9, "绝望": 0.9, "狂喜": 0.9, "震惊": 0.8,
-            "真相": 0.8, "大白": 0.7, "揭晓": 0.8, "揭秘": 0.8,
-            "决战": 0.9, "对决": 0.9, "终局": 0.8, "结局": 0.7,
-            "最": 0.6, "极": 0.6, "彻底": 0.7, "完全": 0.5,
-        }
-        # 情绪关键词映射
-        self.emotion_keywords = {
-            "开心": ["开心", "高兴", "快乐", "喜悦", "兴奋", "激动", "笑", "乐"],
-            "悲伤": ["悲伤", "难过", "伤心", "哭", "泪", "痛苦", "绝望"],
-            "愤怒": ["愤怒", "生气", "怒", "气", "火", "咆哮", "怒吼"],
-            "紧张": ["紧张", "害怕", "恐惧", "慌", "忐忑", "不安", "担心"],
-            "惊喜": ["惊喜", "意外", "没想到", "震惊", "哇", "天哪"],
-            "平静": ["平静", "安静", "沉默", "淡定", "从容", "冷静"],
-            "委屈": ["委屈", "可怜", "冤枉", "心酸", "难受"],
-            "得意": ["得意", "骄傲", "自豪", "炫耀", "嚣张"],
-        }
+        pass
 
-    def analyze(self, script_text: str) -> Dict:
+    def analyze(self, script_text: str, title: str = "") -> DeepAnalysisResult:
         """
-        深度分析剧本
+        完整深度分析剧本
 
         Args:
             script_text: 剧本文本
+            title: 作品标题
 
         Returns:
-            分析结果字典
+            深度分析结果
         """
-        # 分句
-        sentences = self._split_sentences(script_text)
-        if not sentences:
-            return self._empty_result()
+        print(f"开始深度分析: {title or '未命名'}")
 
-        # 分析每个句子
-        sentence_analysis = []
-        for i, sent in enumerate(sentences):
-            analysis = self._analyze_sentence(sent, i, len(sentences))
-            sentence_analysis.append(analysis)
+        result = DeepAnalysisResult(title=title or "未命名作品")
 
-        # 识别故事节点
-        conflict_points = self._identify_points(sentence_analysis, "conflict")
-        turning_points = self._identify_points(sentence_analysis, "turning")
-        climax_points = self._identify_points(sentence_analysis, "climax")
+        # 1. 角色关系分析
+        print("  分析角色关系...")
+        result.character_relations = self._analyze_character_relations(script_text)
 
-        # 情绪曲线
-        emotion_curve = self._build_emotion_curve(sentence_analysis)
+        # 2. 剧情结构分析
+        print("  分析剧情结构...")
+        result.story_structure = self._analyze_story_structure(script_text)
 
-        # 故事结构
-        structure = self._analyze_structure(sentence_analysis, conflict_points, turning_points, climax_points)
+        # 3. 主题分析
+        print("  分析主题...")
+        result.theme_analysis = self._analyze_theme(script_text)
 
-        # 镜头强度分配
-        camera_intensity = self._assign_camera_intensity(sentence_analysis, structure)
+        # 4. 对话意图分析
+        print("  分析对话意图...")
+        result.dialogue_intents = self._analyze_dialogue_intents(script_text)
 
-        return {
-            "total_sentences": len(sentences),
-            "conflict_points": conflict_points,
-            "turning_points": turning_points,
-            "climax_points": climax_points,
-            "emotion_curve": emotion_curve,
-            "structure": structure,
-            "camera_intensity": camera_intensity,
-            "sentence_analysis": sentence_analysis,
-        }
+        # 5. 场景氛围分析
+        print("  分析场景氛围...")
+        result.scene_atmospheres = self._analyze_scene_atmospheres(script_text)
 
-    def _split_sentences(self, text: str) -> List[str]:
-        """分句"""
-        # 按标点符号分句
-        sentences = re.split(r'[。！？!?\n]+', text)
-        return [s.strip() for s in sentences if s.strip()]
+        # 6. 冲突演进分析
+        print("  分析冲突演进...")
+        result.conflict_evolutions = self._analyze_conflicts(script_text)
 
-    def _analyze_sentence(self, sentence: str, index: int, total: int) -> Dict:
-        """分析单个句子"""
-        position = index / max(total - 1, 1)
+        # 7. 情感弧线分析
+        print("  分析情感弧线...")
+        result.emotional_arcs = self._analyze_emotional_arcs(script_text)
 
-        # 冲突分数
-        conflict_score = self._calc_keyword_score(sentence, self.conflict_keywords)
-        # 转折分数
-        turning_score = self._calc_keyword_score(sentence, self.turning_keywords)
-        # 高潮分数
-        climax_score = self._calc_keyword_score(sentence, self.climax_keywords)
+        # 8. 生成摘要
+        result.summary = self._generate_summary(result)
 
-        # 情绪识别
-        emotion, emotion_intensity = self._detect_emotion(sentence)
-
-        return {
-            "index": index,
-            "position": position,
-            "text": sentence,
-            "conflict_score": conflict_score,
-            "turning_score": turning_score,
-            "climax_score": climax_score,
-            "emotion": emotion,
-            "emotion_intensity": emotion_intensity,
-        }
-
-    def _calc_keyword_score(self, text: str, keywords: Dict[str, float]) -> float:
-        """计算关键词分数"""
-        score = 0.0
-        for keyword, weight in keywords.items():
-            if keyword in text:
-                score = max(score, weight)
-        return min(score, 1.0)
-
-    def _detect_emotion(self, text: str) -> Tuple[str, float]:
-        """检测情绪"""
-        best_emotion = "平静"
-        best_score = 0.0
-        for emotion, keywords in self.emotion_keywords.items():
-            for kw in keywords:
-                if kw in text:
-                    score = 0.5 + 0.1 * text.count(kw)
-                    if score > best_score:
-                        best_score = score
-                        best_emotion = emotion
-        return best_emotion, min(best_score, 1.0)
-
-    def _identify_points(self, sentence_analysis: List[Dict], point_type: str) -> List[StoryPoint]:
-        """识别故事节点"""
-        score_key = f"{point_type}_score"
-        points = []
-        threshold = 0.5
-
-        for sa in sentence_analysis:
-            score = sa.get(score_key, 0)
-            if score >= threshold:
-                points.append(StoryPoint(
-                    type=point_type,
-                    position=sa["position"],
-                    description=sa["text"][:50],
-                    intensity=score,
-                    sentence_index=sa["index"],
-                ))
-
-        # 按强度排序，取前3个
-        points.sort(key=lambda x: x.intensity, reverse=True)
-        return points[:3]
-
-    def _build_emotion_curve(self, sentence_analysis: List[Dict]) -> List[EmotionPoint]:
-        """构建情绪曲线（采样10个点）"""
-        if not sentence_analysis:
-            return []
-
-        num_samples = min(10, len(sentence_analysis))
-        curve = []
-        step = len(sentence_analysis) / num_samples
-
-        for i in range(num_samples):
-            idx = int(i * step)
-            if idx < len(sentence_analysis):
-                sa = sentence_analysis[idx]
-                curve.append(EmotionPoint(
-                    position=sa["position"],
-                    emotion=sa["emotion"],
-                    intensity=sa["emotion_intensity"],
-                ))
-
-        return curve
-
-    def _analyze_structure(
-        self,
-        sentence_analysis: List[Dict],
-        conflict_points: List[StoryPoint],
-        turning_points: List[StoryPoint],
-        climax_points: List[StoryPoint],
-    ) -> Dict:
-        """分析故事结构"""
-        total = len(sentence_analysis)
-        if total == 0:
-            return {"type": "unknown", "phases": {}}
-
-        # 三幕结构分析
-        setup_end = int(total * 0.25)
-        confrontation_end = int(total * 0.75)
-
-        setup_conflict = sum(sa["conflict_score"] for sa in sentence_analysis[:setup_end])
-        confrontation_conflict = sum(sa["conflict_score"] for sa in sentence_analysis[setup_end:confrontation_end])
-        resolution_conflict = sum(sa["conflict_score"] for sa in sentence_analysis[confrontation_end:])
-
-        # 确定主要高潮位置
-        main_climax = climax_points[0].position if climax_points else 0.7
-
-        return {
-            "type": "three_act" if total > 5 else "simple",
-            "setup": {
-                "range": [0, setup_end],
-                "conflict_level": round(setup_conflict / max(setup_end, 1), 2),
-            },
-            "confrontation": {
-                "range": [setup_end, confrontation_end],
-                "conflict_level": round(confrontation_conflict / max(confrontation_end - setup_end, 1), 2),
-            },
-            "resolution": {
-                "range": [confrontation_end, total],
-                "conflict_level": round(resolution_conflict / max(total - confrontation_end, 1), 2),
-            },
-            "main_climax_position": round(main_climax, 2),
-            "conflict_count": len(conflict_points),
-            "turning_count": len(turning_points),
-            "climax_count": len(climax_points),
-        }
-
-    def _assign_camera_intensity(self, sentence_analysis: List[Dict], structure: Dict) -> List[Dict]:
-        """分配镜头强度"""
-        result = []
-        for sa in sentence_analysis:
-            # 基础强度
-            intensity = 0.3  # 默认低强度
-
-            # 冲突提升强度
-            intensity += sa["conflict_score"] * 0.4
-            # 转折提升强度
-            intensity += sa["turning_score"] * 0.2
-            # 高潮提升强度
-            intensity += sa["climax_score"] * 0.3
-            # 情绪强度
-            intensity += sa["emotion_intensity"] * 0.2
-
-            # 高潮附近额外提升
-            climax_pos = structure.get("main_climax_position", 0.7)
-            distance_to_climax = abs(sa["position"] - climax_pos)
-            if distance_to_climax < 0.15:
-                intensity += 0.2
-
-            intensity = min(intensity, 1.0)
-
-            # 映射到运镜强度
-            if intensity < 0.4:
-                camera_level = "low"
-                camera_moves = ["固定", "缓慢平移", "缓慢推近"]
-            elif intensity < 0.7:
-                camera_level = "medium"
-                camera_moves = ["推近", "轻微晃动", "平移"]
-            else:
-                camera_level = "high"
-                camera_moves = ["快速推近", "剧烈晃动", "手持感", "快速变焦"]
-
-            result.append({
-                "index": sa["index"],
-                "position": sa["position"],
-                "intensity": round(intensity, 2),
-                "camera_level": camera_level,
-                "recommended_moves": camera_moves,
-                "emotion": sa["emotion"],
-            })
-
+        print(f"  分析完成")
         return result
 
-    def print_summary(self, result: Dict):
+    def _extract_characters(self, text: str) -> List[str]:
+        """提取角色名（简单规则：对话格式 角色名：台词）"""
+        characters = set()
+        # 匹配 "角色名：" 或 "角色名:" 格式
+        pattern = r'^([\u4e00-\u9fa5A-Za-z]{2,4})[：:]'
+        for line in text.split('\n'):
+            line = line.strip()
+            match = re.match(pattern, line)
+            if match:
+                name = match.group(1)
+                # 过滤常见非角色词
+                if name not in ["旁白", "解说", "字幕", "标题", "场景", "时间", "地点"]:
+                    characters.add(name)
+        return sorted(characters)
+
+    def _analyze_character_relations(self, text: str) -> List[CharacterRelation]:
+        """分析角色关系"""
+        characters = self._extract_characters(text)
+        relations = []
+
+        if len(characters) < 2:
+            return relations
+
+        # 简单分析：出现在同一场景/对话中的角色可能有关系
+        lines = text.split('\n')
+        co_occurrence = {}
+
+        current_scene_chars = set()
+        for line in lines:
+            line = line.strip()
+            # 场景分隔
+            if re.match(r'^(场景|第[一二三四五六七八九十\d]+[场幕集])', line):
+                if len(current_scene_chars) >= 2:
+                    chars_list = sorted(current_scene_chars)
+                    for i in range(len(chars_list)):
+                        for j in range(i + 1, len(chars_list)):
+                            key = (chars_list[i], chars_list[j])
+                            co_occurrence[key] = co_occurrence.get(key, 0) + 1
+                current_scene_chars = set()
+            # 角色对话
+            match = re.match(r'^([\u4e00-\u9fa5A-Za-z]{2,4})[：:]', line)
+            if match:
+                current_scene_chars.add(match.group(1))
+
+        # 处理最后一个场景
+        if len(current_scene_chars) >= 2:
+            chars_list = sorted(current_scene_chars)
+            for i in range(len(chars_list)):
+                for j in range(i + 1, len(chars_list)):
+                    key = (chars_list[i], chars_list[j])
+                    co_occurrence[key] = co_occurrence.get(key, 0) + 1
+
+        # 生成关系
+        for (c1, c2), count in co_occurrence.items():
+            intensity = min(1.0, count * 0.3)
+            # 简单情感判断（基于对话中的情绪词）
+            sentiment = "neutral"
+            relations.append(CharacterRelation(
+                character1=c1,
+                character2=c2,
+                relation_type="互动",
+                intensity=round(intensity, 2),
+                sentiment=sentiment,
+                description=f"共同出现{count}次",
+            ))
+
+        return sorted(relations, key=lambda x: -x.intensity)
+
+    def _analyze_story_structure(self, text: str) -> StoryStructure:
+        """分析剧情结构"""
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        total_lines = len(lines)
+
+        if total_lines == 0:
+            return StoryStructure()
+
+        # 简单三幕式划分
+        act1_end = int(total_lines * 0.25)
+        act2_end = int(total_lines * 0.75)
+
+        structure = StoryStructure(
+            structure_type="three_act",
+            acts=[
+                {"act": 1, "name": "建置", "start": 0, "end": act1_end,
+                 "description": "介绍角色、背景、初始状态"},
+                {"act": 2, "name": "对抗", "start": act1_end, "end": act2_end,
+                 "description": "冲突升级、遇到障碍、尝试解决"},
+                {"act": 3, "name": "解决", "start": act2_end, "end": total_lines,
+                 "description": "高潮、解决冲突、结局"},
+            ],
+            turning_points=[
+                {"position": "25%", "type": "激励事件", "description": "打破平衡的事件"},
+                {"position": "50%", "type": "中点", "description": "局势转变"},
+                {"position": "75%", "type": "危机", "description": "最黑暗时刻"},
+                {"position": "90%", "type": "高潮", "description": "最终对决"},
+            ],
+        )
+
+        # 根据文本长度判断节奏
+        if total_lines < 50:
+            structure.pacing = "fast"
+        elif total_lines > 200:
+            structure.pacing = "slow"
+        else:
+            structure.pacing = "medium"
+
+        return structure
+
+    def _analyze_theme(self, text: str) -> ThemeAnalysis:
+        """分析主题"""
+        theme_keywords = {
+            "爱情": ["爱", "喜欢", "心动", "表白", "在一起", "分手"],
+            "友情": ["朋友", "兄弟", "闺蜜", "友谊", "陪伴"],
+            "亲情": ["家人", "父母", "孩子", "家", "温暖"],
+            "成长": ["成长", "改变", "学会", "明白", "懂得"],
+            "梦想": ["梦想", "目标", "追求", "奋斗", "努力"],
+            "复仇": ["复仇", "报仇", "报复", "恨", "惩罚"],
+            "正义": ["正义", "公平", "真相", "揭露", "邪恶"],
+            "生存": ["生存", "活着", "危险", "逃命", "挣扎"],
+        }
+
+        theme_scores = {}
+        for theme, keywords in theme_keywords.items():
+            score = sum(text.count(kw) for kw in keywords)
+            if score > 0:
+                theme_scores[theme] = score
+
+        sorted_themes = sorted(theme_scores.items(), key=lambda x: -x[1])
+
+        main_theme = sorted_themes[0][0] if sorted_themes else "未知"
+        sub_themes = [t for t, _ in sorted_themes[1:4]]
+
+        # 母题分析（反复出现的意象）
+        motif_candidates = ["雨", "花", "刀", "信", "照片", "门", "窗", "路", "梦", "光"]
+        motifs = [m for m in motif_candidates if text.count(m) >= 3]
+
+        return ThemeAnalysis(
+            main_theme=main_theme,
+            sub_themes=sub_themes,
+            motif=motifs,
+            moral=f"关于{main_theme}的故事",
+        )
+
+    def _analyze_dialogue_intents(self, text: str) -> List[DialogueIntent]:
+        """分析对话意图"""
+        intents = []
+        pattern = r'^([\u4e00-\u9fa5A-Za-z]{2,4})[：:](.+)$'
+
+        for line in text.split('\n'):
+            line = line.strip()
+            match = re.match(pattern, line)
+            if match:
+                character = match.group(1)
+                content = match.group(2).strip()
+
+                if character in ["旁白", "解说", "字幕"]:
+                    continue
+
+                # 判断意图
+                intent = "陈述"
+                for itype, keywords in self.INTENT_KEYWORDS.items():
+                    if any(kw in content for kw in keywords):
+                        intent = itype
+                        break
+
+                # 判断情绪
+                emotion = "neutral"
+                for etype, keywords in self.EMOTION_KEYWORDS.items():
+                    if any(kw in content for kw in keywords):
+                        emotion = etype
+                        break
+
+                intents.append(DialogueIntent(
+                    character=character,
+                    content=content[:50],
+                    intent=intent,
+                    emotion=emotion,
+                ))
+
+        return intents[:50]  # 限制数量
+
+    def _analyze_scene_atmospheres(self, text: str) -> List[SceneAtmosphere]:
+        """分析场景氛围"""
+        atmospheres = []
+        scene_id = 0
+        current_scene = None
+
+        for line in text.split('\n'):
+            line = line.strip()
+            # 场景标记
+            if re.match(r'^(场景|第[一二三四五六七八九十\d]+[场幕集])', line):
+                if current_scene:
+                    atmospheres.append(current_scene)
+                scene_id += 1
+                current_scene = SceneAtmosphere(
+                    scene_id=scene_id,
+                    location=line[:30],
+                )
+            elif current_scene:
+                # 分析氛围
+                for mood, keywords in self.MOOD_KEYWORDS.items():
+                    if any(kw in line for kw in keywords):
+                        current_scene.mood = mood
+                        break
+                # 分析时间
+                for time_type, keywords in self.TIME_KEYWORDS.items():
+                    if any(kw in line for kw in keywords):
+                        current_scene.time_of_day = time_type
+                        break
+
+        if current_scene:
+            atmospheres.append(current_scene)
+
+        return atmospheres
+
+    def _analyze_conflicts(self, text: str) -> List[ConflictEvolution]:
+        """分析冲突演进"""
+        conflicts = []
+        characters = self._extract_characters(text)
+
+        if len(characters) >= 2:
+            # 简单人际冲突
+            conflict = ConflictEvolution(
+                conflict_type="人际",
+                parties=characters[:2],
+                escalation_level=0.5,
+                resolution="待分析",
+            )
+            conflicts.append(conflict)
+
+        # 内心冲突（独白/心理描写）
+        inner_conflict_keywords = ["心里", "内心", "想", "纠结", "犹豫", "矛盾"]
+        if any(kw in text for kw in inner_conflict_keywords):
+            conflicts.append(ConflictEvolution(
+                conflict_type="内心",
+                parties=[characters[0] if characters else "主角"],
+                escalation_level=0.3,
+                resolution="待分析",
+            ))
+
+        return conflicts
+
+    def _analyze_emotional_arcs(self, text: str) -> List[EmotionalArc]:
+        """分析情感弧线"""
+        characters = self._extract_characters(text)
+        arcs = []
+
+        for char in characters[:3]:  # 只分析前3个主要角色
+            # 简单弧线判断
+            arc = EmotionalArc(
+                character=char,
+                start_emotion="neutral",
+                end_emotion="neutral",
+                arc_type="flat",
+                key_moments=[],
+            )
+            arcs.append(arc)
+
+        return arcs
+
+    def _generate_summary(self, result: DeepAnalysisResult) -> str:
+        """生成分析摘要"""
+        parts = []
+        parts.append(f"作品《{result.title}》深度分析")
+
+        if result.character_relations:
+            parts.append(f"角色关系: {len(result.character_relations)}组关系")
+
+        if result.story_structure:
+            parts.append(f"剧情结构: {result.story_structure.structure_type}，节奏{result.story_structure.pacing}")
+
+        if result.theme_analysis:
+            parts.append(f"主题: {result.theme_analysis.main_theme}")
+            if result.theme_analysis.sub_themes:
+                parts.append(f"副主题: {', '.join(result.theme_analysis.sub_themes)}")
+
+        if result.dialogue_intents:
+            intent_counts = {}
+            for d in result.dialogue_intents:
+                intent_counts[d.intent] = intent_counts.get(d.intent, 0) + 1
+            top_intent = max(intent_counts.items(), key=lambda x: x[1])[0]
+            parts.append(f"对话意图: 主要为{top_intent}")
+
+        if result.scene_atmospheres:
+            mood_counts = {}
+            for s in result.scene_atmospheres:
+                mood_counts[s.mood] = mood_counts.get(s.mood, 0) + 1
+            top_mood = max(mood_counts.items(), key=lambda x: x[1])[0]
+            parts.append(f"场景氛围: 主要为{top_mood}")
+
+        return "；".join(parts)
+
+    def save_report(self, result: DeepAnalysisResult, output_path: str) -> str:
+        """保存分析报告为JSON"""
+        data = {
+            "title": result.title,
+            "summary": result.summary,
+            "character_relations": [
+                {
+                    "character1": r.character1,
+                    "character2": r.character2,
+                    "relation_type": r.relation_type,
+                    "intensity": r.intensity,
+                    "sentiment": r.sentiment,
+                    "description": r.description,
+                }
+                for r in result.character_relations
+            ],
+            "story_structure": {
+                "structure_type": result.story_structure.structure_type,
+                "pacing": result.story_structure.pacing,
+                "acts": result.story_structure.acts,
+                "turning_points": result.story_structure.turning_points,
+            } if result.story_structure else None,
+            "theme_analysis": {
+                "main_theme": result.theme_analysis.main_theme,
+                "sub_themes": result.theme_analysis.sub_themes,
+                "motif": result.theme_analysis.motif,
+                "moral": result.theme_analysis.moral,
+            } if result.theme_analysis else None,
+            "dialogue_intents": [
+                {
+                    "character": d.character,
+                    "content": d.content,
+                    "intent": d.intent,
+                    "emotion": d.emotion,
+                }
+                for d in result.dialogue_intents
+            ],
+            "scene_atmospheres": [
+                {
+                    "scene_id": s.scene_id,
+                    "location": s.location,
+                    "time_of_day": s.time_of_day,
+                    "mood": s.mood,
+                    "weather": s.weather,
+                }
+                for s in result.scene_atmospheres
+            ],
+            "conflict_evolutions": [
+                {
+                    "conflict_type": c.conflict_type,
+                    "parties": c.parties,
+                    "escalation_level": c.escalation_level,
+                    "resolution": c.resolution,
+                }
+                for c in result.conflict_evolutions
+            ],
+            "emotional_arcs": [
+                {
+                    "character": a.character,
+                    "start_emotion": a.start_emotion,
+                    "end_emotion": a.end_emotion,
+                    "arc_type": a.arc_type,
+                }
+                for a in result.emotional_arcs
+            ],
+        }
+
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return output_path
+
+    def print_summary(self, result: DeepAnalysisResult):
         """打印分析摘要"""
-        print("=" * 60)
+        print("\n" + "=" * 60)
         print("剧本深度语义分析报告")
         print("=" * 60)
-        print(f"\n总句子数: {result['total_sentences']}")
+        print(f"\n{result.summary}")
 
-        print(f"\n冲突点 ({len(result['conflict_points'])}):")
-        for p in result["conflict_points"]:
-            print(f"  [{p.position:.0%}] 强度{p.intensity:.1f}: {p.description}")
+        print(f"\n角色关系 ({len(result.character_relations)}组):")
+        for r in result.character_relations[:5]:
+            print(f"  {r.character1} ↔ {r.character2}: {r.relation_type} "
+                  f"(强度{r.intensity}, {r.sentiment})")
 
-        print(f"\n转折点 ({len(result['turning_points'])}):")
-        for p in result["turning_points"]:
-            print(f"  [{p.position:.0%}] 强度{p.intensity:.1f}: {p.description}")
+        if result.story_structure:
+            print(f"\n剧情结构:")
+            print(f"  类型: {result.story_structure.structure_type}")
+            print(f"  节奏: {result.story_structure.pacing}")
+            for act in result.story_structure.acts:
+                print(f"  第{act['act']}幕 - {act['name']}: {act['description']}")
 
-        print(f"\n高潮点 ({len(result['climax_points'])}):")
-        for p in result["climax_points"]:
-            print(f"  [{p.position:.0%}] 强度{p.intensity:.1f}: {p.description}")
+        if result.theme_analysis:
+            print(f"\n主题分析:")
+            print(f"  主题: {result.theme_analysis.main_theme}")
+            print(f"  副主题: {', '.join(result.theme_analysis.sub_themes)}")
+            if result.theme_analysis.motif:
+                print(f"  母题: {', '.join(result.theme_analysis.motif)}")
 
-        print(f"\n故事结构: {result['structure']['type']}")
-        print(f"  建置段冲突: {result['structure']['setup']['conflict_level']}")
-        print(f"  对抗段冲突: {result['structure']['confrontation']['conflict_level']}")
-        print(f"  解决段冲突: {result['structure']['resolution']['conflict_level']}")
-        print(f"  主高潮位置: {result['structure']['main_climax_position']:.0%}")
+        if result.dialogue_intents:
+            print(f"\n对话意图 ({len(result.dialogue_intents)}条):")
+            intent_counts = {}
+            for d in result.dialogue_intents:
+                intent_counts[d.intent] = intent_counts.get(d.intent, 0) + 1
+            for intent, count in sorted(intent_counts.items(), key=lambda x: -x[1]):
+                print(f"  {intent}: {count}条")
 
-        print(f"\n情绪曲线:")
-        for ep in result["emotion_curve"]:
-            bar = "█" * int(ep.intensity * 20)
-            print(f"  [{ep.position:.0%}] {ep.emotion:4s} {bar} ({ep.intensity:.1f})")
+        if result.scene_atmospheres:
+            print(f"\n场景氛围 ({len(result.scene_atmospheres)}个):")
+            mood_counts = {}
+            for s in result.scene_atmospheres:
+                mood_counts[s.mood] = mood_counts.get(s.mood, 0) + 1
+            for mood, count in sorted(mood_counts.items(), key=lambda x: -x[1]):
+                print(f"  {mood}: {count}个")
 
         print("=" * 60)
-
-    def _empty_result(self) -> Dict:
-        """空结果"""
-        return {
-            "total_sentences": 0,
-            "conflict_points": [],
-            "turning_points": [],
-            "climax_points": [],
-            "emotion_curve": [],
-            "structure": {"type": "empty"},
-            "camera_intensity": [],
-            "sentence_analysis": [],
-        }
 
 
 def main():
     """命令行测试"""
-    analyzer = ScriptDeepAnalyzer()
+    print("剧本深度语义分析器 v1.0 测试")
+    print("=" * 60)
 
-    # 测试剧本（豆包被打）
+    # 测试剧本
     test_script = """
-    豆包开心地在抖音主页展示自己的作品。
-    突然，一个神秘人出现，开始攻击豆包。
-    豆包愤怒地反抗，但被打得节节败退。
-    混乱中，作品卡片被打碎了。
-    最后，豆包满身伤痕地爬回头像框，委屈地看着观众。
-    """
+场景1：咖啡馆 白天
+小明：你好，请问这里有人吗？
+小红：没有，请坐。
+小明：谢谢。我叫小明，你呢？
+小红：我叫小红。你也是来这里看书的吗？
+小明：是的，这里环境很温馨。
+小红：我也觉得。你喜欢看什么类型的书？
+小明：科幻小说，你呢？
+小红：我喜欢爱情故事。
 
-    print("测试剧本:")
-    print(test_script)
-    print()
+场景2：公园 黄昏
+小明：小红，我有话想对你说。
+小红：什么事？这么严肃。
+小明：我喜欢你，从第一次见面就喜欢了。
+小红：真的吗？我也是...
+小明：那我们在一起吧！
+小红：好。
 
-    result = analyzer.analyze(test_script)
+场景3：雨天 夜晚
+小明：对不起，我必须离开这里了。
+小红：为什么？我们不是说好要在一起的吗？
+小明：因为我要去追求我的梦想，这对我很重要。
+小红：那我呢？你考虑过我的感受吗？
+小明：我会回来的，等我。
+小红：我会等你，无论多久。
+"""
+
+    analyzer = ScriptDeepAnalyzer()
+    result = analyzer.analyze(test_script, title="测试剧本")
     analyzer.print_summary(result)
+
+    # 保存报告
+    output = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\deep_analysis_test.json"
+    analyzer.save_report(result, output)
+    print(f"\n报告已保存: {output}")
+    print("\n✅ 剧本深度语义分析器验证通过")
 
 
 if __name__ == "__main__":

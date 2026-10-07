@@ -253,6 +253,64 @@ class PrprojTemplateModifier:
             return True
         return False
 
+    def validate(self) -> Dict:
+        """验证当前工程内容是否有效
+
+        Returns:
+            验证结果字典，包含valid、errors、warnings
+        """
+        errors = []
+        warnings = []
+
+        # 检查1: XML基本结构
+        if not self.content.strip().startswith('<?xml'):
+            errors.append("XML声明缺失")
+        if '<Project' not in self.content:
+            errors.append("Project元素缺失")
+        if '</Project>' not in self.content:
+            errors.append("Project闭合标签缺失")
+
+        # 检查2: 序列
+        if len(self.sequences) == 0:
+            warnings.append("未找到序列")
+
+        # 检查3: 媒体
+        if len(self.media_files) == 0:
+            warnings.append("未找到媒体文件")
+
+        # 检查4: 媒体路径是否包含非法字符
+        for media in self.media_files:
+            if '<' in media['path'] or '>' in media['path']:
+                errors.append(f"媒体路径包含非法字符: {media['filename']}")
+
+        # 检查5: 标签匹配（简单检查）
+        open_tags = len(re.findall(r'<\w+[^>]*[^/]>', self.content))
+        close_tags = len(re.findall(r'</\w+>', self.content))
+        if abs(open_tags - close_tags) > 10:
+            warnings.append(f"标签数量差异较大: 开{open_tags} 闭{close_tags}")
+
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors,
+            'warnings': warnings,
+            'xml_size': len(self.content),
+            'sequences': len(self.sequences),
+            'media_files': len(self.media_files),
+        }
+
+    def generate_media_placeholder_map(self) -> Dict[str, str]:
+        """生成媒体占位符映射（用于模板参数化）
+
+        Returns:
+            占位符到原始文件名的映射，如 {LOGO: "logo.png", VIDEO1: "video.mov"}
+        """
+        placeholder_map = {}
+        for i, media in enumerate(self.media_files):
+            ext = os.path.splitext(media['filename'])[1]
+            placeholder = f"MEDIA_{i+1}{ext}"
+            placeholder_map[placeholder] = media['filename']
+        return placeholder_map
+
 
 def main():
     """命令行测试"""

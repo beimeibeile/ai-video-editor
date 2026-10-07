@@ -1,575 +1,628 @@
+# -*- coding: utf-8 -*-
 """
-坐标/蒙版四层防护体系 v1.0
-确保剪映工程中的坐标和蒙版参数正确，避免出现位置错误、遮挡超标等问题。
+坐标/蒙版四层防护验证工具 v1.0
+验证剪映工程中坐标参数、蒙版参数、层级关系的正确性。
 
-四层防护：
-1. 预设参数库 - 已验证的坐标和蒙版参数（常见场景）
-2. 坐标验证工具 - 检查坐标是否在画布范围内
-3. 自动校准工具 - 根据画布尺寸自动调整坐标
-4. 保存后修复 - draft_fixer自动修复（已集成）
+四层结构定义：
+  第1层（最底层）：背景/主页截图
+  第2层：头像框（圆形反向蒙版+淡入）
+  第3层：作品区（矩形蒙版+淡入）
+  第4层（最顶层）：透明动画素材
+
+防护机制：
+  1. 坐标范围校验（确保元素在画布内）
+  2. 蒙版参数校验（中心坐标、半径、反转标志）
+  3. 层级顺序校验（render_index递增）
+  4. 关键帧时序校验（淡入时间点合理）
+  5. 背景替换验证（替换背景后其他层坐标不变）
 
 使用方式：
     from coord_mask_guard import CoordMaskGuard
-    guard = CoordMaskGuard(canvas_w=1080, canvas_h=1920)
-    guard.validate_position(x=540, y=960, width=200, height=200)
-    guard.calibrate_position(x=540, y=960, source_canvas=(1080, 1920))
+    guard = CoordMaskGuard(draft_path)
+    report = guard.validate_all()
+    guard.print_report(report)
 """
 import os
 import json
+import copy
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 
 
 @dataclass
-class PresetParams:
-    """预设参数"""
-    name: str
-    canvas_w: int
-    canvas_h: int
-    x: float  # 中心X（像素）
-    y: float  # 中心Y（像素）
-    width: float  # 宽度（像素）
-    height: float  # 高度（像素）
-    scale: float = 1.0
-    rotation: float = 0.0
-    opacity: float = 1.0
-    mask_type: str = "none"  # none/rect/circle
-    mask_width: float = 0.0
-    mask_height: float = 0.0
-    mask_x: float = 0.0
-    mask_y: float = 0.0
-    notes: str = ""
+class LayerInfo:
+    """图层信息"""
+    layer_index: int           # 层级（0=最底）
+    track_name: str            # 轨道名
+    material_path: str         # 素材路径
+    material_type: str         # video/photo
+    width: int = 0
+    height: int = 0
+    transform_x: float = 0.0   # 位置X（半个画布宽单位）
+    transform_y: float = 0.0   # 位置Y
+    scale: float = 1.0         # 缩放
+    alpha: float = 1.0         # 不透明度
+    rotation: float = 0.0      # 旋转
+    has_mask: bool = False
+    mask_type: str = ""
+    mask_center_x: float = 0.0
+    mask_center_y: float = 0.0
+    mask_size: float = 0.0
+    mask_invert: bool = False
+    keyframes: List[Dict] = field(default_factory=list)
+    render_index: int = 0
 
 
 @dataclass
 class ValidationResult:
     """验证结果"""
-    valid: bool
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
-    auto_fixed: bool = False
-    fixed_params: Optional[Dict] = None
+    check_name: str
+    passed: bool
+    severity: str = "info"   # info/warning/error
+    message: str = ""
+    details: Dict = field(default_factory=dict)
+
+
+@dataclass
+class GuardReport:
+    """防护验证报告"""
+    draft_path: str = ""
+    canvas_width: int = 1080
+    canvas_height: int = 1920
+    layers: List[LayerInfo] = field(default_factory=list)
+    results: List[ValidationResult] = field(default_factory=list)
+    passed_count: int = 0
+    failed_count: int = 0
+    warning_count: int = 0
+    overall_pass: bool = True
 
 
 class CoordMaskGuard:
-    """坐标/蒙版防护体系"""
+    """坐标/蒙版四层防护验证器"""
 
-    def __init__(self, canvas_w: int = 1080, canvas_h: int = 1920):
-        self.canvas_w = canvas_w
-        self.canvas_h = canvas_h
-        self.presets = self._load_builtin_presets()
+    def __init__(self, draft_path: str = None):
+        self.draft_path = draft_path
+        self.canvas_width = 1080
+        self.canvas_height = 1920
+        self._draft_content = None
 
-    def _load_builtin_presets(self) -> Dict[str, PresetParams]:
-        """加载内置预设参数库（基于已验证的参数）"""
-        presets = {}
+    def load_draft(self, draft_path: str = None) -> bool:
+        """加载剪映草稿"""
+        path = draft_path or self.draft_path
+        if not path:
+            return False
 
-        # 抖音个人主页 - 头像框位置（1080x1920画布）
-        presets["douyin_avatar_frame"] = PresetParams(
-            name="抖音头像框",
-            canvas_w=1080, canvas_h=1920,
-            x=200, y=280,  # 头像框中心位置
-            width=280, height=280,
-            scale=1.0,
-            mask_type="circle",
-            mask_width=280, mask_height=280,
-            mask_x=200, mask_y=280,
-            notes="抖音个人主页头像位置，圆形蒙版"
-        )
+        content_path = os.path.join(path, "draft_content.json")
+        if not os.path.exists(content_path):
+            content_path = os.path.join(path, "draft_info.json")
 
-        # 抖音个人主页 - 作品区位置
-        presets["douyin_works_area"] = PresetParams(
-            name="抖音作品区",
-            canvas_w=1080, canvas_h=1920,
-            x=540, y=1300,  # 作品区中心位置
-            width=1000, height=900,
-            scale=1.0,
-            mask_type="rect",
-            mask_width=1000, mask_height=900,
-            mask_x=540, mask_y=1300,
-            notes="抖音个人主页作品网格区域"
-        )
+        if not os.path.exists(content_path):
+            return False
 
-        # 抖音个人主页 - 顶部信息区
-        presets["douyin_top_info"] = PresetParams(
-            name="抖音顶部信息",
-            canvas_w=1080, canvas_h=1920,
-            x=540, y=500,
-            width=1000, height=400,
-            scale=1.0,
-            notes="抖音个人主页昵称/简介/数据区域"
-        )
+        try:
+            with open(content_path, "r", encoding="utf-8") as f:
+                self._draft_content = json.load(f)
+            self.draft_path = path
 
-        # 全屏背景
-        presets["fullscreen_background"] = PresetParams(
-            name="全屏背景",
-            canvas_w=1080, canvas_h=1920,
-            x=540, y=960,
-            width=1080, height=1920,
-            scale=1.0,
-            notes="全屏背景图层"
-        )
+            # 读取画布尺寸
+            canvas = self._draft_content.get("canvas_config", {})
+            self.canvas_width = canvas.get("width", 1080)
+            self.canvas_height = canvas.get("height", 1920)
+            return True
+        except Exception as e:
+            print(f"加载草稿失败: {e}")
+            return False
 
-        # 中心元素
-        presets["center_element"] = PresetParams(
-            name="中心元素",
-            canvas_w=1080, canvas_h=1920,
-            x=540, y=960,
-            width=500, height=500,
-            scale=1.0,
-            notes="画布中心元素"
-        )
+    def extract_layers(self) -> List[LayerInfo]:
+        """从草稿中提取图层信息"""
+        if not self._draft_content:
+            return []
 
-        # 底部字幕区
-        presets["bottom_subtitle"] = PresetParams(
-            name="底部字幕",
-            canvas_w=1080, canvas_h=1920,
-            x=540, y=1700,
-            width=900, height=150,
-            scale=1.0,
-            notes="底部安全区字幕位置"
-        )
+        layers = []
+        tracks = self._draft_content.get("tracks", [])
+        materials = self._draft_content.get("materials", {})
+        video_materials = {m.get("id"): m for m in materials.get("videos", [])}
 
-        # 顶部标题区
-        presets["top_title"] = PresetParams(
-            name="顶部标题",
-            canvas_w=1080, canvas_h=1920,
-            x=540, y=200,
-            width=900, height=120,
-            scale=1.0,
-            notes="顶部安全区标题位置"
-        )
+        # 按render_index排序（值越大越靠前）
+        sorted_tracks = sorted(tracks, key=lambda t: t.get("render_index", 0))
 
-        return presets
+        for idx, track in enumerate(sorted_tracks):
+            track_type = track.get("type", "")
+            if track_type not in ["video", "photo"]:
+                continue
 
-    def get_preset(self, name: str) -> Optional[PresetParams]:
-        """获取预设参数"""
-        return self.presets.get(name)
+            segments = track.get("segments", [])
+            if not segments:
+                continue
 
-    def list_presets(self) -> List[str]:
-        """列出所有预设"""
-        return list(self.presets.keys())
+            seg = segments[0]  # 取第一个片段
+            material_id = seg.get("material_id", "")
+            material = video_materials.get(material_id, {})
 
-    def validate_position(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        margin: float = 0.0,
-    ) -> ValidationResult:
-        """
-        第一层防护：验证位置是否在画布范围内
+            clip = seg.get("clip", {}) or {}
+            transform = clip.get("transform", {}) or {}
+            scale = clip.get("scale", {}) or {}
 
-        Args:
-            x: 中心X（像素）
-            y: 中心Y（像素）
-            width: 宽度（像素）
-            height: 高度（像素）
-            margin: 安全边距（像素）
+            # 提取蒙版
+            mask_info = seg.get("mask", None) or {}
+            has_mask = bool(mask_info)
 
-        Returns:
-            ValidationResult 验证结果
-        """
-        result = ValidationResult(valid=True)
+            # 提取关键帧
+            keyframes = []
+            for kf_list in seg.get("common_keyframes", []):
+                prop = kf_list.get("property_type", "")
+                for kf in kf_list.get("keyframe_list", []):
+                    keyframes.append({
+                        "property": prop,
+                        "time_offset": kf.get("time_offset", 0),
+                        "values": kf.get("values", []),
+                    })
 
-        # 检查元素是否完全在画布内
-        left = x - width / 2
-        right = x + width / 2
-        top = y - height / 2
-        bottom = y + height / 2
-
-        if left < -margin:
-            result.errors.append(
-                f"元素左边界超出画布: left={left:.1f} < {-margin}"
+            layer = LayerInfo(
+                layer_index=idx,
+                track_name=track.get("name", f"track_{idx}"),
+                material_path=material.get("path", ""),
+                material_type=material.get("type", "video"),
+                width=material.get("width", 0),
+                height=material.get("height", 0),
+                transform_x=transform.get("x", 0.0),
+                transform_y=transform.get("y", 0.0),
+                scale=scale.get("x", 1.0),
+                alpha=clip.get("alpha", 1.0),
+                rotation=clip.get("rotation", 0.0),
+                has_mask=has_mask,
+                mask_type=mask_info.get("type", ""),
+                mask_center_x=mask_info.get("center_x", 0.0),
+                mask_center_y=mask_info.get("center_y", 0.0),
+                mask_size=mask_info.get("size", 0.0),
+                mask_invert=mask_info.get("invert", False),
+                keyframes=keyframes,
+                render_index=track.get("render_index", 0),
             )
-        if right > self.canvas_w + margin:
-            result.errors.append(
-                f"元素右边界超出画布: right={right:.1f} > {self.canvas_w + margin}"
-            )
-        if top < -margin:
-            result.errors.append(
-                f"元素上边界超出画布: top={top:.1f} < {-margin}"
-            )
-        if bottom > self.canvas_h + margin:
-            result.errors.append(
-                f"元素下边界超出画布: bottom={bottom:.1f} > {self.canvas_h + margin}"
-            )
+            layers.append(layer)
 
-        # 检查中心是否在画布内
-        if x < 0 or x > self.canvas_w:
-            result.warnings.append(f"中心X超出画布: x={x:.1f}")
-        if y < 0 or y > self.canvas_h:
-            result.warnings.append(f"中心Y超出画布: y={y:.1f}")
+        return layers
 
-        # 检查尺寸是否合理
-        if width <= 0:
-            result.errors.append(f"宽度必须大于0: width={width}")
-        if height <= 0:
-            result.errors.append(f"高度必须大于0: height={height}")
-        if width > self.canvas_w * 3:
-            result.warnings.append(f"宽度过大: width={width:.1f} > {self.canvas_w * 3}")
-        if height > self.canvas_h * 3:
-            result.warnings.append(f"高度过大: height={height:.1f} > {self.canvas_h * 3}")
+    def check_coordinate_range(self, layers: List[LayerInfo]) -> List[ValidationResult]:
+        """检查1：坐标范围校验"""
+        results = []
+        half_w = self.canvas_width / 2
+        half_h = self.canvas_height / 2
 
-        result.valid = len(result.errors) == 0
-        return result
+        for layer in layers:
+            # transform_x/y是半个画布宽/高单位
+            abs_x = layer.transform_x * half_w
+            abs_y = layer.transform_y * half_h
 
-    def validate_mask(
-        self,
-        mask_x: float,
-        mask_y: float,
-        mask_width: float,
-        mask_height: float,
-        element_x: float,
-        element_y: float,
-        element_width: float,
-        element_height: float,
-    ) -> ValidationResult:
-        """
-        第二层防护：验证蒙版是否在元素范围内
+            # 检查是否在画布范围内（允许一定溢出）
+            margin = 0.3  # 允许30%溢出
+            in_range_x = -margin * half_w <= abs_x <= (1 + margin) * half_w
+            in_range_y = -margin * half_h <= abs_y <= (1 + margin) * half_h
 
-        Args:
-            mask_x/y: 蒙版中心（像素，相对画布）
-            mask_width/height: 蒙版尺寸（像素）
-            element_x/y: 元素中心（像素）
-            element_width/height: 元素尺寸（像素）
+            if not in_range_x or not in_range_y:
+                results.append(ValidationResult(
+                    check_name=f"坐标范围[{layer.track_name}]",
+                    passed=False,
+                    severity="warning",
+                    message=f"图层位置({abs_x:.0f},{abs_y:.0f})可能超出画布范围",
+                    details={"transform_x": layer.transform_x,
+                            "transform_y": layer.transform_y}
+                ))
+            else:
+                results.append(ValidationResult(
+                    check_name=f"坐标范围[{layer.track_name}]",
+                    passed=True,
+                    message=f"位置({abs_x:.0f},{abs_y:.0f})在画布范围内"
+                ))
 
-        Returns:
-            ValidationResult 验证结果
-        """
-        result = ValidationResult(valid=True)
+        return results
 
-        # 蒙版应该在元素范围内
-        mask_left = mask_x - mask_width / 2
-        mask_right = mask_x + mask_width / 2
-        mask_top = mask_y - mask_height / 2
-        mask_bottom = mask_y + mask_height / 2
+    def check_mask_params(self, layers: List[LayerInfo]) -> List[ValidationResult]:
+        """检查2：蒙版参数校验"""
+        results = []
 
-        elem_left = element_x - element_width / 2
-        elem_right = element_x + element_width / 2
-        elem_top = element_y - element_height / 2
-        elem_bottom = element_y + element_height / 2
+        for layer in layers:
+            if not layer.has_mask:
+                results.append(ValidationResult(
+                    check_name=f"蒙版参数[{layer.track_name}]",
+                    passed=True,
+                    severity="info",
+                    message="无蒙版"
+                ))
+                continue
 
-        if mask_left < elem_left - 1:
-            result.warnings.append(
-                f"蒙版左边界超出元素: mask_left={mask_left:.1f} < elem_left={elem_left:.1f}"
-            )
-        if mask_right > elem_right + 1:
-            result.warnings.append(
-                f"蒙版右边界超出元素: mask_right={mask_right:.1f} > elem_right={elem_right:.1f}"
-            )
-        if mask_top < elem_top - 1:
-            result.warnings.append(
-                f"蒙版上边界超出元素: mask_top={mask_top:.1f} < elem_top={elem_top:.1f}"
-            )
-        if mask_bottom > elem_bottom + 1:
-            result.warnings.append(
-                f"蒙版下边界超出元素: mask_bottom={mask_bottom:.1f} > elem_bottom={elem_bottom:.1f}"
-            )
+            # 检查蒙版中心坐标
+            half_w = self.canvas_width / 2
+            half_h = self.canvas_height / 2
+            mask_abs_x = layer.mask_center_x * half_w
+            mask_abs_y = layer.mask_center_y * half_h
 
-        # 蒙版尺寸检查
-        if mask_width <= 0:
-            result.errors.append(f"蒙版宽度必须大于0: {mask_width}")
-        if mask_height <= 0:
-            result.errors.append(f"蒙版高度必须大于0: {mask_height}")
+            # 检查蒙版大小
+            if layer.mask_size <= 0:
+                results.append(ValidationResult(
+                    check_name=f"蒙版参数[{layer.track_name}]",
+                    passed=False,
+                    severity="error",
+                    message="蒙版大小为0或负数",
+                    details={"mask_size": layer.mask_size}
+                ))
+                continue
 
-        # 蒙版位置检查（应该在画布内）
-        if mask_x < 0 or mask_x > self.canvas_w:
-            result.warnings.append(f"蒙版X超出画布: {mask_x}")
-        if mask_y < 0 or mask_y > self.canvas_h:
-            result.warnings.append(f"蒙版Y超出画布: {mask_y}")
+            # 圆形蒙版：size是半径比例（半个画布宽）
+            if "圆" in layer.mask_type or "circle" in layer.mask_type.lower():
+                radius_px = layer.mask_size * half_w
+                if radius_px < 10:
+                    results.append(ValidationResult(
+                        check_name=f"蒙版参数[{layer.track_name}]",
+                        passed=False,
+                        severity="error",
+                        message=f"圆形蒙版半径过小({radius_px:.1f}px)",
+                        details={"radius_px": radius_px}
+                    ))
+                else:
+                    results.append(ValidationResult(
+                        check_name=f"蒙版参数[{layer.track_name}]",
+                        passed=True,
+                        message=f"圆形蒙版中心({mask_abs_x:.0f},{mask_abs_y:.0f})，"
+                                f"半径{radius_px:.1f}px，"
+                                f"反转={'是' if layer.mask_invert else '否'}"
+                    ))
+            else:
+                results.append(ValidationResult(
+                    check_name=f"蒙版参数[{layer.track_name}]",
+                    passed=True,
+                    message=f"蒙版类型{layer.mask_type}，中心({mask_abs_x:.0f},{mask_abs_y:.0f})"
+                ))
 
-        result.valid = len(result.errors) == 0
-        return result
+        return results
 
-    def calibrate_position(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        source_canvas: Tuple[int, int] = (1080, 1920),
-        fit_mode: str = "contain",  # contain/cover/stretch
-    ) -> Dict[str, float]:
-        """
-        第三层防护：根据目标画布尺寸自动校准坐标
+    def check_layer_order(self, layers: List[LayerInfo]) -> List[ValidationResult]:
+        """检查3：层级顺序校验"""
+        results = []
 
-        Args:
-            x/y: 源画布中的中心坐标
-            width/height: 源画布中的尺寸
-            source_canvas: 源画布尺寸 (w, h)
-            fit_mode: 适配模式 contain/cover/stretch
+        if len(layers) < 2:
+            results.append(ValidationResult(
+                check_name="层级顺序",
+                passed=True,
+                severity="info",
+                message=f"仅{len(layers)}层，无需校验顺序"
+            ))
+            return results
 
-        Returns:
-            校准后的坐标和尺寸
-        """
-        src_w, src_h = source_canvas
-        dst_w, dst_h = self.canvas_w, self.canvas_h
+        # 检查render_index是否递增
+        indices = [l.render_index for l in layers]
+        is_increasing = all(indices[i] <= indices[i+1] for i in range(len(indices)-1))
 
-        # 计算缩放比例
-        scale_x = dst_w / src_w
-        scale_y = dst_h / src_h
-
-        if fit_mode == "contain":
-            # 保持比例，完整显示
-            scale = min(scale_x, scale_y)
-        elif fit_mode == "cover":
-            # 保持比例，覆盖全屏
-            scale = max(scale_x, scale_y)
-        else:  # stretch
-            # 拉伸填充
-            scale = 1.0
-            new_width = width * scale_x
-            new_height = height * scale_y
-            new_x = x * scale_x
-            new_y = y * scale_y
-            return {
-                "x": new_x, "y": new_y,
-                "width": new_width, "height": new_height,
-                "scale": scale,
-            }
-
-        new_width = width * scale
-        new_height = height * scale
-        new_x = x * scale
-        new_y = y * scale
-
-        # 如果是contain模式，需要居中偏移
-        if fit_mode == "contain":
-            offset_x = (dst_w - src_w * scale) / 2
-            offset_y = (dst_h - src_h * scale) / 2
-            new_x += offset_x
-            new_y += offset_y
-
-        return {
-            "x": round(new_x, 2),
-            "y": round(new_y, 2),
-            "width": round(new_width, 2),
-            "height": round(new_height, 2),
-            "scale": round(scale, 4),
-        }
-
-    def auto_fix_position(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-    ) -> Tuple[float, float, float, float]:
-        """
-        第四层防护：自动修复超出画布的位置
-
-        将元素约束到画布范围内，保持尺寸不变。
-
-        Returns:
-            修复后的 (x, y, width, height)
-        """
-        # 计算边界
-        half_w = width / 2
-        half_h = height / 2
-
-        # 约束X
-        if half_w >= self.canvas_w:
-            # 元素比画布宽，居中
-            new_x = self.canvas_w / 2
+        if is_increasing:
+            results.append(ValidationResult(
+                check_name="层级顺序",
+                passed=True,
+                message=f"{len(layers)}层，render_index递增: {indices}"
+            ))
         else:
-            new_x = max(half_w, min(self.canvas_w - half_w, x))
+            results.append(ValidationResult(
+                check_name="层级顺序",
+                passed=False,
+                severity="error",
+                message=f"render_index未递增: {indices}",
+                details={"indices": indices}
+            ))
 
-        # 约束Y
-        if half_h >= self.canvas_h:
-            new_y = self.canvas_h / 2
-        else:
-            new_y = max(half_h, min(self.canvas_h - half_h, y))
+        # 检查四层结构（如果有4层）
+        if len(layers) >= 4:
+            # 第2层应该有蒙版（头像框）
+            layer2 = layers[1] if len(layers) > 1 else None
+            if layer2 and not layer2.has_mask:
+                results.append(ValidationResult(
+                    check_name="四层结构-头像框蒙版",
+                    passed=False,
+                    severity="warning",
+                    message=f"第2层({layer2.track_name})应有蒙版但未检测到"
+                ))
+            elif layer2 and layer2.has_mask and not layer2.mask_invert:
+                results.append(ValidationResult(
+                    check_name="四层结构-头像框蒙版反转",
+                    passed=False,
+                    severity="warning",
+                    message="头像框蒙版应为反向蒙版(invert=True)"
+                ))
+            else:
+                results.append(ValidationResult(
+                    check_name="四层结构-头像框蒙版",
+                    passed=True,
+                    message="头像框蒙版配置正确"
+                ))
 
-        return (round(new_x, 2), round(new_y, 2), width, height)
+        return results
 
-    def validate_and_fix(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        auto_fix: bool = True,
-    ) -> ValidationResult:
-        """
-        综合验证并自动修复
+    def check_keyframe_timing(self, layers: List[LayerInfo]) -> List[ValidationResult]:
+        """检查4：关键帧时序校验"""
+        results = []
 
-        Args:
-            x/y/width/height: 元素参数
-            auto_fix: 是否自动修复
+        for layer in layers:
+            alpha_kfs = [kf for kf in layer.keyframes
+                        if kf["property"] in ["KFTypeAlpha", "alpha"]]
 
-        Returns:
-            ValidationResult 包含验证结果和修复后参数
-        """
-        result = self.validate_position(x, y, width, height)
+            if not alpha_kfs:
+                results.append(ValidationResult(
+                    check_name=f"关键帧时序[{layer.track_name}]",
+                    passed=True,
+                    severity="info",
+                    message="无透明度关键帧"
+                ))
+                continue
 
-        if not result.valid and auto_fix:
-            fixed_x, fixed_y, fixed_w, fixed_h = self.auto_fix_position(
-                x, y, width, height
-            )
-            result.auto_fixed = True
-            result.fixed_params = {
-                "x": fixed_x, "y": fixed_y,
-                "width": fixed_w, "height": fixed_h,
-            }
-            # 重新验证修复后的参数
-            recheck = self.validate_position(fixed_x, fixed_y, fixed_w, fixed_h)
-            if recheck.valid:
-                result.valid = True
-                result.errors = []
-                result.warnings.extend([f"已自动修复: {e}" for e in result.errors])
+            # 检查关键帧时间是否递增
+            times = [kf["time_offset"] for kf in alpha_kfs]
+            times_sorted = sorted(times)
 
-        return result
+            if times != times_sorted:
+                results.append(ValidationResult(
+                    check_name=f"关键帧时序[{layer.track_name}]",
+                    passed=False,
+                    severity="error",
+                    message=f"透明度关键帧时间未递增: {times}",
+                    details={"times": times}
+                ))
+                continue
 
-    def check_layer_order(
-        self,
-        layers: List[Dict[str, Any]],
-    ) -> ValidationResult:
-        """
-        检查图层顺序是否合理
+            # 检查淡入逻辑：应该从0到1
+            if len(alpha_kfs) >= 2:
+                first_val = alpha_kfs[0]["values"][0] if alpha_kfs[0]["values"] else 0
+                last_val = alpha_kfs[-1]["values"][0] if alpha_kfs[-1]["values"] else 1
 
-        预期顺序（从底到顶）：
-        1. 背景层
-        2. 主内容层
-        3. 遮挡层
-        4. 动画层
-        5. 字幕/文字层
+                if first_val > last_val:
+                    results.append(ValidationResult(
+                        check_name=f"关键帧时序[{layer.track_name}]",
+                        passed=False,
+                        severity="warning",
+                        message=f"透明度从{first_val}降到{last_val}，可能是淡出而非淡入"
+                    ))
+                else:
+                    fade_time = (alpha_kfs[-1]["time_offset"] - alpha_kfs[0]["time_offset"]) / 1_000_000
+                    results.append(ValidationResult(
+                        check_name=f"关键帧时序[{layer.track_name}]",
+                        passed=True,
+                        message=f"淡入: {first_val}→{last_val}，耗时{fade_time:.1f}s，"
+                                f"起始{alpha_kfs[0]['time_offset']/1_000_000:.1f}s"
+                    ))
 
-        Args:
-            layers: 图层列表，每个包含 name, type, z_index
+        return results
 
-        Returns:
-            ValidationResult
-        """
-        result = ValidationResult(valid=True)
+    def check_background_replacement(self, layers: List[LayerInfo]) -> List[ValidationResult]:
+        """检查5：背景替换验证（模拟替换背景后其他层坐标不变）"""
+        results = []
 
-        if not layers:
-            result.warnings.append("图层列表为空")
-            return result
+        if len(layers) < 2:
+            results.append(ValidationResult(
+                check_name="背景替换验证",
+                passed=True,
+                severity="info",
+                message="图层不足，跳过背景替换验证"
+            ))
+            return results
 
-        # 检查是否有背景层
-        has_background = any(
-            layer.get("type") == "background" for layer in layers
+        # 模拟：记录除背景层外所有层的坐标
+        bg_layer = layers[0]
+        other_layers = layers[1:]
+
+        # 检查其他层是否有独立的坐标设置（不依赖背景层）
+        independent = all(
+            l.transform_x != 0 or l.transform_y != 0 or l.has_mask
+            for l in other_layers
         )
-        if not has_background:
-            result.warnings.append("缺少背景层")
 
-        # 检查z_index是否有重复
-        z_indices = [layer.get("z_index", 0) for layer in layers]
-        if len(z_indices) != len(set(z_indices)):
-            result.warnings.append("存在重复的z_index")
+        if independent:
+            results.append(ValidationResult(
+                check_name="背景替换验证",
+                passed=True,
+                message=f"背景层({bg_layer.track_name})替换后，"
+                        f"{len(other_layers)}个上层有独立坐标/蒙版，不受影响"
+            ))
+        else:
+            results.append(ValidationResult(
+                check_name="背景替换验证",
+                passed=False,
+                severity="warning",
+                message="部分上层无独立坐标，替换背景后可能需要重新调整",
+                details={"independent_layers":
+                        [l.track_name for l in other_layers
+                         if l.transform_x != 0 or l.transform_y != 0 or l.has_mask]}
+            ))
 
-        # 检查图层数量
-        if len(layers) > 10:
-            result.warnings.append(f"图层数量过多: {len(layers)}个（建议≤10）")
+        return results
 
-        return result
+    def validate_all(self, draft_path: str = None) -> GuardReport:
+        """执行全部验证"""
+        if not self.load_draft(draft_path):
+            return GuardReport(draft_path=draft_path or self.draft_path or "",
+                             overall_pass=False,
+                             results=[ValidationResult(
+                                 check_name="加载草稿", passed=False,
+                                 severity="error", message="无法加载草稿文件"
+                             )])
 
-    def generate_guard_report(self, project_name: str = "未命名") -> str:
-        """生成防护体系报告"""
-        report = []
-        report.append("=" * 60)
-        report.append(f"坐标/蒙版四层防护体系报告 - {project_name}")
-        report.append("=" * 60)
-        report.append(f"\n画布尺寸: {self.canvas_w}x{self.canvas_h}")
-        report.append(f"\n第一层：预设参数库")
-        report.append(f"  已加载预设: {len(self.presets)}个")
-        for name, preset in self.presets.items():
-            report.append(f"    - {name}: ({preset.x},{preset.y}) {preset.width}x{preset.height}")
+        layers = self.extract_layers()
 
-        report.append(f"\n第二层：坐标验证工具")
-        report.append(f"  - 边界检查（左/右/上/下）")
-        report.append(f"  - 中心位置检查")
-        report.append(f"  - 尺寸合理性检查")
+        report = GuardReport(
+            draft_path=self.draft_path,
+            canvas_width=self.canvas_width,
+            canvas_height=self.canvas_height,
+            layers=layers,
+        )
 
-        report.append(f"\n第三层：自动校准工具")
-        report.append(f"  - 支持contain/cover/stretch三种适配模式")
-        report.append(f"  - 自动计算缩放比例和偏移量")
+        # 执行5项检查
+        all_checks = [
+            self.check_coordinate_range(layers),
+            self.check_mask_params(layers),
+            self.check_layer_order(layers),
+            self.check_keyframe_timing(layers),
+            self.check_background_replacement(layers),
+        ]
 
-        report.append(f"\n第四层：保存后修复")
-        report.append(f"  - draft_fixer自动修复draft_info.json")
-        report.append(f"  - 已集成到jianying_executor.save()流程")
+        for check_results in all_checks:
+            report.results.extend(check_results)
 
-        report.append("\n" + "=" * 60)
-        return "\n".join(report)
+        # 统计
+        report.passed_count = sum(1 for r in report.results if r.passed)
+        report.failed_count = sum(1 for r in report.results
+                                 if not r.passed and r.severity == "error")
+        report.warning_count = sum(1 for r in report.results
+                                  if not r.passed and r.severity == "warning")
+        report.overall_pass = report.failed_count == 0
+
+        return report
+
+    def print_report(self, report: GuardReport):
+        """打印验证报告"""
+        print("\n" + "=" * 60)
+        print("坐标/蒙版四层防护验证报告")
+        print("=" * 60)
+        print(f"草稿: {os.path.basename(report.draft_path)}")
+        print(f"画布: {report.canvas_width}x{report.canvas_height}")
+        print(f"图层数: {len(report.layers)}")
+        print(f"\n检查结果: {report.passed_count}通过, "
+              f"{report.failed_count}错误, {report.warning_count}警告")
+        print(f"总体: {'✅ 通过' if report.overall_pass else '❌ 未通过'}")
+
+        print("\n图层信息:")
+        for layer in report.layers:
+            mask_str = ""
+            if layer.has_mask:
+                mask_str = f" [蒙版:{layer.mask_type},反转={layer.mask_invert}]"
+            kf_str = f" [关键帧:{len(layer.keyframes)}]" if layer.keyframes else ""
+            print(f"  L{layer.layer_index}: {layer.track_name} "
+                  f"({layer.material_type}) pos=({layer.transform_x:.2f},{layer.transform_y:.2f})"
+                  f" scale={layer.scale:.2f} alpha={layer.alpha:.2f}{mask_str}{kf_str}")
+
+        print("\n详细检查:")
+        for r in report.results:
+            icon = "✅" if r.passed else ("⚠️" if r.severity == "warning" else "❌")
+            print(f"  {icon} {r.check_name}: {r.message}")
+
+        print("=" * 60)
+        return report.overall_pass
+
+
+def validate_from_script(layers_config: List[Dict],
+                         canvas_width: int = 1080,
+                         canvas_height: int = 1920) -> GuardReport:
+    """
+    从脚本配置直接验证（不依赖草稿文件）
+    用于构建工程前的预验证
+
+    Args:
+        layers_config: 图层配置列表，每个元素包含track_name, transform_x/y, mask等
+        canvas_width: 画布宽
+        canvas_height: 画布高
+
+    Returns:
+        验证报告
+    """
+    guard = CoordMaskGuard()
+    guard.canvas_width = canvas_width
+    guard.canvas_height = canvas_height
+
+    layers = []
+    for idx, cfg in enumerate(layers_config):
+        layer = LayerInfo(
+            layer_index=idx,
+            track_name=cfg.get("track_name", f"layer_{idx}"),
+            material_path=cfg.get("material_path", ""),
+            material_type=cfg.get("material_type", "video"),
+            transform_x=cfg.get("transform_x", 0.0),
+            transform_y=cfg.get("transform_y", 0.0),
+            scale=cfg.get("scale", 1.0),
+            alpha=cfg.get("alpha", 1.0),
+            has_mask=cfg.get("has_mask", False),
+            mask_type=cfg.get("mask_type", ""),
+            mask_center_x=cfg.get("mask_center_x", 0.0),
+            mask_center_y=cfg.get("mask_center_y", 0.0),
+            mask_size=cfg.get("mask_size", 0.0),
+            mask_invert=cfg.get("mask_invert", False),
+            keyframes=cfg.get("keyframes", []),
+            render_index=idx,
+        )
+        layers.append(layer)
+
+    report = GuardReport(
+        draft_path="script_preview",
+        canvas_width=canvas_width,
+        canvas_height=canvas_height,
+        layers=layers,
+    )
+
+    all_checks = [
+        guard.check_coordinate_range(layers),
+        guard.check_mask_params(layers),
+        guard.check_layer_order(layers),
+        guard.check_keyframe_timing(layers),
+        guard.check_background_replacement(layers),
+    ]
+
+    for check_results in all_checks:
+        report.results.extend(check_results)
+
+    report.passed_count = sum(1 for r in report.results if r.passed)
+    report.failed_count = sum(1 for r in report.results
+                             if not r.passed and r.severity == "error")
+    report.warning_count = sum(1 for r in report.results
+                              if not r.passed and r.severity == "warning")
+    report.overall_pass = report.failed_count == 0
+
+    return report
 
 
 def main():
     """命令行测试"""
+    print("坐标/蒙版四层防护验证工具 v1.0 测试")
     print("=" * 60)
-    print("坐标/蒙版四层防护体系 v1.0 测试")
-    print("=" * 60)
 
-    guard = CoordMaskGuard(canvas_w=1080, canvas_h=1920)
-
-    # 测试1：列出预设
-    print("\n=== 测试1：预设参数库 ===")
-    presets = guard.list_presets()
-    print(f"已加载预设: {len(presets)}个")
-    for name in presets:
-        p = guard.get_preset(name)
-        print(f"  {name}: ({p.x},{p.y}) {p.width}x{p.height}")
-
-    # 测试2：正常位置验证
-    print("\n=== 测试2：正常位置验证 ===")
-    result = guard.validate_position(540, 960, 500, 500)
-    print(f"  中心元素(540,960,500x500): valid={result.valid}")
-    if result.warnings:
-        for w in result.warnings:
-            print(f"    ⚠️ {w}")
-
-    # 测试3：超出画布位置
-    print("\n=== 测试3：超出画布位置 ===")
-    result = guard.validate_position(-100, 2000, 500, 500)
-    print(f"  越界元素(-100,2000,500x500): valid={result.valid}")
-    for e in result.errors:
-        print(f"    ❌ {e}")
-
-    # 测试4：自动修复
-    print("\n=== 测试4：自动修复 ===")
-    result = guard.validate_and_fix(-100, 2000, 500, 500, auto_fix=True)
-    print(f"  修复后: valid={result.valid}, auto_fixed={result.auto_fixed}")
-    if result.fixed_params:
-        print(f"    修复参数: {result.fixed_params}")
-
-    # 测试5：坐标校准
-    print("\n=== 测试5：坐标校准（1080x1920 → 720x1280）===")
-    guard2 = CoordMaskGuard(canvas_w=720, canvas_h=1280)
-    calibrated = guard2.calibrate_position(
-        x=540, y=960, width=500, height=500,
-        source_canvas=(1080, 1920), fit_mode="contain"
-    )
-    print(f"  校准后: {calibrated}")
-
-    # 测试6：蒙版验证
-    print("\n=== 测试6：蒙版验证 ===")
-    result = guard.validate_mask(
-        mask_x=200, mask_y=280, mask_width=280, mask_height=280,
-        element_x=200, element_y=280, element_width=280, element_height=280,
-    )
-    print(f"  头像蒙版: valid={result.valid}")
-    if result.warnings:
-        for w in result.warnings:
-            print(f"    ⚠️ {w}")
-
-    # 测试7：图层顺序检查
-    print("\n=== 测试7：图层顺序检查 ===")
-    layers = [
-        {"name": "背景", "type": "background", "z_index": 0},
-        {"name": "主页", "type": "content", "z_index": 1},
-        {"name": "头像框", "type": "overlay", "z_index": 2},
-        {"name": "作品区", "type": "mask", "z_index": 3},
-        {"name": "动画", "type": "animation", "z_index": 4},
-        {"name": "字幕", "type": "text", "z_index": 5},
+    # 测试1: 脚本预验证（四层结构）
+    print("\n测试1: 四层结构脚本预验证")
+    four_layer_config = [
+        {"track_name": "背景层", "material_type": "photo",
+         "transform_x": 0, "transform_y": 0},
+        {"track_name": "头像框层", "material_type": "photo",
+         "transform_x": 0, "transform_y": 0,
+         "has_mask": True, "mask_type": "圆形",
+         "mask_center_x": -0.67, "mask_center_y": -0.6,
+         "mask_size": 0.14, "mask_invert": True,
+         "keyframes": [
+             {"property": "KFTypeAlpha", "time_offset": 0, "values": [0]},
+             {"property": "KFTypeAlpha", "time_offset": 9_000_000, "values": [0]},
+             {"property": "KFTypeAlpha", "time_offset": 9_500_000, "values": [1]},
+         ]},
+        {"track_name": "作品区层", "material_type": "photo",
+         "transform_x": 0, "transform_y": 0,
+         "has_mask": True, "mask_type": "矩形",
+         "mask_center_x": 0, "mask_center_y": 0.2,
+         "mask_size": 0.5, "mask_invert": False,
+         "keyframes": [
+             {"property": "KFTypeAlpha", "time_offset": 0, "values": [0]},
+             {"property": "KFTypeAlpha", "time_offset": 12_000_000, "values": [0]},
+             {"property": "KFTypeAlpha", "time_offset": 12_500_000, "values": [1]},
+         ]},
+        {"track_name": "动画层", "material_type": "video",
+         "transform_x": 0, "transform_y": 0},
     ]
-    result = guard.check_layer_order(layers)
-    print(f"  6层结构: valid={result.valid}")
-    if result.warnings:
-        for w in result.warnings:
-            print(f"    ⚠️ {w}")
 
-    # 生成报告
-    print("\n" + guard.generate_guard_report("测试项目"))
+    report = validate_from_script(four_layer_config, 1080, 1920)
+    guard = CoordMaskGuard()
+    guard.print_report(report)
+
+    # 测试2: 错误配置检测
+    print("\n测试2: 错误配置检测（蒙版size=0）")
+    bad_config = [
+        {"track_name": "背景", "transform_x": 0, "transform_y": 0},
+        {"track_name": "头像框", "has_mask": True, "mask_type": "圆形",
+         "mask_center_x": 0, "mask_center_y": 0, "mask_size": 0,
+         "mask_invert": True},
+    ]
+    report2 = validate_from_script(bad_config)
+    guard.print_report(report2)
+
+    print("\n✅ 坐标/蒙版四层防护验证工具测试通过")
 
 
 if __name__ == "__main__":

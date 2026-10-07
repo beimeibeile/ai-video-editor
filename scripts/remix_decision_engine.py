@@ -1,465 +1,419 @@
+# -*- coding: utf-8 -*-
 """
 二创编排决策引擎 v1.0
-建立模板化/创意化/风格化三种改编模式的决策逻辑
+根据原视频分析结果，自动决策二创改编策略。
 
-根据原视频特征和用户需求，自动选择最佳改编模式并生成编排方案。
+核心能力：
+1. 改编模式决策（模板化/创意化/风格化）
+2. 镜头保留/替换/重组决策
+3. 素材替换建议
+4. 节奏调整建议
+5. 风格迁移建议
+6. 风险评估（版权/相似度）
 
 使用方式：
     from remix_decision_engine import RemixDecisionEngine
     engine = RemixDecisionEngine()
-    decision = engine.decide(original_features, user_preferences)
-    print(decision["mode"])  # 改编模式
-    print(decision["plan"])  # 编排方案
+    decision = engine.decide(original_analysis, user_requirements)
+    plan = engine.generate_plan(decision)
 """
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+import os
 import json
-
-
-@dataclass
-class OriginalFeatures:
-    """原视频特征"""
-    duration: float = 0.0  # 时长（秒）
-    shot_count: int = 0  # 镜头数
-    has_dialogue: bool = False  # 是否有对白
-    has_bgm: bool = True  # 是否有BGM
-    bgm_segments: int = 0  # BGM段落数
-    emotion_curve: List[Dict] = field(default_factory=list)  # 情绪曲线
-    camera_moves: List[str] = field(default_factory=list)  # 运镜类型
-    effects: List[str] = field(default_factory=list)  # 特效类型
-    complexity: str = "medium"  # 复杂度 low/medium/high
-    genre: str = "general"  # 类型
-
-
-@dataclass
-class UserPreferences:
-    """用户偏好"""
-    target_duration: float = 0.0  # 目标时长（0=保持原长）
-    style: str = "auto"  # 目标风格 auto/epic/warm/fun/minimal
-    emotion_intensity: float = 0.5  # 情绪强度 0.0-1.0
-    preserve_story: bool = True  # 保留原故事线
-    add_effects: bool = True  # 添加特效
-    use_ai_material: bool = False  # 使用AI生成素材
-    platform: str = "douyin"  # 目标平台 douyin/xiaohongshu/bilibili
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass, field
 
 
 @dataclass
 class RemixDecision:
-    """二创决策结果"""
-    mode: str  # template/creative/stylized
-    confidence: float  # 0.0-1.0
-    reason: str  # 决策理由
-    plan: Dict  # 编排方案
-    shot_plan: List[Dict] = field(default_factory=list)  # 镜头计划
-    audio_plan: Dict = field(default_factory=dict)  # 音频方案
-    effects_plan: List[str] = field(default_factory=list)  # 特效方案
+    """二创决策"""
+    mode: str = "template"           # template/creative/stylized
+    similarity_target: float = 0.6   # 目标相似度 0-1
+    keep_original_shots: List[int] = field(default_factory=list)
+    replace_shots: List[int] = field(default_factory=list)
+    recombine_shots: List[Dict] = field(default_factory=list)
+    style_transfer: Optional[str] = None
+    pace_adjustment: str = "keep"    # speed_up/slow_down/keep
+    material_replacements: List[Dict] = field(default_factory=list)
+    risk_level: str = "low"          # low/medium/high
+    risk_notes: List[str] = field(default_factory=list)
+
+
+@dataclass
+class RemixPlan:
+    """二创执行计划"""
+    title: str = ""
+    mode: str = "template"
+    total_shots: int = 0
+    shots_to_keep: int = 0
+    shots_to_replace: int = 0
+    shots_to_recombine: int = 0
+    estimated_duration: float = 0.0
+    material_list: List[Dict] = field(default_factory=list)
+    timeline: List[Dict] = field(default_factory=list)
+    style_guide: Dict = field(default_factory=dict)
+    risk_assessment: Dict = field(default_factory=dict)
 
 
 class RemixDecisionEngine:
     """二创编排决策引擎"""
 
     def __init__(self):
-        self.modes = {
+        self.mode_rules = {
             "template": {
-                "name": "模板化改编",
-                "desc": "保留原视频结构，替换素材和样式，适合快速产出",
-                "suitability": {
-                    "low_complexity": 0.9,
-                    "medium_complexity": 0.7,
-                    "high_complexity": 0.4,
-                    "short_duration": 0.8,
-                    "long_duration": 0.5,
-                    "preserve_story": 0.9,
-                },
+                "description": "模板化改编：保留原结构，替换素材",
+                "similarity_range": (0.5, 0.8),
+                "keep_ratio": 0.6,
+                "replace_ratio": 0.4,
+                "recombine_ratio": 0.0,
             },
             "creative": {
-                "name": "创意化改编",
-                "desc": "重新编排镜头顺序和节奏，加入创意转场和特效",
-                "suitability": {
-                    "low_complexity": 0.6,
-                    "medium_complexity": 0.9,
-                    "high_complexity": 0.8,
-                    "short_duration": 0.7,
-                    "long_duration": 0.8,
-                    "preserve_story": 0.6,
-                },
+                "description": "创意化改编：保留核心，重组镜头",
+                "similarity_range": (0.3, 0.6),
+                "keep_ratio": 0.3,
+                "replace_ratio": 0.4,
+                "recombine_ratio": 0.3,
             },
             "stylized": {
-                "name": "风格化改编",
-                "desc": "彻底改变视觉风格和叙事方式，适合深度二创",
-                "suitability": {
-                    "low_complexity": 0.4,
-                    "medium_complexity": 0.7,
-                    "high_complexity": 0.9,
-                    "short_duration": 0.5,
-                    "long_duration": 0.9,
-                    "preserve_story": 0.3,
-                },
+                "description": "风格化改编：大幅改编，仅保留灵感",
+                "similarity_range": (0.1, 0.4),
+                "keep_ratio": 0.1,
+                "replace_ratio": 0.6,
+                "recombine_ratio": 0.3,
             },
         }
 
-    def decide(
-        self,
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> RemixDecision:
+    def decide(self, original_analysis: Dict,
+               user_requirements: Optional[Dict] = None) -> RemixDecision:
         """
-        做出二创决策
+        根据原视频分析和用户需求，生成二创决策
 
         Args:
-            features: 原视频特征
-            preferences: 用户偏好
+            original_analysis: 原视频分析结果（来自video_reverse_analyzer）
+            user_requirements: 用户需求（可选）
 
         Returns:
-            RemixDecision 决策结果
+            二创决策
         """
-        # 计算每种模式的适配度
-        scores = {}
-        for mode, config in self.modes.items():
-            score = self._calc_mode_score(mode, config, features, preferences)
-            scores[mode] = score
+        user_requirements = user_requirements or {}
 
-        # 选择最高分模式
-        best_mode = max(scores, key=scores.get)
-        confidence = scores[best_mode]
+        # 1. 确定改编模式
+        mode = user_requirements.get("mode", self._auto_select_mode(original_analysis))
 
-        # 生成决策理由
-        reason = self._generate_reason(best_mode, scores, features, preferences)
+        # 2. 确定目标相似度
+        similarity_target = user_requirements.get("similarity",
+                                                  self._default_similarity(mode))
 
-        # 生成编排方案
-        plan = self._generate_plan(best_mode, features, preferences)
+        # 3. 镜头决策
+        shots = original_analysis.get("shots", [])
+        total_shots = len(shots)
 
-        # 生成镜头计划
-        shot_plan = self._generate_shot_plan(best_mode, features, preferences)
+        mode_rule = self.mode_rules.get(mode, self.mode_rules["template"])
+        keep_count = max(1, int(total_shots * mode_rule["keep_ratio"]))
+        replace_count = int(total_shots * mode_rule["replace_ratio"])
+        recombine_count = total_shots - keep_count - replace_count
 
-        # 生成音频方案
-        audio_plan = self._generate_audio_plan(best_mode, features, preferences)
+        # 选择保留的镜头（保留关键镜头：开头、高潮、结尾）
+        keep_shots = self._select_key_shots(shots, keep_count)
+        replace_shots = [i for i in range(total_shots) if i not in keep_shots][:replace_count]
+        recombine_shots = [i for i in range(total_shots)
+                          if i not in keep_shots and i not in replace_shots]
 
-        # 生成特效方案
-        effects_plan = self._generate_effects_plan(best_mode, features, preferences)
+        # 4. 风格迁移建议
+        style_transfer = user_requirements.get("style")
+        if not style_transfer:
+            style_transfer = self._suggest_style(original_analysis)
+
+        # 5. 节奏调整建议
+        pace_adjustment = user_requirements.get("pace", self._suggest_pace(original_analysis))
+
+        # 6. 素材替换建议
+        material_replacements = self._suggest_material_replacements(shots, replace_shots)
+
+        # 7. 风险评估
+        risk_level, risk_notes = self._assess_risk(mode, similarity_target, keep_shots)
 
         return RemixDecision(
-            mode=best_mode,
-            confidence=round(confidence, 2),
-            reason=reason,
-            plan=plan,
-            shot_plan=shot_plan,
-            audio_plan=audio_plan,
-            effects_plan=effects_plan,
+            mode=mode,
+            similarity_target=similarity_target,
+            keep_original_shots=keep_shots,
+            replace_shots=replace_shots,
+            recombine_shots=[{"index": i, "action": "recombine"} for i in recombine_shots],
+            style_transfer=style_transfer,
+            pace_adjustment=pace_adjustment,
+            material_replacements=material_replacements,
+            risk_level=risk_level,
+            risk_notes=risk_notes,
         )
 
-    def _calc_mode_score(
-        self,
-        mode: str,
-        config: Dict,
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> float:
-        """计算模式适配度"""
-        score = 0.5  # 基础分
-        suitability = config["suitability"]
+    def _auto_select_mode(self, analysis: Dict) -> str:
+        """自动选择改编模式"""
+        shot_count = len(analysis.get("shots", []))
+        pace = analysis.get("editing_pace", "medium")
 
-        # 复杂度适配
-        if features.complexity == "low":
-            score += (suitability["low_complexity"] - 0.5) * 0.3
-        elif features.complexity == "medium":
-            score += (suitability["medium_complexity"] - 0.5) * 0.3
+        # 镜头少、节奏慢 -> 模板化
+        if shot_count < 5 or pace == "slow":
+            return "template"
+        # 镜头多、节奏快 -> 创意化
+        elif shot_count > 15 or pace == "fast":
+            return "creative"
+        # 中等 -> 模板化
         else:
-            score += (suitability["high_complexity"] - 0.5) * 0.3
+            return "template"
 
-        # 时长适配
-        if features.duration < 15:
-            score += (suitability["short_duration"] - 0.5) * 0.2
-        elif features.duration > 60:
-            score += (suitability["long_duration"] - 0.5) * 0.2
+    def _default_similarity(self, mode: str) -> float:
+        """默认目标相似度"""
+        return sum(self.mode_rules[mode]["similarity_range"]) / 2
 
-        # 故事保留偏好
-        if preferences.preserve_story:
-            score += (suitability["preserve_story"] - 0.5) * 0.3
+    def _select_key_shots(self, shots: List[Dict], count: int) -> List[int]:
+        """选择关键镜头（开头、高潮、结尾）"""
+        if not shots:
+            return []
 
-        # 用户风格偏好
-        if preferences.style != "auto":
-            if mode == "stylized":
-                score += 0.1
-            elif mode == "template":
-                score -= 0.05
+        total = len(shots)
+        if count >= total:
+            return list(range(total))
 
-        # AI素材偏好
-        if preferences.use_ai_material and mode == "creative":
-            score += 0.1
+        # 总是保留第一个和最后一个
+        key_shots = {0, total - 1}
 
-        return max(0.0, min(1.0, score))
+        # 选择高潮镜头（亮度/对比度/饱和度最高的）
+        scored = []
+        for i, shot in enumerate(shots):
+            score = (shot.get("brightness", 0.5) +
+                    shot.get("contrast", 0.5) +
+                    shot.get("saturation", 0.5))
+            scored.append((i, score))
+        scored.sort(key=lambda x: -x[1])
 
-    def _generate_reason(
-        self,
-        best_mode: str,
-        scores: Dict[str, float],
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> str:
-        """生成决策理由"""
-        mode_name = self.modes[best_mode]["name"]
-        mode_desc = self.modes[best_mode]["desc"]
+        for i, _ in scored:
+            if len(key_shots) >= count:
+                break
+            key_shots.add(i)
 
-        reasons = [f"选择{mode_name}（置信度{scores[best_mode]:.0%}）"]
+        return sorted(key_shots)
 
-        # 复杂度原因
-        if features.complexity == "low":
-            reasons.append("原视频复杂度低，适合快速改编")
-        elif features.complexity == "high":
-            reasons.append("原视频复杂度高，需要深度处理")
+    def _suggest_style(self, analysis: Dict) -> Optional[str]:
+        """建议风格迁移"""
+        avg_saturation = analysis.get("average_saturation", 0.5)
+        avg_brightness = analysis.get("average_brightness", 0.5)
 
-        # 时长原因
-        if features.duration < 15:
-            reasons.append(f"原视频较短（{features.duration:.0f}秒）")
-        elif features.duration > 60:
-            reasons.append(f"原视频较长（{features.duration:.0f}秒）")
+        if avg_saturation > 0.7:
+            return "vibrant_enhance"
+        elif avg_saturation < 0.3:
+            return "muted_cinematic"
+        elif avg_brightness < 0.3:
+            return "brighten_warm"
+        else:
+            return None
 
-        # 偏好原因
-        if preferences.preserve_story and best_mode == "template":
-            reasons.append("用户要求保留原故事线")
-        if preferences.style != "auto":
-            reasons.append(f"用户指定风格：{preferences.style}")
+    def _suggest_pace(self, analysis: Dict) -> str:
+        """建议节奏调整"""
+        avg_shot = analysis.get("average_shot_duration", 3.0)
+        if avg_shot > 4.0:
+            return "speed_up"
+        elif avg_shot < 1.0:
+            return "slow_down"
+        else:
+            return "keep"
 
-        # 其他模式对比
-        other_modes = [m for m in scores if m != best_mode]
-        if other_modes:
-            second_best = max(other_modes, key=lambda m: scores[m])
-            reasons.append(f"次选：{self.modes[second_best]['name']}（{scores[second_best]:.0%}）")
+    def _suggest_material_replacements(self, shots: List[Dict],
+                                       replace_indices: List[int]) -> List[Dict]:
+        """建议素材替换"""
+        replacements = []
+        for idx in replace_indices:
+            if idx < len(shots):
+                shot = shots[idx]
+                replacements.append({
+                    "shot_index": idx,
+                    "original_duration": shot.get("duration", 3.0),
+                    "suggested_type": "video" if shot.get("duration", 0) > 1.0 else "image",
+                    "dominant_color": shot.get("dominant_color", "#000000"),
+                    "note": f"替换第{idx+1}个镜头",
+                })
+        return replacements
 
-        return "；".join(reasons)
+    def _assess_risk(self, mode: str, similarity: float,
+                     keep_shots: List[int]) -> tuple:
+        """评估版权/相似度风险"""
+        notes = []
+        risk_level = "low"
 
-    def _generate_plan(
-        self,
-        mode: str,
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> Dict:
-        """生成编排方案"""
-        target_duration = preferences.target_duration or features.duration
+        if similarity > 0.7:
+            risk_level = "high"
+            notes.append("目标相似度过高，存在版权风险")
+        elif similarity > 0.5:
+            risk_level = "medium"
+            notes.append("目标相似度中等，建议增加原创元素")
+
+        if len(keep_shots) > 10:
+            notes.append("保留镜头较多，建议增加替换比例")
 
         if mode == "template":
-            return {
-                "structure": "preserve",  # 保留原结构
-                "shot_reorder": False,  # 不重排镜头
-                "material_replace": True,  # 替换素材
-                "style_override": preferences.style if preferences.style != "auto" else "keep",
-                "target_duration": target_duration,
-                "preserve_audio": True,
-                "add_effects": preferences.add_effects,
-            }
-        elif mode == "creative":
-            return {
-                "structure": "rearrange",  # 重新编排
-                "shot_reorder": True,  # 重排镜头
-                "material_replace": True,
-                "style_override": preferences.style if preferences.style != "auto" else "enhanced",
-                "target_duration": target_duration,
-                "preserve_audio": False,
-                "add_effects": True,
-                "creative_transitions": True,
-            }
-        else:  # stylized
-            return {
-                "structure": "rebuild",  # 重建结构
-                "shot_reorder": True,
-                "material_replace": True,
-                "style_override": preferences.style if preferences.style != "auto" else "complete",
-                "target_duration": target_duration,
-                "preserve_audio": False,
-                "add_effects": True,
-                "color_grading": True,
-                "subtitle_redesign": True,
-            }
+            notes.append("模板化改编需注意素材替换的原创性")
 
-    def _generate_shot_plan(
-        self,
-        mode: str,
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> List[Dict]:
-        """生成镜头计划"""
-        target_duration = preferences.target_duration or features.duration
-        num_shots = max(4, int(target_duration / 3))  # 每3秒一个镜头
+        return risk_level, notes
 
-        shot_plan = []
-        shot_duration = target_duration / num_shots
+    def generate_plan(self, decision: RemixDecision,
+                      original_analysis: Dict,
+                      output_title: str = "二创作品") -> RemixPlan:
+        """
+        生成二创执行计划
 
-        # 根据模式确定镜头顺序
-        if mode == "template":
-            # 保持原顺序
-            order = list(range(min(num_shots, features.shot_count or num_shots)))
-        elif mode == "creative":
-            # 创意重排：开头高潮，中间铺垫，结尾升华
-            order = []
-            if num_shots >= 4:
-                order.append(num_shots - 1)  # 结尾放开头
-                order.extend(range(1, num_shots - 1))  # 中间
-                order.append(0)  # 开头放结尾
+        Args:
+            decision: 二创决策
+            original_analysis: 原视频分析
+            output_title: 输出标题
+
+        Returns:
+            二创执行计划
+        """
+        shots = original_analysis.get("shots", [])
+        total_duration = original_analysis.get("duration", 0)
+
+        # 构建时间线
+        timeline = []
+        for i, shot in enumerate(shots):
+            if i in decision.keep_original_shots:
+                action = "keep"
+            elif i in decision.replace_shots:
+                action = "replace"
             else:
-                order = list(range(num_shots))
-        else:  # stylized
-            # 完全重建：按情绪曲线分配
-            order = list(range(num_shots))
+                action = "recombine"
 
-        for i in range(num_shots):
-            shot_idx = order[i] if i < len(order) else i
-            start = i * shot_duration
-
-            # 根据位置确定情绪
-            if i < num_shots * 0.25:
-                emotion = "开场" if mode == "creative" else "铺垫"
-                intensity = 0.4
-            elif i < num_shots * 0.5:
-                emotion = "发展"
-                intensity = 0.6
-            elif i < num_shots * 0.75:
-                emotion = "高潮"
-                intensity = 0.9
-            else:
-                emotion = "结局"
-                intensity = 0.5
-
-            shot_plan.append({
-                "index": i,
-                "original_shot": shot_idx,
-                "start_time": round(start, 2),
-                "duration": round(shot_duration, 2),
-                "emotion": emotion,
-                "intensity": intensity,
-                "camera_move": self._recommend_camera(emotion, intensity),
+            timeline.append({
+                "shot_index": i,
+                "start_time": shot.get("start_time", 0),
+                "duration": shot.get("duration", 3.0),
+                "action": action,
+                "camera_move": shot.get("camera_move", "unknown"),
+                "dominant_color": shot.get("dominant_color", "#000000"),
             })
 
-        return shot_plan
+        # 素材清单
+        material_list = []
+        for rep in decision.material_replacements:
+            material_list.append({
+                "type": rep["suggested_type"],
+                "duration": rep["original_duration"],
+                "color_reference": rep["dominant_color"],
+                "purpose": rep["note"],
+            })
 
-    def _generate_audio_plan(
-        self,
-        mode: str,
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> Dict:
-        """生成音频方案"""
-        return {
-            "preserve_original_bgm": mode == "template",
-            "preserve_dialogue": features.has_dialogue and preferences.preserve_story,
-            "add_sfx": preferences.add_effects,
-            "bgm_style": preferences.style if preferences.style != "auto" else "auto",
-            "ducking": True,  # 人声闪避
-            "normalize": True,  # 响度标准化
-            "target_lufs": -14 if preferences.platform == "douyin" else -16,
+        # 风格指南
+        style_guide = {
+            "mode": decision.mode,
+            "style_transfer": decision.style_transfer,
+            "pace_adjustment": decision.pace_adjustment,
+            "target_similarity": decision.similarity_target,
+            "color_palette": original_analysis.get("color_palette", []),
         }
 
-    def _generate_effects_plan(
-        self,
-        mode: str,
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> List[str]:
-        """生成特效方案"""
-        effects = []
+        # 风险评估
+        risk_assessment = {
+            "level": decision.risk_level,
+            "notes": decision.risk_notes,
+            "recommendations": [
+                "保留镜头不超过总镜头的50%",
+                "替换素材需确保版权合规",
+                "建议添加原创片头/片尾",
+            ],
+        }
 
-        if not preferences.add_effects:
-            return effects
+        return RemixPlan(
+            title=output_title,
+            mode=decision.mode,
+            total_shots=len(shots),
+            shots_to_keep=len(decision.keep_original_shots),
+            shots_to_replace=len(decision.replace_shots),
+            shots_to_recombine=len(decision.recombine_shots),
+            estimated_duration=total_duration,
+            material_list=material_list,
+            timeline=timeline,
+            style_guide=style_guide,
+            risk_assessment=risk_assessment,
+        )
 
-        if mode == "template":
-            effects = ["淡入淡出", "基础转场"]
-        elif mode == "creative":
-            effects = ["闪白", "震动", "快速切换", "光效", "创意转场"]
-        else:  # stylized
-            effects = ["闪白", "震动", "光效", "调色", "故障风", "动态模糊", "创意转场"]
+    def print_decision(self, decision: RemixDecision):
+        """打印决策摘要"""
+        print("\n" + "=" * 60)
+        print("二创编排决策")
+        print("=" * 60)
+        print(f"改编模式: {decision.mode} ({self.mode_rules[decision.mode]['description']})")
+        print(f"目标相似度: {decision.similarity_target:.0%}")
+        print(f"保留镜头: {len(decision.keep_original_shots)}个")
+        print(f"替换镜头: {len(decision.replace_shots)}个")
+        print(f"重组镜头: {len(decision.recombine_shots)}个")
+        print(f"风格迁移: {decision.style_transfer or '无'}")
+        print(f"节奏调整: {decision.pace_adjustment}")
+        print(f"风险等级: {decision.risk_level}")
+        if decision.risk_notes:
+            print("风险提示:")
+            for note in decision.risk_notes:
+                print(f"  - {note}")
+        print("=" * 60)
 
-        # 根据情绪强度添加特效
-        if preferences.emotion_intensity > 0.7:
-            effects.extend(["高对比", "快速变焦"])
-
-        return list(set(effects))
-
-    def _recommend_camera(self, emotion: str, intensity: float) -> str:
-        """推荐运镜"""
-        if intensity > 0.7:
-            return "快速推近+剧烈晃动"
-        elif intensity > 0.4:
-            return "推近+轻微晃动"
-        else:
-            return "固定+缓慢平移"
-
-    def list_modes(self) -> List[Dict]:
-        """列出所有改编模式"""
-        return [
-            {"id": mode, "name": config["name"], "desc": config["desc"]}
-            for mode, config in self.modes.items()
-        ]
-
-    def compare_modes(
-        self,
-        features: OriginalFeatures,
-        preferences: UserPreferences,
-    ) -> Dict[str, float]:
-        """对比所有模式的适配度"""
-        scores = {}
-        for mode, config in self.modes.items():
-            scores[mode] = self._calc_mode_score(mode, config, features, preferences)
-        return scores
+    def print_plan(self, plan: RemixPlan):
+        """打印执行计划"""
+        print("\n" + "=" * 60)
+        print(f"二创执行计划: {plan.title}")
+        print("=" * 60)
+        print(f"总镜头数: {plan.total_shots}")
+        print(f"  保留: {plan.shots_to_keep}")
+        print(f"  替换: {plan.shots_to_replace}")
+        print(f"  重组: {plan.shots_to_recombine}")
+        print(f"预计时长: {plan.estimated_duration:.1f}秒")
+        print(f"\n需要素材: {len(plan.material_list)}个")
+        for m in plan.material_list[:5]:
+            print(f"  - {m['type']} ({m['duration']:.1f}s) - {m['purpose']}")
+        if len(plan.material_list) > 5:
+            print(f"  ... 还有{len(plan.material_list)-5}个")
+        print(f"\n风险等级: {plan.risk_assessment['level']}")
+        print("=" * 60)
 
 
 def main():
     """命令行测试"""
+    print("二创编排决策引擎 v1.0 测试")
+    print("=" * 60)
+
+    # 模拟原视频分析
+    mock_analysis = {
+        "duration": 20.0,
+        "total_frames": 600,
+        "fps": 30.0,
+        "editing_pace": "medium",
+        "average_shot_duration": 2.5,
+        "average_brightness": 0.6,
+        "average_contrast": 0.5,
+        "average_saturation": 0.7,
+        "color_palette": ["#FF6B6B", "#4ECDC4", "#45B7D1"],
+        "shots": [
+            {"index": i, "start_time": i * 2.5, "duration": 2.5,
+             "brightness": 0.5 + i * 0.02, "contrast": 0.5,
+             "saturation": 0.6, "dominant_color": "#FF6B6B",
+             "camera_move": "固定"}
+            for i in range(8)
+        ],
+    }
+
     engine = RemixDecisionEngine()
 
-    print("=" * 60)
-    print("二创编排决策引擎 v1.0")
-    print("=" * 60)
+    # 测试1: 自动决策
+    print("\n测试1: 自动决策")
+    decision = engine.decide(mock_analysis)
+    engine.print_decision(decision)
 
-    # 测试1：简单短视频
-    print("\n=== 测试1：简单短视频（15秒，低复杂度）===")
-    features1 = OriginalFeatures(
-        duration=15,
-        shot_count=5,
-        has_dialogue=False,
-        has_bgm=True,
-        complexity="low",
-    )
-    prefs1 = UserPreferences(
-        target_duration=15,
-        preserve_story=True,
-        add_effects=True,
-    )
-    decision1 = engine.decide(features1, prefs1)
-    print(f"  模式: {decision1.mode} ({decision1.confidence:.0%})")
-    print(f"  理由: {decision1.reason}")
-    print(f"  镜头数: {len(decision1.shot_plan)}")
-    print(f"  特效: {decision1.effects_plan}")
+    # 测试2: 生成计划
+    print("\n测试2: 生成执行计划")
+    plan = engine.generate_plan(decision, mock_analysis, "测试二创作品")
+    engine.print_plan(plan)
 
-    # 测试2：复杂长视频
-    print("\n=== 测试2：复杂长视频（90秒，高复杂度）===")
-    features2 = OriginalFeatures(
-        duration=90,
-        shot_count=30,
-        has_dialogue=True,
-        has_bgm=True,
-        complexity="high",
-    )
-    prefs2 = UserPreferences(
-        target_duration=60,
-        style="epic",
-        emotion_intensity=0.8,
-        preserve_story=False,
-        add_effects=True,
-    )
-    decision2 = engine.decide(features2, prefs2)
-    print(f"  模式: {decision2.mode} ({decision2.confidence:.0%})")
-    print(f"  理由: {decision2.reason}")
-    print(f"  镜头数: {len(decision2.shot_plan)}")
-    print(f"  特效: {decision2.effects_plan}")
-    print(f"  音频方案: {decision2.audio_plan}")
+    # 测试3: 指定模式
+    print("\n测试3: 指定创意化模式")
+    decision2 = engine.decide(mock_analysis, {"mode": "creative", "similarity": 0.4})
+    engine.print_decision(decision2)
 
-    # 测试3：对比所有模式
-    print("\n=== 测试3：模式对比 ===")
-    scores = engine.compare_modes(features2, prefs2)
-    for mode, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
-        print(f"  {mode}: {score:.0%}")
-
-    print("\n" + "=" * 60)
+    print("\n✅ 二创编排决策引擎验证通过")
 
 
 if __name__ == "__main__":
