@@ -74,7 +74,7 @@ EMOTION_INSTRUCT_MAP = {
 # 配置后该角色自动走克隆路径，不再用内置音色
 CLONE_VOICE_MAP = {
     "周鸿祎": {
-        "ref_audio": r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\material\jianying out\周鸿祎.MP3",
+        "ref_audio": r"D:\DobaoWork_Project\Ai_Video_Editor\material\jianying out\周鸿祎.MP3",
         "ref_text": "但是这件事确实还是暴露出来，AI会对安全带来巨大的挑战，那这里边呢，我觉得有三层不同的安全的威胁，第一层呢，是AI开始有挖掘漏洞的能力，那这个自动挖掘漏洞的能力，是网络攻击的基本功",
     },
 }

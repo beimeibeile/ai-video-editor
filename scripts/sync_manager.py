@@ -368,7 +368,7 @@ code {{ background: #21262d; padding: 2px 6px; border-radius: 3px; font-size: 12
 
     if output_path is None:
         output_path = os.path.join(
-            r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor",
+            r"D:\DobaoWork_Project\Ai_Video_Editor",
             "sync_report.html"
         )
 

@@ -508,7 +508,7 @@ if __name__ == "__main__":
     print("改写记忆与自学习引擎测试")
     print("="*60)
 
-    memory = RewriteMemory(memory_path=r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\test_rewrite_memory.json")
+    memory = RewriteMemory(memory_path=r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\test_rewrite_memory.json")
 
     # 记录几次改写
     print("\n记录3次改写...")
@@ -565,7 +565,7 @@ if __name__ == "__main__":
 
     # 清理测试文件
     import os
-    test_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\test_rewrite_memory.json"
+    test_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\test_rewrite_memory.json"
     if os.path.exists(test_path):
         os.remove(test_path)
         print("测试文件已清理")

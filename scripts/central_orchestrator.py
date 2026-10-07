@@ -714,7 +714,7 @@ class CentralOrchestrator:
 
 if __name__ == "__main__":
     # 测试：用P24输出的指令序列做调度
-    instr_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\instruction_sequence.json"
+    instr_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\instruction_sequence.json"
 
     if os.path.exists(instr_path):
         with open(instr_path, "r", encoding="utf-8") as f:

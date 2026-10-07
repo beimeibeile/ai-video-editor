@@ -2,7 +2,7 @@
 import sys
 import os
 
-SCRIPT_DIR = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\ai-video-editor-runtime\scripts"
+SCRIPT_DIR = r"D:\DobaoWork_Project\Ai_Video_Editor\ai-video-editor-runtime\scripts"
 sys.path.insert(0, SCRIPT_DIR)
 
 from sfx_executor import SFXExecutor

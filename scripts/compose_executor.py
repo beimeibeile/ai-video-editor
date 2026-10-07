@@ -10,7 +10,7 @@ import subprocess
 from typing import Dict, Any, List, Optional
 
 
-RUNTIME_DIR = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\ai-video-editor-runtime\scripts"
+RUNTIME_DIR = r"D:\DobaoWork_Project\Ai_Video_Editor\ai-video-editor-runtime\scripts"
 sys.path.insert(0, RUNTIME_DIR)
 
 FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"

@@ -1,4 +1,4 @@
-"""
+﻿"""
 P25执行器: 剪映工程构建
 把P24输出的指令序列转换成实际的剪映工程
 
@@ -33,7 +33,7 @@ from adapters.jianying_adapter import (
 draft = None  # 已迁移到适配层，保留变量名避免引用错误
 
 # 统一特效API（运行时路径）
-_RUNTIME_SCRIPTS = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\ai-video-editor-runtime\scripts"
+_RUNTIME_SCRIPTS = r"D:\DobaoWork_Project\Ai_Video_Editor\ai-video-editor-runtime\scripts"
 if _RUNTIME_SCRIPTS not in sys.path:
     sys.path.insert(0, _RUNTIME_SCRIPTS)
 try:
@@ -997,7 +997,7 @@ class JianyingExecutor:
 
 if __name__ == "__main__":
     # 测试：用导演引擎输出的指令序列构建剪映工程
-    instr_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\e2e_instruction_sequence.json"
+    instr_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\e2e_instruction_sequence.json"
 
     if os.path.exists(instr_path):
         with open(instr_path, "r", encoding="utf-8") as f:

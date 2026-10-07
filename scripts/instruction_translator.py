@@ -882,7 +882,7 @@ class InstructionTranslator:
 
 if __name__ == "__main__":
     # 测试：用P23解析的豆包被打分镜做翻译
-    parsed_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\parsed_script.json"
+    parsed_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\parsed_script.json"
 
     if os.path.exists(parsed_path):
         with open(parsed_path, "r", encoding="utf-8") as f:
@@ -892,7 +892,7 @@ if __name__ == "__main__":
         sequence = translator.translate(parsed_script)
         translator.print_summary()
 
-        out_path = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\instruction_sequence.json"
+        out_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\instruction_sequence.json"
         translator.save_json(out_path)
     else:
         print(f"❌ 分镜文件不存在: {parsed_path}")

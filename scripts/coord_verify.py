@@ -29,7 +29,7 @@ try:
 except ImportError:
     PIL_OK = False
 
-OUT_DIR = r'C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\coord_verify'
+OUT_DIR = r'D:\DobaoWork_Project\Ai_Video_Editor\coord_verify'
 os.makedirs(OUT_DIR, exist_ok=True)
 
 

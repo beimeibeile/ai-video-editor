@@ -1037,5 +1037,5 @@ if __name__ == "__main__":
     parser.print_summary()
 
     # 保存
-    out = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\director_engine_test\parsed_script.json"
+    out = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\parsed_script.json"
     parser.save_json(out)

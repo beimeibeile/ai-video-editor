@@ -411,7 +411,7 @@ if __name__ == "__main__":
     print("测试: 创建5种模板片头")
     print("=" * 60)
 
-    test_dir = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\debug\intro_test"
+    test_dir = r"D:\DobaoWork_Project\Ai_Video_Editor\debug\intro_test"
     os.makedirs(test_dir, exist_ok=True)
 
     tests = [

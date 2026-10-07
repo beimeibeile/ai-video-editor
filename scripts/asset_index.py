@@ -500,7 +500,7 @@ def search_assets(library_root: str, **kwargs) -> List[Dict]:
 
 if __name__ == "__main__":
     # 测试：扫描默认素材库
-    default_lib = r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\material"
+    default_lib = r"D:\DobaoWork_Project\Ai_Video_Editor\material"
     if os.path.exists(default_lib):
         idx = build_index(default_lib, force=True)
         print("\n检索测试:")

@@ -395,5 +395,5 @@ if __name__ == "__main__":
         'fps': 30,
     }
     output = render_html_report(test_report, title="测试报告", category="storyboard", source_data=test_data,
-                                output_path=r"C:\Users\Administrator\Videos\剪映导出\Doubao_Jianying-editor\debug\test_report.html")
+                                output_path=r"D:\DobaoWork_Project\Ai_Video_Editor\debug\test_report.html")
     print(f"测试报告: {output}")
