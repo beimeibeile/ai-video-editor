@@ -481,6 +481,15 @@ body {
         </div>
       </div>
 
+      <!-- 参数预设 -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="form-select" id="presetSelect" style="flex:1;min-width:150px" onchange="loadPreset(this.value)">
+          <option value="">📌 选择预设...</option>
+        </select>
+        <button class="btn btn-secondary" style="padding:8px 16px;font-size:13px;white-space:nowrap" onclick="savePreset()">💾 保存当前</button>
+        <button class="btn btn-secondary" style="padding:8px 16px;font-size:13px;white-space:nowrap" onclick="deletePreset()">🗑 删除</button>
+      </div>
+
       <button class="btn btn-primary btn-block" id="generateBtn" onclick="generateVideo()">
         🚀 开始生成
       </button>
@@ -698,6 +707,72 @@ document.getElementById('mode').addEventListener('change', function() {
   document.getElementById('fl2vGroup').style.display = mode === 'fl2v' ? 'block' : 'none';
   document.getElementById('ref2vGroup').style.display = mode === 'ref2v' ? 'block' : 'none';
 });
+
+// ============ 参数预设管理 ============
+const PRESET_KEY = 'ai_video_editor_presets';
+const PRESET_FIELDS = ['prompt', 'model', 'mode', 'variant', 'preset', 'frames', 'width', 'height'];
+
+function getPresets() {
+  try { return JSON.parse(localStorage.getItem(PRESET_KEY)) || {}; } catch { return {}; }
+}
+
+function savePresets(presets) {
+  localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
+}
+
+function refreshPresetList() {
+  const presets = getPresets();
+  const sel = document.getElementById('presetSelect');
+  sel.innerHTML = '<option value="">📌 选择预设...</option>';
+  Object.keys(presets).sort().forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+function savePreset() {
+  const name = prompt('输入预设名称：', '我的预设');
+  if (!name) return;
+  const presets = getPresets();
+  const data = {};
+  PRESET_FIELDS.forEach(f => {
+    const el = document.getElementById(f);
+    if (el) data[f] = el.value;
+  });
+  presets[name] = data;
+  savePresets(presets);
+  refreshPresetList();
+  alert('预设已保存：' + name);
+}
+
+function loadPreset(name) {
+  if (!name) return;
+  const presets = getPresets();
+  const data = presets[name];
+  if (!data) return;
+  PRESET_FIELDS.forEach(f => {
+    const el = document.getElementById(f);
+    if (el && data[f] !== undefined) el.value = data[f];
+  });
+  // 触发模式切换
+  document.getElementById('mode').dispatchEvent(new Event('change'));
+}
+
+function deletePreset() {
+  const sel = document.getElementById('presetSelect');
+  const name = sel.value;
+  if (!name) { alert('请先选择要删除的预设'); return; }
+  if (!confirm('确定删除预设「' + name + '」？')) return;
+  const presets = getPresets();
+  delete presets[name];
+  savePresets(presets);
+  refreshPresetList();
+}
+
+// 初始化预设列表
+refreshPresetList();
 
 // 文件选择后自动上传
 async function onFileSelected(input, targetInputId) {
@@ -972,6 +1047,41 @@ function startPolling(taskId) {
 }
 
 // 加载任务列表
+// 错误信息友好化
+function friendlyError(error) {
+  if (!error) return '未知错误';
+  const e = String(error);
+  const map = [
+    [/No module named/i, '依赖模块缺失，请检查Python环境配置'],
+    [/Connection refused|无法连接/i, 'ComfyUI服务未启动，请先启动ComfyUI'],
+    [/timeout|超时/i, '生成超时，可能是模型加载慢或显存不足'],
+    [/out of memory|OOM|显存/i, '显存不足，请降低分辨率或帧数'],
+    [/FileNotFoundError|文件不存在/i, '素材文件不存在，请检查路径'],
+    [/Permission denied|权限/i, '文件被占用，请关闭剪映后重试'],
+    [/invalid|无效/i, '参数无效，请检查输入配置'],
+  ];
+  for (const [pattern, msg] of map) {
+    if (pattern.test(e)) return msg;
+  }
+  return e.length > 100 ? e.substring(0, 100) + '...' : e;
+}
+
+// 重试任务
+async function retryTask(taskId) {
+  try {
+    const res = await fetch(API_BASE + '/api/task/' + taskId + '/retry', { method: 'POST' });
+    const data = await res.json();
+    if (data.task_id) {
+      alert('已重新提交任务: ' + data.task_id);
+      loadTasks();
+    } else {
+      alert('重试失败: ' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    alert('重试请求失败: ' + e.message);
+  }
+}
+
 async function loadTasks() {
   try {
     const res = await fetch(API_BASE + '/api/tasks');
@@ -981,16 +1091,24 @@ async function loadTasks() {
       list.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>暂无任务</p></div>';
       return;
     }
+    const statusMap = { pending: '等待中', running: '进行中', completed: '已完成', failed: '失败', cancelled: '已取消' };
     list.innerHTML = data.tasks.map(t => {
       const time = new Date(t.created_at * 1000).toLocaleString('zh-CN');
-      const prompt = t.params?.prompt || '-';
+      const prompt = t.params?.prompt || t.params?.video_path || '-';
+      const isFailed = t.status === 'failed';
+      const errorInfo = isFailed && t.error ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;">⚠ ${friendlyError(t.error)}</div>` : '';
+      const retryBtn = isFailed ? `<button onclick="retryTask('${t.id}')" style="padding:4px 12px;background:rgba(59,130,246,0.15);color:var(--accent-light);border:none;border-radius:6px;cursor:pointer;font-size:12px;">🔄 重试</button>` : '';
       return `
         <div class="task-item">
-          <span class="task-id">${t.id}</span>
-          <span class="task-type">${t.type}</span>
-          <span class="task-prompt" title="${prompt}">${prompt}</span>
-          <span class="task-status status-${t.status}">${t.status}</span>
-          <span class="task-time">${time}</span>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span class="task-id">${t.id}</span>
+            <span class="task-type">${t.type}</span>
+            <span class="task-prompt" title="${prompt}">${prompt}</span>
+            <span class="task-status status-${t.status}">${statusMap[t.status] || t.status}</span>
+            <span class="task-time">${time}</span>
+            ${retryBtn}
+          </div>
+          ${errorInfo}
         </div>
       `;
     }).join('');

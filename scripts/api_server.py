@@ -721,6 +721,35 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "任务不存在或无法取消"}, 404)
 
+        elif path.startswith("/api/task/") and path.endswith("/retry"):
+            # 重试失败的任务
+            task_id = path.split("/")[-2]
+            task = task_manager.get_task(task_id)
+            if not task:
+                self._send_json({"error": "任务不存在"}, 404)
+                return
+            if task["status"] != TASK_FAILED:
+                self._send_json({"error": "只有失败的任务才能重试"}, 400)
+                return
+
+            params = task.get("params", {})
+            task_type = task.get("type", "")
+            new_id = task_manager.create_task(task_type, params)
+
+            if task_type == "video_generation":
+                task_manager.run_task_async(new_id, generate_video_task, params)
+            elif task_type == "template_create":
+                task_manager.run_task_async(new_id, create_template_task, params)
+            else:
+                self._send_json({"error": f"不支持重试的任务类型: {task_type}"}, 400)
+                return
+
+            self._send_json({
+                "task_id": new_id,
+                "status": TASK_PENDING,
+                "message": f"任务已重新提交（原任务: {task_id}）",
+            }, 202)
+
         # 模板市场POST端点
         elif path.startswith("/api/template/") and path.endswith("/rate"):
             if not _template_market:
