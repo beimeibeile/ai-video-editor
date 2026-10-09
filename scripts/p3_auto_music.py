@@ -182,13 +182,13 @@ class AudioMixer:
             # 音量
             parts.append(f"volume={config.volume}")
 
-            # 淡入淡出
+            # 淡入淡出（使用afade音频滤镜，fade是视频滤镜）
             fade_parts = []
             if config.fade_in > 0:
-                fade_parts.append(f"fade=t=in:st=0:d={config.fade_in}")
+                fade_parts.append(f"afade=t=in:st=0:d={config.fade_in}")
             if config.fade_out > 0:
                 fade_start = max(0, config.duration - config.fade_out)
-                fade_parts.append(f"fade=t=out:st={fade_start}:d={config.fade_out}")
+                fade_parts.append(f"afade=t=out:st={fade_start}:d={config.fade_out}")
             parts.extend(fade_parts)
 
             filter_str = f"[{i}:a]{','.join(parts)}[{label}]"
@@ -201,14 +201,30 @@ class AudioMixer:
         else:
             filters.append(f"{mix_inputs[0]}anull[out]")
 
+        # 根据输出文件扩展名选择编码器
+        ext = os.path.splitext(output_path)[1].lower()
+        if ext == ".mp3":
+            audio_codec = "libmp3lame"
+            audio_bitrate = "192k"
+        elif ext in (".m4a", ".aac"):
+            audio_codec = "aac"
+            audio_bitrate = "192k"
+        elif ext == ".wav":
+            audio_codec = "pcm_s16le"
+            audio_bitrate = None
+        else:
+            audio_codec = "aac"
+            audio_bitrate = "192k"
+
         cmd.extend([
             "-filter_complex", ";".join(filters),
             "-map", "[out]",
             "-t", str(total_duration),
-            "-c:a", "aac",
-            "-b:a", "192k",
-            output_path
+            "-c:a", audio_codec,
         ])
+        if audio_bitrate:
+            cmd.extend(["-b:a", audio_bitrate])
+        cmd.append(output_path)
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
