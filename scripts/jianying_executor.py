@@ -29,6 +29,20 @@ from jy_wrapper import JyProject
 import pyJianYingDraft as draft
 from pyJianYingDraft.metadata.video_scene_effect import VideoSceneEffectType
 
+# 特效API（延迟导入，避免依赖问题）
+_effect_api = None
+def _get_effect_api():
+    """延迟初始化JianyingEffectAPI（2309个特效库）"""
+    global _effect_api
+    if _effect_api is None:
+        try:
+            from jianying_effect_api import JianyingEffectAPI
+            _effect_api = JianyingEffectAPI()
+        except Exception as e:
+            logger.warning(f"JianyingEffectAPI初始化失败: {e}")
+            _effect_api = False
+    return _effect_api if _effect_api else None
+
 try:
     from PIL import Image, ImageDraw, ImageFont
     _PIL_AVAILABLE = True
@@ -292,15 +306,37 @@ class JianyingExecutor:
                 char_name = target.replace("char_", "")
                 seg = self.character_segments.get(char_name)
             elif target == "background" or target == "all":
-                # 对所有角色片段应用特效
+                # 对所有角色片段应用枚举特效
+                enum_applied = 0
                 for char_seg in self.character_segments.values():
                     effect_enum = EFFECT_NAME_MAP.get(effect_type)
                     if effect_enum:
                         try:
                             char_seg.add_effect(effect_enum)
-                            applied += 1
+                            enum_applied += 1
                         except Exception as e:
                             logger.warning(f"  ⚠️  特效失败: {e}")
+                # 枚举特效找不到时，回退到特效API（应用到整个工程）
+                if enum_applied == 0:
+                    api = _get_effect_api()
+                    if api and self.project:
+                        if effect.get("category") == "filter":
+                            ok = api.apply_filter(
+                                self.project, effect_type,
+                                start=start_time, duration=duration,
+                                intensity=params.get("intensity", 100.0)
+                            )
+                        else:
+                            ok = api.apply_scene_effect(
+                                self.project, effect_type,
+                                start=start_time, duration=duration
+                            )
+                        if ok:
+                            applied += 1
+                            logger.info(f"  ✅ 特效API: {effect_type} → 全局")
+                else:
+                    applied += enum_applied
+                    logger.info(f"  ✅ 特效: {effect_type} → 所有角色({enum_applied}个)")
                 continue
 
             if not seg:
@@ -313,7 +349,28 @@ class JianyingExecutor:
                 try:
                     effect_enum = getattr(VideoSceneEffectType, effect_type)
                 except AttributeError:
-                    logger.warning(f"  ⚠️  未知特效: {effect_type}")
+                    # 回退到JianyingEffectAPI（2309个特效库）
+                    api = _get_effect_api()
+                    if api and self.project:
+                        # 区分场景特效和滤镜
+                        if effect.get("category") == "filter":
+                            ok = api.apply_filter(
+                                self.project, effect_type,
+                                start=start_time, duration=duration,
+                                intensity=params.get("intensity", 100.0)
+                            )
+                        else:
+                            ok = api.apply_scene_effect(
+                                self.project, effect_type,
+                                start=start_time, duration=duration
+                            )
+                        if ok:
+                            applied += 1
+                            logger.info(f"  ✅ 特效API: {effect_type} → {target}")
+                        else:
+                            logger.warning(f"  ⚠️  特效API失败: {effect_type}")
+                    else:
+                        logger.warning(f"  ⚠️  未知特效: {effect_type}")
                     continue
 
             try:

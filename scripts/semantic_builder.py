@@ -310,7 +310,7 @@ class SemanticBuilder:
         audio_path = os.path.join(self.assets_dir, "ref_detail", "audio.wav")
         if os.path.exists(audio_path):
             try:
-                self.project.add_audio(audio_path, "0s", f"{duration}s")
+                self.project.add_audio_safe(audio_path, start_time="0s", duration=f"{duration}s")
                 logger.info(f"  ✅ 原视频音频: {os.path.basename(audio_path)}")
             except Exception as e:
                 logger.error(f"  ⚠️ 音频添加失败: {e}")
