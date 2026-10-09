@@ -29,6 +29,9 @@ FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
 JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
+# 智能转场选择器
+from smart_transition_selector import SmartTransitionSelector, get_selector
+
 # 工作目录
 WORK_DIR = r"C:\Users\Administrator\AppData\Local\Temp\template_replicator"
 os.makedirs(WORK_DIR, exist_ok=True)
@@ -231,18 +234,41 @@ def build_jianying_project(style: Dict[str, Any], assets: List[str],
         seg = project.add_media_safe(asset_path, start, seg_duration, "VideoTrack")
         segments.append(seg)
 
-    # 添加转场
-    transitions = style["transitions"]
-    for i in range(1, len(segments)):
+    # 添加智能转场（根据风格类型匹配情绪/节奏/场景）
+    style_type = style.get("type", "general")
+    # 根据模板类型推断情绪和节奏
+    emotion_map = {
+        "cinematic_bar": ("震撼", "normal", "cinematic"),
+        "music_player": ("炫酷", "normal", "creative"),
+        "book_flip": ("回忆", "slow", "general"),
+        "photo_album": ("温馨", "normal", "general"),
+        "vlog": ("轻快", "fast", "vlog"),
+        "travel": ("旅行", "normal", "travel"),
+        "general": ("平静", "normal", "general"),
+    }
+    emotion, pace, scene = emotion_map.get(style_type, ("平静", "normal", "general"))
+
+    selector = get_selector()
+    selector.reset()
+    emotions = [emotion] * len(segments)
+    smart_transitions = selector.select_sequence(emotions, pace=pace, scene_type=scene)
+
+    for i, trans in enumerate(smart_transitions):
+        if i >= len(segments) - 1:
+            break
         try:
-            tname = transitions[(i - 1) % len(transitions)]
             project.add_transition_simple(
-                tname,
-                video_segment=segments[i - 1],
-                duration=trans_duration
+                trans["name"],
+                video_segment=segments[i],  # 转场必须加在前一个片段上
+                duration=trans["duration"],
             )
+            logger.info(f"  智能转场 [{i+1}] {trans['name']} ({trans['duration']}s) [{trans['category']}]")
         except Exception as e:
-            logger.warning(f"转场 [{i}] 失败: {e}")
+            logger.warning(f"  智能转场 [{i+1}] {trans['name']} 失败: {e}，回退叠化")
+            try:
+                project.add_transition_simple("叠化", video_segment=segments[i], duration=0.5)
+            except Exception:
+                pass
 
     # 注：电影感黑边已内置在占位素材图片中，无需独立遮罩轨道
 
