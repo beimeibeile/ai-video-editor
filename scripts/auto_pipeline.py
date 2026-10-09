@@ -497,18 +497,27 @@ class AutoPipeline:
                     # 使用ComfyUI生成图片
                     result = executor.generate_asset(
                         asset_type=asset.asset_type,
-                        prompt=asset.prompt,
+                        description=asset.prompt,
                         negative_prompt=asset.negative_prompt,
                         width=asset.width,
                         height=asset.height,
                     )
-                    if result and os.path.exists(result):
-                        asset.output_path = result
+                    # generate_asset返回字典，包含success和output_path
+                    output_path = None
+                    if isinstance(result, dict):
+                        if result.get("success"):
+                            output_path = result.get("output_path")
+                    elif isinstance(result, str) and os.path.exists(result):
+                        output_path = result
+
+                    if output_path and os.path.exists(output_path):
+                        asset.output_path = output_path
                         asset.status = "done"
-                        logger.info(f"  ✅ {asset.name}: {os.path.basename(result)}")
+                        logger.info(f"  ✅ {asset.name}: {os.path.basename(output_path)}")
                     else:
                         asset.status = "failed"
-                        logger.warning(f"  ⚠️  {asset.name}: 生成失败")
+                        err = result.get("error", "未知错误") if isinstance(result, dict) else "返回格式异常"
+                        logger.warning(f"  ⚠️  {asset.name}: 生成失败 - {err}")
                 except Exception as e:
                     asset.status = "failed"
                     logger.warning(f"  ⚠️  {asset.name}: {e}")
