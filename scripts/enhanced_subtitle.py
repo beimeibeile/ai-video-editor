@@ -13,7 +13,11 @@ import sys
 import subprocess
 
 JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
-sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
+JY_SCRIPTS = os.path.join(JY_SKILL, "scripts")
+JY_VENDOR = os.path.join(JY_SCRIPTS, "vendor")
+for p in [JY_SCRIPTS, JY_VENDOR]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 import pyJianYingDraft as draft
 from pyJianYingDraft import KeyframeProperty as KP

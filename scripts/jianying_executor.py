@@ -471,6 +471,88 @@ class JianyingExecutor:
             logger.info(f"  ✅ 关键帧特效: {effect_type} → {applied}个角色")
         return applied
 
+    def _apply_artistic_subtitles(self, subtitle_instructions: List[Dict]) -> int:
+        """
+        应用艺术字幕（字幕条/发光文字/组合字幕）
+
+        Args:
+            subtitle_instructions: 字幕指令列表，每个元素：
+                {'type': 'bar'/'glow'/'simple', 'text': '...', 'start_time': 0, 'duration': 3,
+                 'style': 'epic'/'warm'/'fun'/'minimal', 'y_position': -0.7, 'font_size': 8.0}
+
+        Returns:
+            int: 应用的字幕数
+        """
+        if not subtitle_instructions:
+            return 0
+
+        try:
+            from enhanced_subtitle import add_subtitle_with_bar, add_glowing_text
+        except ImportError as e:
+            logger.warning(f"艺术字幕模块不可用: {e}")
+            return 0
+
+        applied = 0
+        for sub in subtitle_instructions:
+            sub_type = sub.get("type", "simple")
+            text = sub.get("text", "")
+            start_time = sub.get("start_time", 0)
+            duration = sub.get("duration", 3)
+            y_position = sub.get("y_position", -0.7)
+            font_size = sub.get("font_size", 8.0)
+            style = sub.get("style", "epic")
+
+            if not text:
+                continue
+
+            try:
+                if sub_type == "bar":
+                    # 带半透明背景条的字幕
+                    bar_color = {"epic": "0x000000", "warm": "0x2a1810", "fun": "0x1a1a2e", "minimal": "0x000000"}.get(style, "0x000000")
+                    result = add_subtitle_with_bar(
+                        self.project, text,
+                        start_time=f"{start_time}s", duration=f"{duration}s",
+                        bar_height=120, bar_opacity=0.6,
+                        bar_color=bar_color,
+                        font_size=font_size, y_position=y_position,
+                        anim_in="渐显",
+                    )
+                    if result.get("text_segment"):
+                        applied += 1
+                        logger.info(f"  ✅ 字幕条: {text[:20]}")
+
+                elif sub_type == "glow":
+                    # 发光文字
+                    glow_color = {"epic": (1, 0.85, 0.3), "warm": (1, 0.6, 0.2), "fun": (0.3, 0.8, 1), "minimal": (1, 1, 1)}.get(style, (1, 0.85, 0.3))
+                    result = add_glowing_text(
+                        self.project, text,
+                        start_time=f"{start_time}s", duration=f"{duration}s",
+                        font_size=font_size + 4, glow_color=glow_color,
+                        y_position=y_position, anim_in="放大", layers=3,
+                    )
+                    if result:
+                        applied += 1
+                        logger.info(f"  ✅ 发光文字: {text[:20]} ({len(result)}层)")
+
+                else:
+                    # 简单字幕（带描边和动画）
+                    self.project.add_text_simple(
+                        text,
+                        start_time=f"{start_time}s",
+                        duration=f"{duration}s",
+                        style=draft.TextStyle(size=font_size, bold=True),
+                        border=draft.TextBorder(color=(0, 0, 0), width=40),
+                        clip_settings=draft.ClipSettings(transform_y=y_position),
+                        anim_in="渐显", anim_out="渐隐",
+                    )
+                    applied += 1
+                    logger.info(f"  ✅ 简单字幕: {text[:20]}")
+
+            except Exception as e:
+                logger.warning(f"  ⚠️  字幕失败: {text[:20]} - {e}")
+
+        return applied
+
     def _apply_audio(self, audio_files: List[Dict]) -> int:
         """
         添加音频到剪映工程（支持音量、淡入淡出、ducking关键帧、情绪驱动关键帧）
@@ -907,21 +989,40 @@ class JianyingExecutor:
 
             logger.info(f"  ✅ 应用 {kf_applied} 条关键帧")
 
-            # 4. 添加文字（每条用独立轨道避免重叠）
+            # 4. 添加文字（支持艺术字幕：字幕条/发光文字/简单字幕）
             logger.info(f"[4/7] 添加文字...")
             texts = instruction_sequence.get("text_instructions", [])
-            for i, text_item in enumerate(texts):
-                text = text_item.get("text", "")
-                start = text_item.get("start_time", 0)
-                dur = text_item.get("duration", 3)
-                if text:
-                    self.project.add_text_simple(
-                        text=text,
-                        start_time=f"{start:.2f}s",
-                        duration=f"{dur:.2f}s",
-                        track_name=f"Subtitle_{i}",
-                    )
-            logger.info(f"  ✅ {len(texts)} 条文字")
+            artistic_subs = instruction_sequence.get("artistic_subtitles", [])
+            if artistic_subs:
+                # 优先使用艺术字幕指令
+                subs_applied = self._apply_artistic_subtitles(artistic_subs)
+                logger.info(f"  ✅ {subs_applied} 条艺术字幕")
+            else:
+                # 兼容旧格式：简单字幕
+                for i, text_item in enumerate(texts):
+                    text = text_item.get("text", "")
+                    start = text_item.get("start_time", 0)
+                    dur = text_item.get("duration", 3)
+                    sub_type = text_item.get("type", "simple")
+                    if text:
+                        if sub_type in ("bar", "glow"):
+                            # 艺术字幕
+                            self._apply_artistic_subtitles([{
+                                "type": sub_type, "text": text,
+                                "start_time": start, "duration": dur,
+                                "style": text_item.get("style", "epic"),
+                                "y_position": text_item.get("y_position", -0.7),
+                                "font_size": text_item.get("font_size", 8.0),
+                            }])
+                        else:
+                            # 简单字幕
+                            self.project.add_text_simple(
+                                text=text,
+                                start_time=f"{start:.2f}s",
+                                duration=f"{dur:.2f}s",
+                                track_name=f"Subtitle_{i}",
+                            )
+                logger.info(f"  ✅ {len(texts)} 条文字")
 
             # 5. 应用特效
             logger.info(f"[5/7] 应用特效...")
