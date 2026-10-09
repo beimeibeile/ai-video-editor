@@ -330,6 +330,7 @@ body {
   </div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('generate')">🎬 视频生成</button>
+    <button class="nav-tab" onclick="switchPage('create')">✨ 智能创作</button>
     <button class="nav-tab" onclick="switchPage('templates')">📦 模板市场</button>
     <button class="nav-tab" onclick="switchPage('tasks')">📋 任务列表</button>
     <button class="nav-tab" onclick="switchPage('plugins')">🔌 插件管理</button>
@@ -489,6 +490,33 @@ body {
     <div class="card" id="resultCard" style="display:none">
       <div class="card-title"><span class="icon">📊</span> 生成结果</div>
       <div id="resultContent"></div>
+    </div>
+  </div>
+
+  <!-- 智能创作页 -->
+  <div class="page" id="page-create">
+    <div class="card">
+      <div class="card-title"><span class="icon">✨</span> 模板风格复刻</div>
+      <p style="color:#8b95a7;font-size:13px;margin-bottom:16px">
+        上传或指定教学视频，自动分析其风格并生成类似风格的剪映模板工程（素材位可替换为自己的照片/视频）
+      </p>
+      <div class="form-group">
+        <label>教学视频</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="createVideoPath" placeholder="视频文件路径，或点击右侧上传" style="flex:1">
+          <input type="file" id="createVideoFile" accept="video/*" style="display:none" onchange="onCreateVideoSelected(event)">
+          <button class="btn btn-secondary" onclick="document.getElementById('createVideoFile').click()" style="white-space:nowrap">📁 上传</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>工程名称（可选）</label>
+        <input type="text" id="createProjectName" placeholder="留空则自动命名">
+      </div>
+      <button class="btn btn-primary" onclick="startTemplateCreate()" style="width:100%;margin-top:8px">🚀 开始复刻</button>
+    </div>
+    <div class="card" id="createResultCard" style="display:none">
+      <div class="card-title"><span class="icon">📊</span> 创作结果</div>
+      <div id="createResultContent"></div>
     </div>
   </div>
 
@@ -706,6 +734,108 @@ async function uploadMultipleFiles(inputId) {
     }
   }
   return paths;
+}
+
+// 智能创作：教学视频上传
+async function onCreateVideoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(API_BASE + '/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.path) {
+      document.getElementById('createVideoPath').value = data.path;
+    } else {
+      alert('上传失败: ' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    alert('上传异常: ' + e.message);
+  }
+}
+
+// 智能创作：开始模板风格复刻
+async function startTemplateCreate() {
+  const videoPath = document.getElementById('createVideoPath').value.trim();
+  const projectName = document.getElementById('createProjectName').value.trim();
+
+  if (!videoPath) {
+    alert('请先指定或上传教学视频');
+    return;
+  }
+
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+
+  try {
+    const body = { video_path: videoPath };
+    if (projectName) body.project_name = projectName;
+
+    const res = await fetch(API_BASE + '/api/create/template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (data.task_id) {
+      // 轮询任务状态
+      pollCreateTask(data.task_id);
+    } else {
+      alert('创建失败: ' + (data.error || '未知错误'));
+      btn.disabled = false;
+      btn.textContent = '🚀 开始复刻';
+    }
+  } catch (e) {
+    alert('请求异常: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '🚀 开始复刻';
+  }
+}
+
+// 轮询创作任务
+function pollCreateTask(taskId) {
+  const card = document.getElementById('createResultCard');
+  const content = document.getElementById('createResultContent');
+  card.style.display = 'block';
+  content.innerHTML = '<div style="color:#8b95a7">⏳ 正在分析视频风格并构建模板...</div>';
+
+  const poll = setInterval(async () => {
+    try {
+      const res = await fetch(API_BASE + '/api/task/' + taskId);
+      const data = await res.json();
+
+      if (data.status === 'completed') {
+        clearInterval(poll);
+        const r = data.result || {};
+        content.innerHTML = `
+          <div style="color:#4ade80;font-weight:bold;margin-bottom:12px">✅ 模板创建成功</div>
+          <div style="font-size:13px;line-height:1.8">
+            <div><b>工程名称：</b>${r.project_name || '-'}</div>
+            <div><b>草稿路径：</b><code style="background:#1e293b;padding:2px 6px;border-radius:4px;font-size:12px">${r.draft_path || '-'}</code></div>
+            <div><b>素材片段数：</b>${r.segment_count || '-'}</div>
+            <div><b>模板类型：</b>${(r.style && r.style.template_type) || '-'}</div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:#1e293b;border-radius:8px;font-size:12px;color:#94a3b8">
+            💡 在剪映中打开该草稿，右键素材片段选择"替换"即可换成自己的照片/视频
+          </div>
+        `;
+        const btn = document.querySelector('#page-create .btn-primary');
+        btn.disabled = false;
+        btn.textContent = '🚀 开始复刻';
+      } else if (data.status === 'failed') {
+        clearInterval(poll);
+        content.innerHTML = `<div style="color:#f87171">❌ 失败: ${data.error || '未知错误'}</div>`;
+        const btn = document.querySelector('#page-create .btn-primary');
+        btn.disabled = false;
+        btn.textContent = '🚀 开始复刻';
+      }
+    } catch (e) {
+      console.error('轮询失败:', e);
+    }
+  }, 2000);
 }
 
 function onModelChange() {

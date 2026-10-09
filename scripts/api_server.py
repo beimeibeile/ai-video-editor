@@ -262,6 +262,34 @@ def generate_video_task(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"output_path": result.output_path, "model": model, "mode": mode}
 
 
+def create_template_task(params: Dict[str, Any]) -> Dict[str, Any]:
+    """模板风格复刻任务执行函数"""
+    video_path = params.get("video_path", "")
+    if not video_path:
+        raise ValueError("缺少video_path参数")
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"视频不存在: {video_path}")
+
+    project_name = params.get("project_name", None)
+
+    # 动态导入template_creator
+    _this_dir = os.path.dirname(os.path.abspath(__file__))
+    if _this_dir not in sys.path:
+        sys.path.insert(0, _this_dir)
+    from template_creator import create_template_from_video
+
+    result = create_template_from_video(video_path, project_name)
+    if result.get("status") != "success":
+        raise ValueError(f"模板创建失败: {result.get('error', '未知错误')}")
+
+    return {
+        "draft_path": result["draft_path"],
+        "project_name": result["project_name"],
+        "segment_count": result["segment_count"],
+        "style": result.get("style", {}),
+    }
+
+
 class APIHandler(BaseHTTPRequestHandler):
     """API请求处理器"""
 
@@ -665,6 +693,23 @@ class APIHandler(BaseHTTPRequestHandler):
                 "task_id": task_id,
                 "status": TASK_PENDING,
                 "message": "剪映工程创建任务已创建（功能开发中）",
+            }, 202)
+
+        elif path == "/api/create/template":
+            # 模板风格复刻：从教学视频创建类似风格的剪映模板
+            if "video_path" not in body:
+                self._send_json({"error": "缺少video_path参数"}, 400)
+                return
+            video_path = body["video_path"]
+            if not os.path.exists(video_path):
+                self._send_json({"error": f"视频文件不存在: {video_path}"}, 400)
+                return
+            task_id = task_manager.create_task("template_create", body)
+            task_manager.run_task_async(task_id, create_template_task, body)
+            self._send_json({
+                "task_id": task_id,
+                "status": TASK_PENDING,
+                "message": "模板风格复刻任务已创建",
             }, 202)
 
         elif path.startswith("/api/task/") and path.endswith("/cancel"):
