@@ -142,7 +142,7 @@ def analyze_style(video_info: Dict[str, Any], keyframes: List[str]) -> Dict[str,
 
 # ============ 步骤3：素材生成 ============
 def generate_placeholder_assets(style: Dict[str, Any], output_dir: str) -> List[str]:
-    """生成占位素材（纯色背景+数字+装饰文字）"""
+    """生成占位素材（完整画布，上下内置黑边，中间彩色内容区+数字+装饰文字）"""
     os.makedirs(output_dir, exist_ok=True)
 
     try:
@@ -150,14 +150,16 @@ def generate_placeholder_assets(style: Dict[str, Any], output_dir: str) -> List[
     except ImportError:
         raise RuntimeError("Pillow未安装，无法生成素材")
 
-    # 内容区域尺寸（扣除上下黑边）
+    # 完整画布尺寸
     if style["orientation"] == "portrait":
         canvas_w, canvas_h = 1080, 1920
     else:
         canvas_w, canvas_h = 1920, 1080
 
     letterbox_h = int(canvas_h * style["letterbox_ratio"])
-    content_h = canvas_h - letterbox_h * 2
+    content_top = letterbox_h
+    content_bottom = canvas_h - letterbox_h
+    content_h = content_bottom - content_top
 
     assets = []
     palette = style["palette"]
@@ -168,40 +170,38 @@ def generate_placeholder_assets(style: Dict[str, Any], output_dir: str) -> List[
         num = str(i + 1)
         phrase = phrases[i % len(phrases)]
 
-        img = Image.new("RGB", (canvas_w, content_h), color)
+        # 完整画布：黑色背景 + 中间彩色内容区
+        img = Image.new("RGB", (canvas_w, canvas_h), "black")
         draw = ImageDraw.Draw(img)
+
+        # 画中间彩色内容区
+        draw.rectangle([(0, content_top), (canvas_w, content_bottom)], fill=color)
 
         # 大号数字
         try:
-            font_large = ImageFont.truetype(r"C:\Windows\Fonts\arialbd.ttf", int(content_h * 0.25))
-            font_small = ImageFont.truetype(r"C:\Windows\Fonts\arial.ttf", int(content_h * 0.025))
+            font_large = ImageFont.truetype(r"C:\Windows\Fonts\arialbd.ttf", int(content_h * 0.28))
+            font_small = ImageFont.truetype(r"C:\Windows\Fonts\arial.ttf", int(content_h * 0.028))
         except Exception:
             font_large = ImageFont.load_default()
             font_small = ImageFont.load_default()
 
-        # 数字居中
+        # 数字居中（在内容区内）
         bbox = draw.textbbox((0, 0), num, font=font_large)
         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        draw.text(((canvas_w - tw) // 2, (content_h - th) // 2 - int(content_h * 0.06)),
-                  num, fill="white", font=font_large)
+        num_y = content_top + (content_h - th) // 2 - int(content_h * 0.08)
+        draw.text(((canvas_w - tw) // 2, num_y), num, fill="white", font=font_large)
 
-        # 装饰文字
+        # 装饰文字（数字下方，留出间距）
         if style["has_decor_text"]:
             bbox2 = draw.textbbox((0, 0), phrase, font=font_small)
             tw2 = bbox2[2] - bbox2[0]
-            draw.text(((canvas_w - tw2) // 2, (content_h + th) // 2 + int(content_h * 0.04)),
-                      phrase, fill="white", font=font_small)
+            decor_y = num_y + th + int(content_h * 0.06)
+            draw.text(((canvas_w - tw2) // 2, decor_y), phrase, fill="white", font=font_small)
 
         path = os.path.join(output_dir, f"segment_{i + 1}.png")
         img.save(path)
         assets.append(path)
         logger.info(f"生成占位素材: {os.path.basename(path)}")
-
-    # 生成上下黑边遮罩
-    top_mask = Image.new("RGB", (canvas_w, letterbox_h), "black")
-    top_mask.save(os.path.join(output_dir, "top_mask.png"))
-    bottom_mask = Image.new("RGB", (canvas_w, letterbox_h), "black")
-    bottom_mask.save(os.path.join(output_dir, "bottom_mask.png"))
 
     return assets
 
@@ -244,12 +244,7 @@ def build_jianying_project(style: Dict[str, Any], assets: List[str],
         except Exception as e:
             logger.warning(f"转场 [{i}] 失败: {e}")
 
-    # 添加电影感黑边
-    if style["has_letterbox"]:
-        asset_dir = os.path.dirname(assets[0])
-        total_dur = len(assets) * seg_duration
-        project.add_media_safe(os.path.join(asset_dir, "top_mask.png"), 0, total_dur, "MaskTop")
-        project.add_media_safe(os.path.join(asset_dir, "bottom_mask.png"), 0, total_dur, "MaskBottom")
+    # 注：电影感黑边已内置在占位素材图片中，无需独立遮罩轨道
 
     # 添加标题文字
     if style.get("has_title") and style.get("title_text"):
