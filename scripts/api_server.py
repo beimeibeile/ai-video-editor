@@ -217,6 +217,19 @@ class APIHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_html(self, html_path: str, status: int = 200):
+        """发送HTML响应"""
+        try:
+            with open(html_path, "r", encoding="utf-8") as f:
+                body = f.read().encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except FileNotFoundError:
+            self._send_json({"error": "页面文件不存在", "path": html_path}, 404)
+
     def _read_body(self) -> Dict[str, Any]:
         """读取请求体"""
         content_length = int(self.headers.get("Content-Length", 0))
@@ -236,6 +249,12 @@ class APIHandler(BaseHTTPRequestHandler):
         """处理GET请求"""
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
+
+        # 根路径返回用户工作台
+        if path == "":
+            web_index = os.path.join(_SKILL_ROOT, "web", "index.html")
+            self._send_html(web_index)
+            return
 
         if path == "/api/health":
             self._send_json({

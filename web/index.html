@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Video Editor - 用户工作台</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #3b82f6;
+  --accent-light: #60a5fa;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+/* 顶部导航 */
+.navbar {
+  background: rgba(10,14,26,0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nav-logo {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.nav-title { font-size: 18px; font-weight: 700; }
+.nav-subtitle { font-size: 12px; color: var(--text-muted); }
+.nav-tabs { display: flex; gap: 4px; }
+.nav-tab {
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  border: none;
+  background: none;
+}
+.nav-tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.nav-tab.active { color: var(--accent-light); background: rgba(59,130,246,0.1); }
+.nav-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-secondary);
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* 主内容 */
+.main { padding: 32px; max-width: 1400px; margin: 0 auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* 卡片 */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .icon { font-size: 20px; }
+
+/* 表单 */
+.form-group { margin-bottom: 20px; }
+.form-label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+}
+.form-textarea { resize: vertical; min-height: 100px; font-family: inherit; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* 按钮 */
+.btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: white;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59,130,246,0.4); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-secondary {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.12); }
+.btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); }
+.btn-danger:hover { background: rgba(239,68,68,0.25); }
+.btn-block { width: 100%; justify-content: center; }
+
+/* 选项组 */
+.option-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.option-btn {
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.option-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+.option-btn.active {
+  background: rgba(59,130,246,0.15);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+/* 任务列表 */
+.task-list { display: flex; flex-direction: column; gap: 12px; }
+.task-item {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s;
+}
+.task-item:hover { border-color: rgba(59,130,246,0.3); }
+.task-id {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  min-width: 80px;
+}
+.task-type {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(139,92,246,0.15);
+  color: var(--purple);
+  min-width: 100px;
+  text-align: center;
+}
+.task-prompt {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-status {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  min-width: 70px;
+  text-align: center;
+}
+.status-pending { background: rgba(245,158,11,0.15); color: var(--warning); }
+.status-running { background: rgba(59,130,246,0.15); color: var(--accent-light); }
+.status-completed { background: rgba(16,185,129,0.15); color: var(--success); }
+.status-failed { background: rgba(239,68,68,0.15); color: var(--danger); }
+.status-cancelled { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+.task-time { font-size: 12px; color: var(--text-muted); min-width: 80px; }
+
+/* 能力卡片网格 */
+.cap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.cap-card {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.cap-card h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cap-card ul { list-style: none; }
+.cap-card li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  display: flex;
+  justify-content: space-between;
+}
+.cap-card li .val { color: var(--accent-light); font-weight: 500; }
+
+/* 统计卡片 */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.stat-value { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.stat-label { font-size: 13px; color: var(--text-muted); }
+.stat-card.primary .stat-value { color: var(--accent-light); }
+.stat-card.success .stat-value { color: var(--success); }
+.stat-card.warning .stat-value { color: var(--warning); }
+.stat-card.purple .stat-value { color: var(--purple); }
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state p { font-size: 14px; }
+
+/* 进度条 */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+/* 结果信息 */
+.result-box {
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 2;
+}
+.result-box .row { display: flex; }
+.result-box .label { color: var(--text-muted); min-width: 80px; }
+.result-box .value { color: var(--accent-light); word-break: break-all; }
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .navbar { padding: 0 16px; }
+  .main { padding: 16px; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-tabs { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">🎬</div>
+    <div>
+      <div class="nav-title">AI Video Editor</div>
+      <div class="nav-subtitle">智能视频创作工作台</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchPage('generate')">🎬 视频生成</button>
+    <button class="nav-tab" onclick="switchPage('tasks')">📋 任务列表</button>
+    <button class="nav-tab" onclick="switchPage('capabilities')">⚡ 系统能力</button>
+  </div>
+  <div class="nav-status">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">连接中...</span>
+  </div>
+</nav>
+
+<!-- 主内容 -->
+<div class="main">
+
+  <!-- 视频生成页 -->
+  <div class="page active" id="page-generate">
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">总任务数</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="statRunning">0</div>
+        <div class="stat-label">进行中</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" id="statCompleted">0</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-value" id="statModels">3</div>
+        <div class="stat-label">可用模型</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">🎨</span> 视频生成配置</div>
+
+      <div class="form-group">
+        <label class="form-label">提示词（描述你想要的视频内容）</label>
+        <textarea class="form-textarea" id="prompt" placeholder="例如：一只可爱的橘猫在阳光明媚的花园里追逐蝴蝶，慢动作，电影级画质"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">生成模型</label>
+          <select class="form-select" id="model" onchange="onModelChange()">
+            <option value="minimax-h3">MiniMax H3（推荐，原生音频）</option>
+            <option value="ltx-2.5">LTX-2.5</option>
+            <option value="hunyuan-i2v">混元 I2V</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">生成模式</label>
+          <select class="form-select" id="mode">
+            <option value="t2v">文生视频 (T2V)</option>
+            <option value="i2v">图生视频 (I2V)</option>
+            <option value="fl2v">首尾帧生视频 (FL2V)</option>
+            <option value="ref2v">参考驱动生视频 (Ref2V)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">H3 模型版本</label>
+          <select class="form-select" id="variant">
+            <option value="fl2va">FL2VA（高质量）</option>
+            <option value="ref2va">Ref2VA（参考驱动）</option>
+            <option value="hybrid">Hybrid（混合）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">优化预设</label>
+          <select class="form-select" id="preset">
+            <option value="turbo_768p">Turbo 768p（4步加速）</option>
+            <option value="standard_768p">Standard 768p（20步）</option>
+            <option value="turbo_2k">Turbo 2K（4步加速）</option>
+            <option value="quality_2k">Quality 2K（30步）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">帧数</label>
+          <select class="form-select" id="frames">
+            <option value="49">49帧（~2秒）</option>
+            <option value="81" selected>81帧（~3.4秒）</option>
+            <option value="121">121帧（~5秒）</option>
+            <option value="241">241帧（~10秒）</option>
+            <option value="361">361帧（~15秒）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">宽度</label>
+          <input type="number" class="form-input" id="width" value="1344" min="256" max="2560">
+        </div>
+        <div class="form-group">
+          <label class="form-label">高度</label>
+          <input type="number" class="form-input" id="height" value="768" min="256" max="1440">
+        </div>
+      </div>
+
+      <div class="form-group" id="imagePathGroup" style="display:none">
+        <label class="form-label">首帧图片路径（I2V模式）</label>
+        <input type="text" class="form-input" id="imagePath" placeholder="例如：D:\images\input.png">
+      </div>
+
+      <div class="form-row" id="fl2vGroup" style="display:none">
+        <div class="form-group">
+          <label class="form-label">首帧图片路径</label>
+          <input type="text" class="form-input" id="firstFramePath" placeholder="首帧图片路径">
+        </div>
+        <div class="form-group">
+          <label class="form-label">尾帧图片路径</label>
+          <input type="text" class="form-input" id="lastFramePath" placeholder="尾帧图片路径">
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="generateBtn" onclick="generateVideo()">
+        🚀 开始生成
+      </button>
+    </div>
+
+    <!-- 生成结果 -->
+    <div class="card" id="resultCard" style="display:none">
+      <div class="card-title"><span class="icon">📊</span> 生成结果</div>
+      <div id="resultContent"></div>
+    </div>
+  </div>
+
+  <!-- 任务列表页 -->
+  <div class="page" id="page-tasks">
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between">
+        <span><span class="icon">📋</span> 任务列表</span>
+        <button class="btn btn-secondary" onclick="loadTasks()" style="padding:6px 16px;font-size:12px">🔄 刷新</button>
+      </div>
+      <div class="task-list" id="taskList">
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>暂无任务，去「视频生成」创建第一个任务吧</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 系统能力页 -->
+  <div class="page" id="page-capabilities">
+    <div class="card">
+      <div class="card-title"><span class="icon">⚡</span> 系统能力总览</div>
+      <div class="cap-grid" id="capGrid">
+        <div class="empty-state"><p>加载中...</p></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API_BASE = '';
+let currentTaskId = null;
+let pollTimer = null;
+
+// 页面切换
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  event.target.classList.add('active');
+  if (page === 'tasks') loadTasks();
+  if (page === 'capabilities') loadCapabilities();
+}
+
+// 健康检查
+async function checkHealth() {
+  try {
+    const res = await fetch(API_BASE + '/api/health');
+    const data = await res.json();
+    document.getElementById('statusDot').style.background = 'var(--success)';
+    document.getElementById('statusText').textContent = '服务正常 v' + data.version;
+    return true;
+  } catch (e) {
+    document.getElementById('statusDot').style.background = 'var(--danger)';
+    document.getElementById('statusText').textContent = '连接失败';
+    return false;
+  }
+}
+
+// 模式切换
+document.getElementById('mode').addEventListener('change', function() {
+  const mode = this.value;
+  document.getElementById('imagePathGroup').style.display = mode === 'i2v' ? 'block' : 'none';
+  document.getElementById('fl2vGroup').style.display = mode === 'fl2v' ? 'block' : 'none';
+});
+
+function onModelChange() {
+  const model = document.getElementById('model').value;
+  const modeSelect = document.getElementById('mode');
+  if (model === 'hunyuan-i2v') {
+    modeSelect.value = 'i2v';
+    modeSelect.querySelectorAll('option').forEach(o => {
+      o.disabled = o.value !== 'i2v';
+    });
+  } else {
+    modeSelect.querySelectorAll('option').forEach(o => o.disabled = false);
+  }
+  document.getElementById('mode').dispatchEvent(new Event('change'));
+}
+
+// 生成视频
+async function generateVideo() {
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!prompt) { alert('请输入提示词'); return; }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 提交中...';
+
+  const body = {
+    prompt: prompt,
+    model: document.getElementById('model').value,
+    mode: document.getElementById('mode').value,
+    variant: document.getElementById('variant').value,
+    preset: document.getElementById('preset').value,
+    width: parseInt(document.getElementById('width').value),
+    height: parseInt(document.getElementById('height').value),
+    frames: parseInt(document.getElementById('frames').value),
+  };
+
+  const mode = body.mode;
+  if (mode === 'i2v') body.image_path = document.getElementById('imagePath').value;
+  if (mode === 'fl2v') {
+    body.first_frame_path = document.getElementById('firstFramePath').value;
+    body.last_frame_path = document.getElementById('lastFramePath').value;
+  }
+
+  try {
+    const res = await fetch(API_BASE + '/api/video/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.task_id) {
+      currentTaskId = data.task_id;
+      btn.textContent = '⏳ 生成中...';
+      startPolling(data.task_id);
+      document.getElementById('resultCard').style.display = 'block';
+      document.getElementById('resultContent').innerHTML = `
+        <div class="result-box">
+          <div class="row"><span class="label">任务ID:</span><span class="value">${data.task_id}</span></div>
+          <div class="row"><span class="label">状态:</span><span class="value" id="taskStatusText">排队中...</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="taskProgress" style="width:10%"></div></div>
+        </div>
+      `;
+    } else {
+      alert('提交失败: ' + (data.error || '未知错误'));
+      btn.disabled = false;
+      btn.textContent = '🚀 开始生成';
+    }
+  } catch (e) {
+    alert('请求失败: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '🚀 开始生成';
+  }
+}
+
+// 轮询任务状态
+function startPolling(taskId) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await fetch(API_BASE + '/api/task/' + taskId);
+      const task = await res.json();
+      const statusEl = document.getElementById('taskStatusText');
+      const progressEl = document.getElementById('taskProgress');
+      const btn = document.getElementById('generateBtn');
+
+      if (statusEl) {
+        const statusMap = { pending: '排队中...', running: '生成中...', completed: '✅ 已完成', failed: '❌ 失败', cancelled: '已取消' };
+        statusEl.textContent = statusMap[task.status] || task.status;
+      }
+      if (progressEl) {
+        const progressMap = { pending: 10, running: 50, completed: 100, failed: 100, cancelled: 100 };
+        progressEl.style.width = (progressMap[task.status] || 10) + '%';
+      }
+
+      if (task.status === 'completed') {
+        clearInterval(pollTimer);
+        btn.disabled = false;
+        btn.textContent = '🚀 开始生成';
+        if (task.result && task.result.output_path) {
+          document.getElementById('resultContent').innerHTML += `
+            <div class="result-box" style="margin-top:12px">
+              <div class="row"><span class="label">输出文件:</span><span class="value">${task.result.output_path}</span></div>
+              <div class="row"><span class="label">模型:</span><span class="value">${task.result.model || '-'}</span></div>
+              <div class="row"><span class="label">模式:</span><span class="value">${task.result.mode || '-'}</span></div>
+            </div>
+          `;
+        }
+        loadStats();
+      } else if (task.status === 'failed') {
+        clearInterval(pollTimer);
+        btn.disabled = false;
+        btn.textContent = '🚀 开始生成';
+        document.getElementById('resultContent').innerHTML += `
+          <div class="result-box" style="margin-top:12px;border-left:3px solid var(--danger)">
+            <div class="row"><span class="label">错误:</span><span class="value" style="color:var(--danger)">${task.error || '未知错误'}</span></div>
+          </div>
+        `;
+      }
+    } catch (e) { console.error('轮询失败', e); }
+  }, 3000);
+}
+
+// 加载任务列表
+async function loadTasks() {
+  try {
+    const res = await fetch(API_BASE + '/api/tasks');
+    const data = await res.json();
+    const list = document.getElementById('taskList');
+    if (!data.tasks || data.tasks.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>暂无任务</p></div>';
+      return;
+    }
+    list.innerHTML = data.tasks.map(t => {
+      const time = new Date(t.created_at * 1000).toLocaleString('zh-CN');
+      const prompt = t.params?.prompt || '-';
+      return `
+        <div class="task-item">
+          <span class="task-id">${t.id}</span>
+          <span class="task-type">${t.type}</span>
+          <span class="task-prompt" title="${prompt}">${prompt}</span>
+          <span class="task-status status-${t.status}">${t.status}</span>
+          <span class="task-time">${time}</span>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    document.getElementById('taskList').innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
+  }
+}
+
+// 加载统计
+async function loadStats() {
+  try {
+    const res = await fetch(API_BASE + '/api/tasks');
+    const data = await res.json();
+    const tasks = data.tasks || [];
+    document.getElementById('statTotal').textContent = tasks.length;
+    document.getElementById('statRunning').textContent = tasks.filter(t => t.status === 'running' || t.status === 'pending').length;
+    document.getElementById('statCompleted').textContent = tasks.filter(t => t.status === 'completed').length;
+  } catch (e) {}
+}
+
+// 加载能力
+async function loadCapabilities() {
+  try {
+    const res = await fetch(API_BASE + '/api/capabilities');
+    const data = await res.json();
+    const grid = document.getElementById('capGrid');
+    const icons = { video_generation: '🎬', jianying: '✂️', audio: '🎵', comfyui: '🎨' };
+    const names = { video_generation: '视频生成', jianying: '剪映工程', audio: '音频处理', comfyui: 'ComfyUI' };
+    grid.innerHTML = Object.entries(data).map(([key, val]) => {
+      const items = Object.entries(val).map(([k, v]) =>
+        `<li><span>${k}</span><span class="val">${Array.isArray(v) ? v.length + '项' : v}</span></li>`
+      ).join('');
+      return `<div class="cap-card"><h3>${icons[key] || '📦'} ${names[key] || key}</h3><ul>${items}</ul></div>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('capGrid').innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
+  }
+}
+
+// 初始化
+checkHealth();
+loadStats();
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>
