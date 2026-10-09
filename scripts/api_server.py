@@ -450,6 +450,40 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "任务不存在", "task_id": task_id}, 404)
 
+        # BGM音乐库端点
+        elif path == "/api/bgm":
+            from bgm_matcher import get_matcher
+            matcher = get_matcher()
+            tracks = matcher.list_all()
+            self._send_json({"tracks": tracks, "total": len(tracks)})
+
+        elif path == "/api/bgm/match":
+            from bgm_matcher import get_matcher
+            matcher = get_matcher()
+            query = parse_qs(parsed.query)
+            emotion = query.get("emotion", [None])[0]
+            style = query.get("style", [None])[0]
+            tempo = query.get("tempo", [None])[0]
+            duration = float(query.get("duration", [0])[0]) or None
+            keywords = query.get("keywords", [""])[0]
+            kw_list = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else None
+            result = matcher.match(emotion=emotion, style=style, tempo=tempo,
+                                   duration=duration, keywords=kw_list)
+            if result:
+                self._send_json(result)
+            else:
+                self._send_json({"error": "未找到匹配的BGM"}, 404)
+
+        elif path.startswith("/api/bgm/"):
+            from bgm_matcher import get_matcher
+            matcher = get_matcher()
+            track_id = path.split("/")[-1]
+            track = matcher.get_by_id(track_id)
+            if track:
+                self._send_json(track)
+            else:
+                self._send_json({"error": "BGM不存在", "id": track_id}, 404)
+
         # 模板市场端点
         elif path == "/api/templates":
             if not _template_market:
