@@ -43,6 +43,20 @@ def _get_effect_api():
             _effect_api = False
     return _effect_api if _effect_api else None
 
+# 自动配乐系统（延迟导入，避免依赖问题）
+_auto_music = None
+def _get_auto_music():
+    """延迟初始化AutoMusicSystem（183首BGM库+多轨混音）"""
+    global _auto_music
+    if _auto_music is None:
+        try:
+            from p3_auto_music import AutoMusicSystem
+            _auto_music = AutoMusicSystem()
+        except Exception as e:
+            logger.warning(f"AutoMusicSystem初始化失败: {e}")
+            _auto_music = False
+    return _auto_music if _auto_music else None
+
 try:
     from PIL import Image, ImageDraw, ImageFont
     _PIL_AVAILABLE = True
@@ -655,6 +669,60 @@ class JianyingExecutor:
 
         return applied
 
+    def _apply_auto_music(self, emotions: List[Dict], total_duration: float,
+                          style: str = "general",
+                          narration_timeline: List[Dict] = None) -> List[Dict]:
+        """
+        自动配乐：根据情绪时间线选择BGM并添加到工程
+
+        Args:
+            emotions: 情绪时间线 [{start, end, emotion, intensity}]
+            total_duration: 总时长（秒）
+            style: 整体风格（cinematic/pop/electronic等）
+            narration_timeline: 旁白时间线 [{start, end, file_path}]
+
+        Returns:
+            添加的BGM音频配置列表
+        """
+        system = _get_auto_music()
+        if not system:
+            logger.warning("  ⚠️  AutoMusicSystem不可用，跳过自动配乐")
+            return []
+
+        try:
+            # 生成配乐方案
+            plan = system.generate_music_plan(
+                emotions=emotions,
+                style=style,
+                narration_timeline=narration_timeline,
+            )
+
+            bgm_configs = []
+            for track in plan["tracks"]:
+                if track["track_type"] == "bgm":
+                    bgm_configs.append({
+                        "path": track["file_path"],
+                        "start_time": track["start"],
+                        "duration": track["duration"],
+                        "track_name": "BGM_Auto",
+                        "volume": track["volume"],
+                        "fade_in": track.get("fade_in", 0.5),
+                        "fade_out": track.get("fade_out", 0.5),
+                    })
+
+            # 应用BGM到工程
+            if bgm_configs:
+                applied = self._apply_audio(bgm_configs)
+                logger.info(f"  ✅ 自动配乐: {applied}首BGM (风格={style})")
+                return bgm_configs
+            else:
+                logger.info(f"  ⏭️  自动配乐: 未找到匹配BGM")
+                return []
+
+        except Exception as e:
+            logger.warning(f"  ⚠️  自动配乐失败: {e}")
+            return []
+
     def _verify_project(self, draft_path: str, instruction_sequence: Dict,
                         audio_files: List[Dict] = None) -> Optional[Dict]:
         """
@@ -843,7 +911,8 @@ class JianyingExecutor:
                 width: int = 1080, height: int = 1920,
                 duration: float = 20.0,
                 audio_files: List[Dict] = None,
-                asset_results: List[Dict] = None) -> Dict[str, Any]:
+                asset_results: List[Dict] = None,
+                auto_music: Dict = None) -> Dict[str, Any]:
         """
         执行指令序列，构建剪映工程
 
@@ -1036,13 +1105,32 @@ class JianyingExecutor:
             masks_applied = self._apply_masks(masks)
             logger.info(f"  ✅ {masks_applied} 个蒙版")
 
-            # 7. 添加音频
+            # 7. 添加音频（自动配乐 + 手动音频）
             logger.info(f"[7/8] 添加音频...")
+            audio_applied = 0
+
+            # 7.1 自动配乐（如果指定了auto_music）
+            if auto_music:
+                emotions = auto_music.get("emotions", [])
+                style = auto_music.get("style", "general")
+                narration = auto_music.get("narration_timeline", [])
+                if emotions:
+                    auto_bgm = self._apply_auto_music(
+                        emotions=emotions,
+                        total_duration=duration,
+                        style=style,
+                        narration_timeline=narration,
+                    )
+                    audio_applied += len(auto_bgm)
+
+            # 7.2 手动音频文件
             if audio_files:
-                audio_applied = self._apply_audio(audio_files)
-                logger.info(f"  ✅ {audio_applied} 条音频")
+                manual_audio = self._apply_audio(audio_files)
+                audio_applied += manual_audio
+
+            if audio_applied > 0:
+                logger.info(f"  ✅ 共 {audio_applied} 条音频")
             else:
-                audio_applied = 0
                 logger.info(f"  ⏭️  无音频文件")
 
             # 8. 保存工程（带蒙版关键帧注入）
