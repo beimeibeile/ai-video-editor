@@ -484,6 +484,25 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "BGM不存在", "id": track_id}, 404)
 
+        # 素材资产管理端点
+        elif path == "/api/assets":
+            from asset_manager import get_manager
+            mgr = get_manager()
+            query = parse_qs(parsed.query)
+            asset_type = query.get("type", [None])[0]
+            keyword = query.get("keyword", [None])[0]
+            tags_str = query.get("tags", [""])[0]
+            tags = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else None
+            limit = int(query.get("limit", ["50"])[0])
+            results = mgr.search(asset_type=asset_type, keyword=keyword,
+                                 tags=tags, limit=limit)
+            self._send_json({"assets": results, "total": len(results)})
+
+        elif path == "/api/assets/stats":
+            from asset_manager import get_manager
+            mgr = get_manager()
+            self._send_json(mgr.get_stats())
+
         # 模板市场端点
         elif path == "/api/templates":
             if not _template_market:
@@ -783,6 +802,18 @@ class APIHandler(BaseHTTPRequestHandler):
                 "status": TASK_PENDING,
                 "message": f"任务已重新提交（原任务: {task_id}）",
             }, 202)
+
+        elif path == "/api/assets/scan":
+            # 重新扫描素材目录
+            from asset_manager import get_manager
+            mgr = get_manager()
+            force = body.get("force", False)
+            count = mgr.scan(force=force)
+            self._send_json({
+                "scanned": count,
+                "total": len(mgr.assets),
+                "message": f"扫描完成，新增/更新{count}个素材",
+            })
 
         # 模板市场POST端点
         elif path.startswith("/api/template/") and path.endswith("/rate"):
