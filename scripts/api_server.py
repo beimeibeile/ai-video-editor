@@ -33,6 +33,14 @@ _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _SKILL_ROOT = os.path.dirname(_THIS_DIR)
 sys.path.insert(0, _THIS_DIR)
 
+# 模板市场
+try:
+    from template_market import get_market
+    _template_market = get_market()
+except Exception as e:
+    logger.warning(f"模板市场初始化失败: {e}")
+    _template_market = None
+
 # 任务状态
 TASK_PENDING = "pending"
 TASK_RUNNING = "running"
@@ -230,6 +238,15 @@ class APIHandler(BaseHTTPRequestHandler):
         except FileNotFoundError:
             self._send_json({"error": "页面文件不存在", "path": html_path}, 404)
 
+    def _template_to_dict(self, template, detail: bool = False) -> Dict[str, Any]:
+        """模板对象转字典"""
+        from dataclasses import asdict
+        data = asdict(template)
+        if not detail:
+            # 列表视图不返回评论
+            data.pop("comments", None)
+        return data
+
     def _read_body(self) -> Dict[str, Any]:
         """读取请求体"""
         content_length = int(self.headers.get("Content-Length", 0))
@@ -280,6 +297,80 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "任务不存在", "task_id": task_id}, 404)
 
+        # 模板市场端点
+        elif path == "/api/templates":
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            query = parse_qs(parsed.query)
+            keyword = query.get("keyword", [""])[0]
+            category = query.get("category", [""])[0]
+            style = query.get("style", [""])[0]
+            scene = query.get("scene", [""])[0]
+            difficulty = query.get("difficulty", [""])[0]
+            sort_by = query.get("sort", ["rating"])[0]
+            limit = int(query.get("limit", ["20"])[0])
+            offset = int(query.get("offset", ["0"])[0])
+            results = _template_market.search_templates(
+                keyword=keyword, category=category, style=style,
+                scene=scene, difficulty=difficulty,
+                sort_by=sort_by, limit=limit, offset=offset
+            )
+            self._send_json({
+                "templates": [self._template_to_dict(t) for t in results],
+                "total": len(results),
+            })
+
+        elif path == "/api/templates/featured":
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            limit = int(parse_qs(parsed.query).get("limit", ["6"])[0])
+            results = _template_market.get_featured(limit)
+            self._send_json({"templates": [self._template_to_dict(t) for t in results]})
+
+        elif path == "/api/templates/hot":
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            limit = int(parse_qs(parsed.query).get("limit", ["10"])[0])
+            results = _template_market.get_hot(limit)
+            self._send_json({"templates": [self._template_to_dict(t) for t in results]})
+
+        elif path == "/api/templates/newest":
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            limit = int(parse_qs(parsed.query).get("limit", ["10"])[0])
+            results = _template_market.get_newest(limit)
+            self._send_json({"templates": [self._template_to_dict(t) for t in results]})
+
+        elif path == "/api/templates/categories":
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            self._send_json(_template_market.get_categories())
+
+        elif path == "/api/templates/stats":
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            self._send_json(_template_market.get_stats())
+
+        elif path.startswith("/api/templates/") and not path.startswith("/api/templates/"):
+            pass  # 占位，避免匹配冲突
+
+        elif path.startswith("/api/template/"):
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            template_id = path.split("/")[-1]
+            template = _template_market.get_template(template_id)
+            if template:
+                self._send_json(self._template_to_dict(template, detail=True))
+            else:
+                self._send_json({"error": "模板不存在", "template_id": template_id}, 404)
+
         else:
             self._send_json({"error": "端点不存在", "path": path}, 404)
 
@@ -323,6 +414,58 @@ class APIHandler(BaseHTTPRequestHandler):
                 self._send_json({"task_id": task_id, "status": TASK_CANCELLED, "message": "任务已取消"})
             else:
                 self._send_json({"error": "任务不存在或无法取消"}, 404)
+
+        # 模板市场POST端点
+        elif path.startswith("/api/template/") and path.endswith("/rate"):
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            template_id = path.split("/")[-2]
+            rating = body.get("rating", 0)
+            comment = body.get("comment", "")
+            user = body.get("user", "anonymous")
+            if not rating or rating < 1 or rating > 5:
+                self._send_json({"error": "评分必须在1-5之间"}, 400)
+                return
+            success = _template_market.rate_template(template_id, rating, comment, user)
+            if success:
+                self._send_json({"message": "评分成功", "template_id": template_id})
+            else:
+                self._send_json({"error": "模板不存在"}, 404)
+
+        elif path.startswith("/api/template/") and path.endswith("/use"):
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            template_id = path.split("/")[-2]
+            success = _template_market.increment_use(template_id)
+            if success:
+                self._send_json({"message": "使用计数已更新", "template_id": template_id})
+            else:
+                self._send_json({"error": "模板不存在"}, 404)
+
+        elif path == "/api/templates":
+            if not _template_market:
+                self._send_json({"error": "模板市场未初始化"}, 500)
+                return
+            name = body.get("name", "")
+            if not name:
+                self._send_json({"error": "缺少name参数"}, 400)
+                return
+            template = _template_market.add_template(
+                name=name,
+                description=body.get("description", ""),
+                category=body.get("category", ""),
+                tags=body.get("tags", []),
+                file_path=body.get("file_path", ""),
+                author=body.get("author", "user"),
+                style=body.get("style", ""),
+                scene=body.get("scene", ""),
+                duration=body.get("duration", ""),
+                difficulty=body.get("difficulty", "简单"),
+                aspect_ratio=body.get("aspect_ratio", "9:16竖屏"),
+            )
+            self._send_json({"message": "模板创建成功", "template_id": template.template_id}, 201)
 
         else:
             self._send_json({"error": "端点不存在", "path": path}, 404)

@@ -330,6 +330,7 @@ body {
   </div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('generate')">🎬 视频生成</button>
+    <button class="nav-tab" onclick="switchPage('templates')">📦 模板市场</button>
     <button class="nav-tab" onclick="switchPage('tasks')">📋 任务列表</button>
     <button class="nav-tab" onclick="switchPage('capabilities')">⚡ 系统能力</button>
   </div>
@@ -476,6 +477,78 @@ body {
     </div>
   </div>
 
+  <!-- 模板市场页 -->
+  <div class="page" id="page-templates">
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-value" id="tplTotal">0</div>
+        <div class="stat-label">模板总数</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" id="tplOfficial">0</div>
+        <div class="stat-label">官方模板</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="tplFeatured">0</div>
+        <div class="stat-label">精选推荐</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-value" id="tplUses">0</div>
+        <div class="stat-label">累计使用</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between">
+        <span><span class="icon">🔍</span> 搜索模板</span>
+        <button class="btn btn-secondary" onclick="loadTemplates()" style="padding:6px 16px;font-size:12px">🔄 刷新</button>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">关键词</label>
+          <input type="text" class="form-input" id="tplKeyword" placeholder="搜索模板名称/描述/标签" onkeydown="if(event.key==='Enter')loadTemplates()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">分类</label>
+          <select class="form-select" id="tplCategory" onchange="loadTemplates()">
+            <option value="">全部分类</option>
+            <option value="探店">探店</option>
+            <option value="Vlog">Vlog</option>
+            <option value="教程">教程</option>
+            <option value="产品展示">产品展示</option>
+            <option value="剧情">剧情</option>
+            <option value="口播">口播</option>
+            <option value="带货">带货</option>
+            <option value="旅行">旅行</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">排序</label>
+          <select class="form-select" id="tplSort" onchange="loadTemplates()">
+            <option value="rating">评分最高</option>
+            <option value="download">下载最多</option>
+            <option value="use">使用最多</option>
+            <option value="created">最新发布</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">⭐</span> 精选推荐</div>
+      <div class="cap-grid" id="featuredGrid">
+        <div class="empty-state"><p>加载中...</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> 全部模板</div>
+      <div class="task-list" id="templateList">
+        <div class="empty-state"><p>加载中...</p></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 系统能力页 -->
   <div class="page" id="page-capabilities">
     <div class="card">
@@ -501,6 +574,7 @@ function switchPage(page) {
   event.target.classList.add('active');
   if (page === 'tasks') loadTasks();
   if (page === 'capabilities') loadCapabilities();
+  if (page === 'templates') { loadTemplateStats(); loadFeatured(); loadTemplates(); }
 }
 
 // 健康检查
@@ -701,6 +775,123 @@ async function loadCapabilities() {
     }).join('');
   } catch (e) {
     document.getElementById('capGrid').innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
+  }
+}
+
+// 模板市场 - 统计
+async function loadTemplateStats() {
+  try {
+    const res = await fetch(API_BASE + '/api/templates/stats');
+    const data = await res.json();
+    document.getElementById('tplTotal').textContent = data.total || 0;
+    document.getElementById('tplOfficial').textContent = data.official_count || 0;
+    document.getElementById('tplFeatured').textContent = data.featured_count || 0;
+    document.getElementById('tplUses').textContent = data.total_uses || 0;
+  } catch (e) {
+    console.error('加载模板统计失败:', e);
+  }
+}
+
+// 模板市场 - 精选推荐
+async function loadFeatured() {
+  try {
+    const res = await fetch(API_BASE + '/api/templates/featured?limit=4');
+    const data = await res.json();
+    const grid = document.getElementById('featuredGrid');
+    if (!data.templates || data.templates.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><p>暂无精选模板</p></div>';
+      return;
+    }
+    grid.innerHTML = data.templates.map(t => `
+      <div class="cap-card" style="cursor:pointer" onclick="useTemplate('${t.template_id}')">
+        <div class="cap-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.05))">⭐</div>
+        <div class="cap-name">${t.name}</div>
+        <div class="cap-desc">${t.description.substring(0, 40)}${t.description.length > 40 ? '...' : ''}</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">
+          ${t.category} · ${t.duration} · ⭐${t.rating.toFixed(1)}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('加载精选模板失败:', e);
+  }
+}
+
+// 模板市场 - 搜索列表
+async function loadTemplates() {
+  const keyword = document.getElementById('tplKeyword').value;
+  const category = document.getElementById('tplCategory').value;
+  const sort = document.getElementById('tplSort').value;
+  let url = API_BASE + '/api/templates?sort=' + sort + '&limit=50';
+  if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
+  if (category) url += '&category=' + encodeURIComponent(category);
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const list = document.getElementById('templateList');
+    if (!data.templates || data.templates.length === 0) {
+      list.innerHTML = '<div class="empty-state"><p>未找到匹配的模板</p></div>';
+      return;
+    }
+    list.innerHTML = data.templates.map(t => `
+      <div class="task-item">
+        <div class="task-header">
+          <span class="task-type" style="background:rgba(245,158,11,0.15);color:var(--warning)">${t.category}</span>
+          <span class="task-name">${t.name}</span>
+          <span class="task-status" style="background:rgba(139,92,246,0.15);color:var(--purple)">⭐ ${t.rating.toFixed(1)}</span>
+        </div>
+        <div class="task-prompt">${t.description}</div>
+        <div class="task-meta">
+          <span>📐 ${t.aspect_ratio}</span>
+          <span>⏱ ${t.duration}</span>
+          <span>📊 难度: ${t.difficulty}</span>
+          <span>👤 ${t.author}</span>
+          <span>📥 ${t.download_count}次下载</span>
+          <span>▶ ${t.use_count}次使用</span>
+          ${t.is_official ? '<span style="color:var(--accent)">🏛 官方</span>' : ''}
+          ${t.is_featured ? '<span style="color:var(--warning)">⭐ 精选</span>' : ''}
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn btn-primary" style="padding:6px 16px;font-size:12px" onclick="useTemplate('${t.template_id}')">使用模板</button>
+          <button class="btn btn-secondary" style="padding:6px 16px;font-size:12px" onclick="rateTemplate('${t.template_id}')">评分</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('加载模板列表失败:', e);
+  }
+}
+
+// 使用模板
+async function useTemplate(templateId) {
+  try {
+    await fetch(API_BASE + '/api/template/' + templateId + '/use', { method: 'POST' });
+    loadTemplateStats();
+    loadTemplates();
+    alert('模板使用计数已更新！\n\n提示：模板功能正在完善中，后续将支持一键套用模板到视频生成流程。');
+  } catch (e) {
+    alert('使用模板失败: ' + e.message);
+  }
+}
+
+// 评分模板
+async function rateTemplate(templateId) {
+  const rating = prompt('请输入评分（1-5星）：', '5');
+  if (!rating) return;
+  const r = parseFloat(rating);
+  if (isNaN(r) || r < 1 || r > 5) { alert('评分必须在1-5之间'); return; }
+  const comment = prompt('可选：输入评论内容：', '') || '';
+  try {
+    await fetch(API_BASE + '/api/template/' + templateId + '/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: r, comment: comment, user: 'web_user' })
+    });
+    loadTemplates();
+    alert('评分成功！');
+  } catch (e) {
+    alert('评分失败: ' + e.message);
   }
 }
 
