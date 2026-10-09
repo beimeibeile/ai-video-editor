@@ -237,6 +237,9 @@ def generate_video_task(params: Dict[str, Any]) -> Dict[str, Any]:
         else:
             raise ValueError(f"不支持的模式: {mode}")
 
+        if not output:
+            raise RuntimeError("视频生成失败：工作流执行返回空结果，请检查ComfyUI日志和模型文件是否存在")
+
         return {"output_path": output, "model": model, "variant": variant, "mode": mode}
 
     else:
