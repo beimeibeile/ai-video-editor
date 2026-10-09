@@ -1,0 +1,345 @@
+"""
+AI Video Editor API 服务
+零依赖REST API服务（Python标准库http.server），提供视频生成、剪映工程、任务管理等能力
+
+启动方式：
+    python api_server.py --port 8000
+
+API端点：
+    GET  /api/health          - 健康检查
+    GET  /api/capabilities    - 能力列表
+    POST /api/video/generate  - 视频生成（T2V/I2V/FL2V/Ref2V）
+    POST /api/draft/create    - 创建剪映工程
+    GET  /api/task/{id}       - 查询任务状态
+    GET  /api/tasks           - 任务列表
+    POST /api/task/{id}/cancel - 取消任务
+"""
+
+import os
+import sys
+import json
+import time
+import uuid
+import threading
+import logging
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+from typing import Dict, Any, Optional, List
+
+logger = logging.getLogger(__name__)
+
+# 路径配置
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_SKILL_ROOT = os.path.dirname(_THIS_DIR)
+sys.path.insert(0, _THIS_DIR)
+
+# 任务状态
+TASK_PENDING = "pending"
+TASK_RUNNING = "running"
+TASK_COMPLETED = "completed"
+TASK_FAILED = "failed"
+TASK_CANCELLED = "cancelled"
+
+
+class TaskManager:
+    """任务管理器"""
+
+    def __init__(self):
+        self.tasks: Dict[str, Dict[str, Any]] = {}
+        self._lock = threading.Lock()
+
+    def create_task(self, task_type: str, params: Dict[str, Any]) -> str:
+        """创建任务"""
+        task_id = str(uuid.uuid4())[:8]
+        with self._lock:
+            self.tasks[task_id] = {
+                "id": task_id,
+                "type": task_type,
+                "status": TASK_PENDING,
+                "params": params,
+                "result": None,
+                "error": None,
+                "created_at": time.time(),
+                "started_at": None,
+                "completed_at": None,
+            }
+        return task_id
+
+    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """获取任务"""
+        with self._lock:
+            return self.tasks.get(task_id)
+
+    def list_tasks(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """列出任务"""
+        with self._lock:
+            tasks = sorted(self.tasks.values(), key=lambda x: x["created_at"], reverse=True)
+            return tasks[:limit]
+
+    def update_task(self, task_id: str, **kwargs):
+        """更新任务状态"""
+        with self._lock:
+            if task_id in self.tasks:
+                self.tasks[task_id].update(kwargs)
+
+    def run_task_async(self, task_id: str, func, *args, **kwargs):
+        """异步执行任务"""
+        def wrapper():
+            self.update_task(task_id, status=TASK_RUNNING, started_at=time.time())
+            try:
+                result = func(*args, **kwargs)
+                self.update_task(task_id, status=TASK_COMPLETED, result=result, completed_at=time.time())
+            except Exception as e:
+                logger.error(f"任务{task_id}失败: {e}", exc_info=True)
+                self.update_task(task_id, status=TASK_FAILED, error=str(e), completed_at=time.time())
+
+        thread = threading.Thread(target=wrapper, daemon=True)
+        thread.start()
+        return thread
+
+
+# 全局任务管理器
+task_manager = TaskManager()
+
+
+def get_capabilities() -> Dict[str, Any]:
+    """获取系统能力列表"""
+    return {
+        "video_generation": {
+            "models": ["ltx-2.5", "hunyuan-i2v", "minimax-h3"],
+            "minimax_h3_variants": ["fl2va", "ref2va", "hybrid"],
+            "modes": ["t2v", "i2v", "fl2v", "ref2v"],
+            "max_resolution": "2560x1440",
+            "max_frames": 361,
+            "native_audio": True,
+        },
+        "jianying": {
+            "effects": "25+特效",
+            "animations": "入场/出场/循环动画",
+            "transitions": "多种转场",
+            "filters": "多种滤镜",
+        },
+        "audio": {
+            "tts": "多音色语音合成",
+            "bgm": "55首BGM库",
+            "mixing": "多轨混音",
+        },
+        "comfyui": {
+            "workflows": "35+工作流模板",
+            "models": "文生图/图生图/视频生成/超分/抠图",
+        },
+    }
+
+
+def generate_video_task(params: Dict[str, Any]) -> Dict[str, Any]:
+    """视频生成任务执行函数"""
+    model = params.get("model", "minimax-h3")
+    mode = params.get("mode", "t2v")
+    prompt = params.get("prompt", "")
+    width = params.get("width", 1344)
+    height = params.get("height", 768)
+    frames = params.get("frames", 81)
+    output_dir = params.get("output_dir", os.path.join(_SKILL_ROOT, "..", "api_output"))
+    os.makedirs(output_dir, exist_ok=True)
+
+    if model == "minimax-h3":
+        from minimax_h3_runner import MiniMaxH3Runner, PRESETS, MODEL_FL2VA, MODEL_REF2VA
+        variant = params.get("variant", "fl2va")
+        preset = params.get("preset", "turbo_768p")
+
+        # 根据版本选择预设
+        if variant == "ref2va" and preset not in ["ref2va_turbo", "ref2va_standard"]:
+            preset = "ref2va_turbo"
+
+        runner = MiniMaxH3Runner(
+            server_addr="127.0.0.1:8188",
+            output_dir=output_dir,
+            preset=preset,
+        )
+
+        if mode == "t2v":
+            output = runner.text_to_video(prompt, width, height, frames)
+        elif mode == "i2v":
+            image_path = params.get("image_path", "")
+            if not image_path:
+                raise ValueError("i2v模式需要image_path参数")
+            output = runner.image_to_video(prompt, image_path, width, height, frames)
+        elif mode == "fl2v":
+            first_frame = params.get("first_frame_path", "")
+            last_frame = params.get("last_frame_path", "")
+            if not first_frame or not last_frame:
+                raise ValueError("fl2v模式需要first_frame_path和last_frame_path参数")
+            output = runner.first_last_to_video(prompt, first_frame, last_frame, width, height, frames)
+        elif mode == "ref2v":
+            ref_images = params.get("reference_images", [])
+            ref_videos = params.get("reference_videos", [])
+            ref_audios = params.get("reference_audios", [])
+            output = runner.reference_to_video(
+                prompt, ref_images, ref_videos, ref_audios, width, height, frames
+            )
+        else:
+            raise ValueError(f"不支持的模式: {mode}")
+
+        return {"output_path": output, "model": model, "variant": variant, "mode": mode}
+
+    else:
+        # LTX-2.5 / 混元I2V 使用video_generation_integrator
+        from video_generation_integrator import VideoGenerationIntegrator, VideoGenConfig
+        integrator = VideoGenerationIntegrator()
+        config = VideoGenConfig(
+            model=model,
+            mode=mode,
+            prompt=prompt,
+            width=width,
+            height=height,
+            duration=frames,
+        )
+        if mode == "i2v":
+            config.image_path = params.get("image_path", "")
+        result = integrator.generate_video(config, output_dir)
+        if not result.success:
+            raise ValueError(f"生成失败: {result.errors}")
+        return {"output_path": result.output_path, "model": model, "mode": mode}
+
+
+class APIHandler(BaseHTTPRequestHandler):
+    """API请求处理器"""
+
+    def _send_json(self, data: Dict[str, Any], status: int = 200):
+        """发送JSON响应"""
+        body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _read_body(self) -> Dict[str, Any]:
+        """读取请求体"""
+        content_length = int(self.headers.get("Content-Length", 0))
+        if content_length == 0:
+            return {}
+        body = self.rfile.read(content_length)
+        try:
+            return json.loads(body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return {}
+
+    def do_OPTIONS(self):
+        """处理OPTIONS请求（CORS预检）"""
+        self._send_json({"status": "ok"}, 200)
+
+    def do_GET(self):
+        """处理GET请求"""
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+
+        if path == "/api/health":
+            self._send_json({
+                "status": "healthy",
+                "service": "ai-video-editor-api",
+                "version": "1.0.0",
+                "timestamp": time.time(),
+                "tasks_total": len(task_manager.tasks),
+            })
+
+        elif path == "/api/capabilities":
+            self._send_json(get_capabilities())
+
+        elif path == "/api/tasks":
+            tasks = task_manager.list_tasks()
+            self._send_json({"tasks": tasks, "total": len(tasks)})
+
+        elif path.startswith("/api/task/"):
+            task_id = path.split("/")[-1]
+            task = task_manager.get_task(task_id)
+            if task:
+                self._send_json(task)
+            else:
+                self._send_json({"error": "任务不存在", "task_id": task_id}, 404)
+
+        else:
+            self._send_json({"error": "端点不存在", "path": path}, 404)
+
+    def do_POST(self):
+        """处理POST请求"""
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+        body = self._read_body()
+
+        if path == "/api/video/generate":
+            # 验证必要参数
+            if "prompt" not in body:
+                self._send_json({"error": "缺少prompt参数"}, 400)
+                return
+
+            task_id = task_manager.create_task("video_generation", body)
+            task_manager.run_task_async(task_id, generate_video_task, body)
+            self._send_json({
+                "task_id": task_id,
+                "status": TASK_PENDING,
+                "message": "视频生成任务已创建",
+            }, 202)
+
+        elif path == "/api/draft/create":
+            # 创建剪映工程（简化版，后续完善）
+            if "project_name" not in body:
+                self._send_json({"error": "缺少project_name参数"}, 400)
+                return
+            task_id = task_manager.create_task("draft_create", body)
+            self._send_json({
+                "task_id": task_id,
+                "status": TASK_PENDING,
+                "message": "剪映工程创建任务已创建（功能开发中）",
+            }, 202)
+
+        elif path.startswith("/api/task/") and path.endswith("/cancel"):
+            task_id = path.split("/")[-2]
+            task = task_manager.get_task(task_id)
+            if task and task["status"] in [TASK_PENDING, TASK_RUNNING]:
+                task_manager.update_task(task_id, status=TASK_CANCELLED)
+                self._send_json({"task_id": task_id, "status": TASK_CANCELLED, "message": "任务已取消"})
+            else:
+                self._send_json({"error": "任务不存在或无法取消"}, 404)
+
+        else:
+            self._send_json({"error": "端点不存在", "path": path}, 404)
+
+    def log_message(self, format, *args):
+        """简化日志输出"""
+        logger.info(f"{self.address_string()} - {format % args}")
+
+
+def main():
+    """启动API服务"""
+    import argparse
+    parser = argparse.ArgumentParser(description="AI Video Editor API服务")
+    parser.add_argument("--host", default="0.0.0.0", help="监听地址")
+    parser.add_argument("--port", type=int, default=8000, help="监听端口")
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+
+    server = HTTPServer((args.host, args.port), APIHandler)
+    logger.info(f"=" * 60)
+    logger.info(f"AI Video Editor API 服务启动")
+    logger.info(f"地址: http://{args.host}:{args.port}")
+    logger.info(f"健康检查: http://{args.host}:{args.port}/api/health")
+    logger.info(f"能力列表: http://{args.host}:{args.port}/api/capabilities")
+    logger.info(f"=" * 60)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        logger.info("服务停止")
+        server.shutdown()
+
+
+if __name__ == "__main__":
+    main()
