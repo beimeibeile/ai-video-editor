@@ -332,6 +332,7 @@ body {
     <button class="nav-tab active" onclick="switchPage('generate')">🎬 视频生成</button>
     <button class="nav-tab" onclick="switchPage('templates')">📦 模板市场</button>
     <button class="nav-tab" onclick="switchPage('tasks')">📋 任务列表</button>
+    <button class="nav-tab" onclick="switchPage('plugins')">🔌 插件管理</button>
     <button class="nav-tab" onclick="switchPage('capabilities')">⚡ 系统能力</button>
   </div>
   <div class="nav-status">
@@ -549,6 +550,45 @@ body {
     </div>
   </div>
 
+  <!-- 插件管理页 -->
+  <div class="page" id="page-plugins">
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-value" id="pluginTotal">0</div>
+        <div class="stat-label">插件总数</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" id="pluginActive">0</div>
+        <div class="stat-label">运行中</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="pluginCaps">0</div>
+        <div class="stat-label">注册能力</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-value" id="pluginAvailable">0</div>
+        <div class="stat-label">可用插件</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between">
+        <span><span class="icon">🔌</span> 已安装插件</span>
+        <button class="btn btn-secondary" onclick="loadPlugins()" style="padding:6px 16px;font-size:12px">🔄 刷新</button>
+      </div>
+      <div class="task-list" id="pluginList">
+        <div class="empty-state"><p>加载中...</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">⚡</span> 插件能力列表</div>
+      <div class="cap-grid" id="pluginCapGrid">
+        <div class="empty-state"><p>加载中...</p></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 系统能力页 -->
   <div class="page" id="page-capabilities">
     <div class="card">
@@ -575,6 +615,7 @@ function switchPage(page) {
   if (page === 'tasks') loadTasks();
   if (page === 'capabilities') loadCapabilities();
   if (page === 'templates') { loadTemplateStats(); loadFeatured(); loadTemplates(); }
+  if (page === 'plugins') { loadPlugins(); loadPluginCapabilities(); }
 }
 
 // 健康检查
@@ -892,6 +933,127 @@ async function rateTemplate(templateId) {
     alert('评分成功！');
   } catch (e) {
     alert('评分失败: ' + e.message);
+  }
+}
+
+// 插件管理 - 加载插件列表
+async function loadPlugins() {
+  try {
+    const res = await fetch(API_BASE + '/api/plugins');
+    const data = await res.json();
+    document.getElementById('pluginTotal').textContent = data.total || 0;
+    const activeCount = (data.plugins || []).filter(p => p.status === 'active' || p.status === 'loaded').length;
+    document.getElementById('pluginActive').textContent = activeCount;
+
+    const statsRes = await fetch(API_BASE + '/api/plugins/stats');
+    const stats = await statsRes.json();
+    document.getElementById('pluginCaps').textContent = stats.total_capabilities || 0;
+    document.getElementById('pluginAvailable').textContent = (stats.available_plugins || []).length;
+
+    const list = document.getElementById('pluginList');
+    if (!data.plugins || data.plugins.length === 0) {
+      list.innerHTML = '<div class="empty-state"><p>暂无已安装插件</p></div>';
+      return;
+    }
+    const statusColors = { loaded: 'var(--accent)', active: 'var(--success)', disabled: 'var(--text-muted)', error: 'var(--danger)' };
+    list.innerHTML = data.plugins.map(p => `
+      <div class="task-item">
+        <div class="task-header">
+          <span class="task-type" style="background:rgba(139,92,246,0.15);color:var(--purple)">${p.category || 'general'}</span>
+          <span class="task-name">${p.name}</span>
+          <span class="task-status" style="background:${statusColors[p.status] || 'var(--text-muted)'}20;color:${statusColors[p.status] || 'var(--text-muted)'}">${p.status}</span>
+        </div>
+        <div class="task-prompt">${p.description || '暂无描述'}</div>
+        <div class="task-meta">
+          <span>📦 v${p.version}</span>
+          <span>👤 ${p.author || '未知'}</span>
+          <span>🏷 ${(p.tags || []).join(', ')}</span>
+          <span>🔑 ${(p.permissions || []).length}项权限</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn btn-primary" style="padding:6px 16px;font-size:12px" onclick="enablePlugin('${p.plugin_id}')">启用</button>
+          <button class="btn btn-secondary" style="padding:6px 16px;font-size:12px" onclick="disablePlugin('${p.plugin_id}')">禁用</button>
+          <button class="btn btn-secondary" style="padding:6px 16px;font-size:12px" onclick="reloadPlugin('${p.plugin_id}')">重载</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('加载插件列表失败:', e);
+  }
+}
+
+// 插件管理 - 加载能力列表
+async function loadPluginCapabilities() {
+  try {
+    const res = await fetch(API_BASE + '/api/plugins/capabilities');
+    const data = await res.json();
+    const grid = document.getElementById('pluginCapGrid');
+    if (!data.capabilities || data.capabilities.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><p>暂无注册能力</p></div>';
+      return;
+    }
+    const catColors = { effect: 'var(--warning)', transition: 'var(--accent)', export: 'var(--success)', audio: 'var(--purple)', text: '#06b6d4', other: 'var(--text-muted)' };
+    grid.innerHTML = data.capabilities.map(c => `
+      <div class="cap-card" style="cursor:pointer" onclick="callPluginCapability('${c.id}')">
+        <div class="cap-icon" style="background:linear-gradient(135deg,${catColors[c.category] || 'var(--text-muted)'}33,${catColors[c.category] || 'var(--text-muted)'}11)">⚡</div>
+        <div class="cap-name">${c.name}</div>
+        <div class="cap-desc">${c.description.substring(0, 30)}${c.description.length > 30 ? '...' : ''}</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">
+          ${c.category} · ${c.plugin_id}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('加载插件能力失败:', e);
+  }
+}
+
+// 启用插件
+async function enablePlugin(pluginId) {
+  try {
+    await fetch(API_BASE + '/api/plugin/' + pluginId + '/enable', { method: 'POST' });
+    loadPlugins();
+    alert('插件已启用: ' + pluginId);
+  } catch (e) {
+    alert('启用失败: ' + e.message);
+  }
+}
+
+// 禁用插件
+async function disablePlugin(pluginId) {
+  try {
+    await fetch(API_BASE + '/api/plugin/' + pluginId + '/disable', { method: 'POST' });
+    loadPlugins();
+    alert('插件已禁用: ' + pluginId);
+  } catch (e) {
+    alert('禁用失败: ' + e.message);
+  }
+}
+
+// 重载插件
+async function reloadPlugin(pluginId) {
+  try {
+    await fetch(API_BASE + '/api/plugin/' + pluginId + '/reload', { method: 'POST' });
+    loadPlugins();
+    loadPluginCapabilities();
+    alert('插件已重新加载: ' + pluginId);
+  } catch (e) {
+    alert('重载失败: ' + e.message);
+  }
+}
+
+// 调用插件能力
+async function callPluginCapability(capabilityId) {
+  try {
+    const res = await fetch(API_BASE + '/api/capability/' + capabilityId + '/call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    alert('能力调用结果:\n\n' + JSON.stringify(data.result || data, null, 2));
+  } catch (e) {
+    alert('调用失败: ' + e.message);
   }
 }
 

@@ -41,6 +41,16 @@ except Exception as e:
     logger.warning(f"模板市场初始化失败: {e}")
     _template_market = None
 
+# 插件管理器
+try:
+    from plugin_sdk import get_plugin_manager
+    _plugin_manager = get_plugin_manager()
+    _plugin_manager.load_all()
+    logger.info(f"插件管理器初始化完成，已加载 {len(_plugin_manager.list_plugins())} 个插件")
+except Exception as e:
+    logger.warning(f"插件管理器初始化失败: {e}")
+    _plugin_manager = None
+
 # 任务状态
 TASK_PENDING = "pending"
 TASK_RUNNING = "running"
@@ -371,6 +381,53 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "模板不存在", "template_id": template_id}, 404)
 
+        # 插件管理端点
+        elif path == "/api/plugins":
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            self._send_json({
+                "plugins": _plugin_manager.list_plugins(),
+                "total": len(_plugin_manager.list_plugins()),
+            })
+
+        elif path == "/api/plugins/stats":
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            self._send_json(_plugin_manager.get_stats())
+
+        elif path == "/api/plugins/capabilities":
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            self._send_json({
+                "capabilities": _plugin_manager.list_capabilities(),
+                "total": len(_plugin_manager.list_capabilities()),
+            })
+
+        elif path.startswith("/api/plugin/"):
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            parts = path.split("/")
+            # /api/plugin/{id}
+            if len(parts) == 4:
+                plugin_id = parts[3]
+                plugin = _plugin_manager.get_plugin(plugin_id)
+                if plugin:
+                    self._send_json(plugin.get_info())
+                else:
+                    self._send_json({"error": "插件不存在", "plugin_id": plugin_id}, 404)
+            # /api/plugin/{id}/capabilities
+            elif len(parts) == 5 and parts[4] == "capabilities":
+                plugin_id = parts[3]
+                caps = [c for c in _plugin_manager.list_capabilities()
+                        if c.get("plugin_id") == plugin_id]
+                self._send_json({"capabilities": caps, "total": len(caps)})
+            else:
+                self._send_json({"error": "端点不存在", "path": path}, 404)
+
         else:
             self._send_json({"error": "端点不存在", "path": path}, 404)
 
@@ -466,6 +523,54 @@ class APIHandler(BaseHTTPRequestHandler):
                 aspect_ratio=body.get("aspect_ratio", "9:16竖屏"),
             )
             self._send_json({"message": "模板创建成功", "template_id": template.template_id}, 201)
+
+        # 插件管理POST端点
+        elif path.startswith("/api/plugin/") and path.endswith("/enable"):
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            plugin_id = path.split("/")[-2]
+            success = _plugin_manager.enable_plugin(plugin_id)
+            if success:
+                self._send_json({"message": "插件已启用", "plugin_id": plugin_id})
+            else:
+                self._send_json({"error": "启用插件失败"}, 500)
+
+        elif path.startswith("/api/plugin/") and path.endswith("/disable"):
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            plugin_id = path.split("/")[-2]
+            success = _plugin_manager.disable_plugin(plugin_id)
+            if success:
+                self._send_json({"message": "插件已禁用", "plugin_id": plugin_id})
+            else:
+                self._send_json({"error": "禁用插件失败"}, 500)
+
+        elif path.startswith("/api/plugin/") and path.endswith("/reload"):
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            plugin_id = path.split("/")[-2]
+            _plugin_manager.unload_plugin(plugin_id)
+            plugin = _plugin_manager.load_plugin(plugin_id)
+            if plugin:
+                self._send_json({"message": "插件已重新加载", "plugin_id": plugin_id})
+            else:
+                self._send_json({"error": "重新加载插件失败"}, 500)
+
+        elif path.startswith("/api/capability/") and path.endswith("/call"):
+            if not _plugin_manager:
+                self._send_json({"error": "插件管理器未初始化"}, 500)
+                return
+            capability_id = path.split("/")[-2]
+            try:
+                result = _plugin_manager.call_capability(capability_id, body)
+                self._send_json({"status": "success", "result": result})
+            except ValueError as e:
+                self._send_json({"error": str(e)}, 404)
+            except Exception as e:
+                self._send_json({"error": f"调用能力失败: {e}"}, 500)
 
         else:
             self._send_json({"error": "端点不存在", "path": path}, 404)
