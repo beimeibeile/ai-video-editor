@@ -196,6 +196,10 @@ def generate_video_task(params: Dict[str, Any]) -> Dict[str, Any]:
     os.makedirs(output_dir, exist_ok=True)
 
     if model == "minimax-h3":
+        # 添加comfyui-controls-skill的scripts目录到路径
+        _comfyui_scripts = os.path.join(_SKILL_ROOT, "..", "comfyui-controls-skill", "scripts")
+        if os.path.exists(_comfyui_scripts) and _comfyui_scripts not in sys.path:
+            sys.path.insert(0, _comfyui_scripts)
         from minimax_h3_runner import MiniMaxH3Runner, PRESETS, MODEL_FL2VA, MODEL_REF2VA
         variant = params.get("variant", "fl2va")
         preset = params.get("preset", "turbo_768p")
