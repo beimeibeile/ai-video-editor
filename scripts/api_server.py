@@ -51,6 +51,41 @@ except Exception as e:
     logger.warning(f"插件管理器初始化失败: {e}")
     _plugin_manager = None
 
+# 音频增强模块（BGM+音效+TTS）
+try:
+    from audio_enhancer import get_bgm_selector, get_sfx_manager, get_tts_enhancer
+    _bgm_selector = get_bgm_selector()
+    _sfx_manager = get_sfx_manager()
+    _tts_enhancer = get_tts_enhancer()
+    logger.info("音频增强模块初始化完成")
+except Exception as e:
+    logger.warning(f"音频增强模块初始化失败: {e}")
+    _bgm_selector = None
+    _sfx_manager = None
+    _tts_enhancer = None
+
+# 智能增强模块（导演决策+素材管理+自然语言）
+try:
+    from intelligence_enhancer import get_director_v3, get_asset_manager, get_nl_enhancer
+    _director_v3 = get_director_v3()
+    _asset_manager = get_asset_manager()
+    _nl_enhancer = get_nl_enhancer()
+    logger.info("智能增强模块初始化完成")
+except Exception as e:
+    logger.warning(f"智能增强模块初始化失败: {e}")
+    _director_v3 = None
+    _asset_manager = None
+    _nl_enhancer = None
+
+# 全自动流水线
+try:
+    from auto_pipeline import AutoPipeline
+    _auto_pipeline = AutoPipeline()
+    logger.info("全自动流水线初始化完成")
+except Exception as e:
+    logger.warning(f"全自动流水线初始化失败: {e}")
+    _auto_pipeline = None
+
 # 任务状态
 TASK_PENDING = "pending"
 TASK_RUNNING = "running"
@@ -428,6 +463,89 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "端点不存在", "path": path}, 404)
 
+        # BGM搜索
+        elif path == "/api/bgm/search":
+            if not _bgm_selector:
+                self._send_json({"error": "BGM选择器未初始化"}, 500)
+                return
+            query = parse_qs(parsed.query)
+            emotion = query.get("emotion", [""])[0]
+            style = query.get("style", [""])[0]
+            tempo = query.get("tempo", [""])[0]
+            limit = int(query.get("limit", ["10"])[0])
+            results = _bgm_selector.select(emotion=emotion or None, style=style or None,
+                                            tempo=tempo or None, limit=limit)
+            self._send_json({"bgms": results, "total": len(results)})
+
+        elif path == "/api/bgm/stats":
+            if not _bgm_selector:
+                self._send_json({"error": "BGM选择器未初始化"}, 500)
+                return
+            self._send_json(_bgm_selector.get_stats())
+
+        # 音效搜索
+        elif path == "/api/sfx/search":
+            if not _sfx_manager:
+                self._send_json({"error": "音效管理器未初始化"}, 500)
+                return
+            query = parse_qs(parsed.query)
+            keyword = query.get("keyword", [""])[0]
+            category = query.get("category", [""])[0]
+            limit = int(query.get("limit", ["20"])[0])
+            results = _sfx_manager.search(keyword=keyword or None, category=category or None, limit=limit)
+            self._send_json({"sfxs": results, "total": len(results)})
+
+        elif path == "/api/sfx/categories":
+            if not _sfx_manager:
+                self._send_json({"error": "音效管理器未初始化"}, 500)
+                return
+            self._send_json({"categories": _sfx_manager.list_categories()})
+
+        # 素材管理
+        elif path == "/api/assets":
+            if not _asset_manager:
+                self._send_json({"error": "素材管理器未初始化"}, 500)
+                return
+            query = parse_qs(parsed.query)
+            keyword = query.get("keyword", [""])[0]
+            asset_type = query.get("type", [""])[0]
+            limit = int(query.get("limit", ["20"])[0])
+            results = _asset_manager.search(keyword=keyword or None, asset_type=asset_type or None, limit=limit)
+            self._send_json({"assets": results, "total": len(results)})
+
+        elif path == "/api/assets/stats":
+            if not _asset_manager:
+                self._send_json({"error": "素材管理器未初始化"}, 500)
+                return
+            self._send_json(_asset_manager.get_stats())
+
+        # 智能导演能力列表
+        elif path == "/api/director/skills":
+            if not _director_v3:
+                self._send_json({"error": "导演决策引擎未初始化"}, 500)
+                return
+            self._send_json({"skills": _director_v3.list_skills()})
+
+        # 自然语言意图列表
+        elif path == "/api/nl/intents":
+            if not _nl_enhancer:
+                self._send_json({"error": "自然语言增强模块未初始化"}, 500)
+                return
+            self._send_json({"intents": _nl_enhancer.list_intents()})
+
+        # TTS情绪/角色列表
+        elif path == "/api/tts/emotions":
+            if not _tts_enhancer:
+                self._send_json({"error": "TTS增强模块未初始化"}, 500)
+                return
+            self._send_json({"emotions": _tts_enhancer.list_emotions()})
+
+        elif path == "/api/tts/characters":
+            if not _tts_enhancer:
+                self._send_json({"error": "TTS增强模块未初始化"}, 500)
+                return
+            self._send_json({"characters": _tts_enhancer.list_characters()})
+
         else:
             self._send_json({"error": "端点不存在", "path": path}, 404)
 
@@ -571,6 +689,161 @@ class APIHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(e)}, 404)
             except Exception as e:
                 self._send_json({"error": f"调用能力失败: {e}"}, 500)
+
+        # TTS品质增强
+        elif path == "/api/tts/enhance":
+            if not _tts_enhancer:
+                self._send_json({"error": "TTS增强模块未初始化"}, 500)
+                return
+            text = body.get("text", "")
+            if not text:
+                self._send_json({"error": "缺少text参数"}, 400)
+                return
+            emotion = body.get("emotion", "平静")
+            character = body.get("character", "narrator")
+            config = _tts_enhancer.enhance_tts_config(text, emotion=emotion, character=character)
+            self._send_json(config)
+
+        # TTS字幕时间轴生成
+        elif path == "/api/tts/subtitle-timeline":
+            if not _tts_enhancer:
+                self._send_json({"error": "TTS增强模块未初始化"}, 500)
+                return
+            configs = body.get("configs", [])
+            start_time = body.get("start_time", 0.0)
+            if not configs:
+                self._send_json({"error": "缺少configs参数"}, 400)
+                return
+            timeline = _tts_enhancer.generate_subtitle_timeline(configs, start_time=start_time)
+            self._send_json({"timeline": timeline, "total": len(timeline)})
+
+        # 智能路由决策
+        elif path == "/api/director/route":
+            if not _director_v3:
+                self._send_json({"error": "导演决策引擎未初始化"}, 500)
+                return
+            task_type = body.get("task_type", "")
+            if not task_type:
+                self._send_json({"error": "缺少task_type参数"}, 400)
+                return
+            requirements = body.get("requirements", {})
+            result = _director_v3.route_task(task_type, requirements=requirements)
+            self._send_json(result)
+
+        # 镜头语言决策
+        elif path == "/api/director/shot":
+            if not _director_v3:
+                self._send_json({"error": "导演决策引擎未初始化"}, 500)
+                return
+            emotion = body.get("emotion", "平静")
+            purpose = body.get("purpose")
+            duration_hint = body.get("duration_hint")
+            result = _director_v3.decide_shot(emotion=emotion, purpose=purpose, duration_hint=duration_hint)
+            self._send_json(result)
+
+        # 情绪曲线生成
+        elif path == "/api/director/emotion-curve":
+            if not _director_v3:
+                self._send_json({"error": "导演决策引擎未初始化"}, 500)
+                return
+            duration = body.get("duration", 30.0)
+            structure = body.get("structure", "classic")
+            result = _director_v3.generate_emotion_curve(duration=duration, structure=structure)
+            self._send_json({"curve": result, "segments": len(result)})
+
+        # 全自动流水线
+        elif path == "/api/pipeline/run":
+            if not _auto_pipeline:
+                self._send_json({"error": "全自动流水线未初始化"}, 500)
+                return
+            topic = body.get("topic", "")
+            if not topic:
+                self._send_json({"error": "缺少topic参数"}, 400)
+                return
+            template = body.get("template", "vlog")
+            style = body.get("style", "cinematic")
+            resolution = body.get("resolution", "portrait_768")
+            generate_assets = body.get("generate_assets", True)
+            generate_audio = body.get("generate_audio", True)
+            build_draft = body.get("build_draft", True)
+            enhance_quality = body.get("enhance_quality", True)
+
+            # 异步执行流水线
+            task_id = task_manager.create_task("auto_pipeline", body)
+            def run_pipeline(task_id, params):
+                try:
+                    task_manager.update_task(task_id, status=TASK_RUNNING, started_at=time.time())
+                    result = _auto_pipeline.run(
+                        topic=params.get("topic", ""),
+                        template=params.get("template", "vlog"),
+                        style=params.get("style", "cinematic"),
+                        resolution=params.get("resolution", "portrait_768"),
+                        generate_assets=params.get("generate_assets", True),
+                        generate_audio=params.get("generate_audio", True),
+                        build_draft=params.get("build_draft", True),
+                        enhance_quality=params.get("enhance_quality", True),
+                    )
+                    task_manager.update_task(task_id, status=TASK_COMPLETED, result=result.__dict__, completed_at=time.time())
+                except Exception as e:
+                    task_manager.update_task(task_id, status=TASK_FAILED, error=str(e), completed_at=time.time())
+
+            task_manager.run_task_async(task_id, run_pipeline, body)
+            self._send_json({
+                "task_id": task_id,
+                "status": TASK_PENDING,
+                "message": "全自动流水线任务已创建",
+            }, 202)
+
+        # 添加素材
+        elif path == "/api/assets/add":
+            if not _asset_manager:
+                self._send_json({"error": "素材管理器未初始化"}, 500)
+                return
+            file_path = body.get("file_path", "")
+            if not file_path or not os.path.exists(file_path):
+                self._send_json({"error": "文件不存在或缺少file_path参数"}, 400)
+                return
+            asset_type = body.get("asset_type", "image")
+            tags = body.get("tags", [])
+            metadata = body.get("metadata", {})
+            result = _asset_manager.add_asset(file_path, asset_type=asset_type, tags=tags, metadata=metadata)
+            self._send_json(result)
+
+        # 素材智能推荐
+        elif path == "/api/assets/recommend":
+            if not _asset_manager:
+                self._send_json({"error": "素材管理器未初始化"}, 500)
+                return
+            context = body.get("context", "")
+            asset_type = body.get("asset_type", "image")
+            count = body.get("count", 5)
+            results = _asset_manager.recommend(context=context, asset_type=asset_type, count=count)
+            self._send_json({"recommendations": results, "total": len(results)})
+
+        # 自然语言解析
+        elif path == "/api/nl/parse":
+            if not _nl_enhancer:
+                self._send_json({"error": "自然语言增强模块未初始化"}, 500)
+                return
+            instruction = body.get("instruction", "")
+            if not instruction:
+                self._send_json({"error": "缺少instruction参数"}, 400)
+                return
+            result = _nl_enhancer.parse_instruction(instruction)
+            self._send_json(result)
+
+        # 创意扩展
+        elif path == "/api/nl/expand":
+            if not _nl_enhancer:
+                self._send_json({"error": "自然语言增强模块未初始化"}, 500)
+                return
+            base_idea = body.get("base_idea", "")
+            if not base_idea:
+                self._send_json({"error": "缺少base_idea参数"}, 400)
+                return
+            direction = body.get("direction", "general")
+            results = _nl_enhancer.expand_creative(base_idea, direction=direction)
+            self._send_json({"expansions": results, "total": len(results)})
 
         else:
             self._send_json({"error": "端点不存在", "path": path}, 404)

@@ -417,49 +417,75 @@ class NLCreativeEnhancerV2:
     INTENT_TYPES = {
         "create_video": {
             "name": "创建视频",
-            "keywords": ["做视频", "生成视频", "创建视频", "制作视频", "拍视频", "出片"],
+            "keywords": ["做视频", "生成视频", "创建视频", "制作视频", "拍视频", "出片",
+                         "做一个视频", "做个视频", "做一段视频", "创作视频", "创作一个视频",
+                         "生成一个视频", "拍一个视频", "出一个视频", "搞个视频", "整个视频",
+                         "视频创作", "视频生成", "做一支视频", "做支视频"],
+            "patterns": [r"做(一个|个|一段|一支|支).*视频", r"生成(一个|个|一段).*视频",
+                         r"创作(一个|个).*视频", r"拍(一个|个|一段).*视频",
+                         r"搞(个|一个).*视频", r"整(个|一个).*视频"],
             "required_params": ["topic"],
             "optional_params": ["style", "duration", "resolution", "template"],
         },
         "generate_image": {
             "name": "生成图片",
-            "keywords": ["生成图", "做图", "画图", "生成图片", "AI画图", "文生图"],
+            "keywords": ["生成图", "做图", "画图", "生成图片", "AI画图", "文生图",
+                         "生成一张图", "生成一张图片", "做一张图", "画一张图", "出图",
+                         "出一张图", "AI生成图", "AI出图", "画个图", "做个图", "生成个图",
+                         "图片生成", "图像生成", "AI绘图", "绘图"],
+            "patterns": [r"生成(一张|一个|个).*(图|图片|图像)", r"做(一张|一个|个).*(图|图片)",
+                         r"画(一张|一个|个).*(图|图片)", r"出(一张|一个|个).*(图|图片)",
+                         r"AI(生成|画|出).*(图|图片)"],
             "required_params": ["prompt"],
             "optional_params": ["style", "size", "model"],
         },
         "edit_video": {
             "name": "编辑视频",
-            "keywords": ["剪辑", "编辑", "加特效", "加字幕", "加音乐", "调色"],
+            "keywords": ["剪辑", "编辑", "加特效", "加字幕", "加音乐", "调色",
+                         "剪视频", "剪一下", "处理视频", "视频处理", "加转场",
+                         "加滤镜", "加动画", "视频剪辑"],
+            "patterns": [r"给.*视频(加|弄|整).*(特效|字幕|音乐|转场|滤镜|动画)"],
             "required_params": ["video_path"],
             "optional_params": ["effect", "filter", "transition"],
         },
         "add_subtitle": {
             "name": "添加字幕",
-            "keywords": ["字幕", "加字幕", "字幕条", "文字"],
+            "keywords": ["字幕", "加字幕", "字幕条", "文字", "加文字", "上字幕",
+                         "打字幕", "字幕动画"],
+            "patterns": [r"(加|上|打|弄).*字幕"],
             "required_params": ["text"],
             "optional_params": ["style", "position", "animation"],
         },
         "add_music": {
             "name": "添加音乐",
-            "keywords": ["音乐", "BGM", "配乐", "背景音乐", "加音乐"],
+            "keywords": ["音乐", "BGM", "配乐", "背景音乐", "加音乐", "加BGM",
+                         "加配乐", "加背景音乐", "上音乐", "配个音乐", "整个BGM"],
+            "patterns": [r"(加|上|配|整|弄).*(音乐|BGM|配乐|背景音乐)"],
             "required_params": [],
             "optional_params": ["emotion", "style", "volume"],
         },
         "generate_tts": {
             "name": "生成配音",
-            "keywords": ["配音", "TTS", "语音", "朗读", "旁白"],
+            "keywords": ["配音", "TTS", "语音", "朗读", "旁白", "生成语音",
+                         "生成配音", "AI配音", "语音合成", "文字转语音", "念出来",
+                         "读出来", "配个音", "整个旁白"],
+            "patterns": [r"(生成|配|做|整).*(配音|语音|旁白|朗读)"],
             "required_params": ["text"],
             "optional_params": ["emotion", "voice", "speed"],
         },
         "export": {
             "name": "导出视频",
-            "keywords": ["导出", "渲染", "输出", "生成mp4"],
+            "keywords": ["导出", "渲染", "输出", "生成mp4", "导出视频", "渲染视频",
+                         "输出视频", "导出工程", "导出成片", "出片"],
+            "patterns": [r"(导出|渲染|输出).*(视频|工程|成片|mp4)"],
             "required_params": ["draft_path"],
             "optional_params": ["resolution", "fps", "format"],
         },
         "query_status": {
             "name": "查询状态",
-            "keywords": ["状态", "进度", "怎么样了", "完成了吗"],
+            "keywords": ["状态", "进度", "怎么样了", "完成了吗", "好了吗",
+                         "到哪了", "进行到哪了", "什么情况", "怎么回事"],
+            "patterns": [r"(怎么样|怎么|什么).*(了|情况|回事)"],
             "required_params": [],
             "optional_params": ["task_id"],
         },
@@ -489,13 +515,19 @@ class NLCreativeEnhancerV2:
         """
         instruction_lower = instruction.lower()
 
-        # 意图识别
+        # 意图识别（关键词匹配 + 正则模式匹配）
+        import re
         intent_scores = {}
         for intent_id, intent in self.INTENT_TYPES.items():
             score = 0
+            # 关键词匹配（每个关键词1分）
             for keyword in intent["keywords"]:
                 if keyword.lower() in instruction_lower:
                     score += 1
+            # 正则模式匹配（每个匹配3分，权重更高）
+            for pattern in intent.get("patterns", []):
+                if re.search(pattern, instruction_lower):
+                    score += 3
             if score > 0:
                 intent_scores[intent_id] = score
 
@@ -510,7 +542,8 @@ class NLCreativeEnhancerV2:
 
         # 选择得分最高的意图
         selected_intent = max(intent_scores, key=intent_scores.get)
-        confidence = intent_scores[selected_intent] / sum(intent_scores.values())
+        total_score = sum(intent_scores.values())
+        confidence = intent_scores[selected_intent] / total_score if total_score > 0 else 0.0
 
         # 参数提取
         params = self._extract_params(instruction, selected_intent)
