@@ -537,7 +537,8 @@ class JianyingExecutor:
         Args:
             subtitle_instructions: 字幕指令列表，每个元素：
                 {'type': 'bar'/'glow'/'simple', 'text': '...', 'start_time': 0, 'duration': 3,
-                 'style': 'epic'/'warm'/'fun'/'minimal', 'y_position': -0.7, 'font_size': 8.0}
+                 'style': 'epic'/'warm'/'fun'/'minimal'/'cinematic'/'tech'/'elegant'/'bold'/'retro'/'neon'/'vlog'/'news',
+                 'y_position': -0.7, 'font_size': 8.0}
 
         Returns:
             int: 应用的字幕数
@@ -547,6 +548,7 @@ class JianyingExecutor:
 
         try:
             from enhanced_subtitle import add_subtitle_with_bar, add_glowing_text
+            from subtitle_styles import get_style
         except ImportError as e:
             logger.warning(f"艺术字幕模块不可用: {e}")
             return 0
@@ -558,8 +560,14 @@ class JianyingExecutor:
             start_time = sub.get("start_time", 0)
             duration = sub.get("duration", 3)
             y_position = sub.get("y_position", -0.7)
-            font_size = sub.get("font_size", 8.0)
-            style = sub.get("style", "epic")
+            style_name = sub.get("style", "epic")
+
+            # 从风格库获取配置
+            style_config = get_style(style_name)
+            font_size = sub.get("font_size", style_config["font_size"])
+            anim_in = style_config["anim_in"]
+            anim_out = style_config["anim_out"]
+            border_width = style_config["border_width"]
 
             if not text:
                 continue
@@ -567,31 +575,29 @@ class JianyingExecutor:
             try:
                 if sub_type == "bar":
                     # 带半透明背景条的字幕
-                    bar_color = {"epic": "0x000000", "warm": "0x2a1810", "fun": "0x1a1a2e", "minimal": "0x000000"}.get(style, "0x000000")
                     result = add_subtitle_with_bar(
                         self.project, text,
                         start_time=f"{start_time}s", duration=f"{duration}s",
                         bar_height=120, bar_opacity=0.6,
-                        bar_color=bar_color,
+                        bar_color=style_config["bar_color"],
                         font_size=font_size, y_position=y_position,
-                        anim_in="渐显",
+                        anim_in=anim_in,
                     )
                     if result.get("text_segment"):
                         applied += 1
-                        logger.info(f"  ✅ 字幕条: {text[:20]}")
+                        logger.info(f"  ✅ 字幕条[{style_name}]: {text[:20]}")
 
                 elif sub_type == "glow":
                     # 发光文字
-                    glow_color = {"epic": (1, 0.85, 0.3), "warm": (1, 0.6, 0.2), "fun": (0.3, 0.8, 1), "minimal": (1, 1, 1)}.get(style, (1, 0.85, 0.3))
                     result = add_glowing_text(
                         self.project, text,
                         start_time=f"{start_time}s", duration=f"{duration}s",
-                        font_size=font_size + 4, glow_color=glow_color,
-                        y_position=y_position, anim_in="放大", layers=3,
+                        font_size=font_size + 4, glow_color=style_config["glow_color"],
+                        y_position=y_position, anim_in=anim_in, layers=3,
                     )
                     if result:
                         applied += 1
-                        logger.info(f"  ✅ 发光文字: {text[:20]} ({len(result)}层)")
+                        logger.info(f"  ✅ 发光文字[{style_name}]: {text[:20]} ({len(result)}层)")
 
                 else:
                     # 简单字幕（带描边和动画）
@@ -600,12 +606,12 @@ class JianyingExecutor:
                         start_time=f"{start_time}s",
                         duration=f"{duration}s",
                         style=draft.TextStyle(size=font_size, bold=True),
-                        border=draft.TextBorder(color=(0, 0, 0), width=40),
+                        border=draft.TextBorder(color=(0, 0, 0), width=border_width),
                         clip_settings=draft.ClipSettings(transform_y=y_position),
-                        anim_in="渐显", anim_out="渐隐",
+                        anim_in=anim_in, anim_out=anim_out,
                     )
                     applied += 1
-                    logger.info(f"  ✅ 简单字幕: {text[:20]}")
+                    logger.info(f"  ✅ 简单字幕[{style_name}]: {text[:20]}")
 
             except Exception as e:
                 logger.warning(f"  ⚠️  字幕失败: {text[:20]} - {e}")
