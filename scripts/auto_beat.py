@@ -17,15 +17,25 @@
 - apply_beat_cuts: 根据卡点时间线自动切分视频片段
 - apply_beat_effects: 根据卡点强度应用特效
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import json
 import subprocess
 import re
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict
 
-FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
-FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
+try:
+    from paths import FFMPEG
+except ImportError:
+    FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
+try:
+    from paths import FFPROBE
+except ImportError:
+    FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
 
 
 def load_beats_from_draft(draft_dir: str) -> Dict:
@@ -446,10 +456,7 @@ def apply_beat_cuts(project, video_clips: list, timeline: dict,
     Returns:
         片段列表
     """
-    # pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+    import pyJianYingDraft as draft
 
     cuts = timeline["cuts"]
     segments = []
@@ -475,8 +482,8 @@ if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
         # 添加转场（加在前一个片段上）
         if len(segments) > 1:
             try:
-                trans_enum = getattr(TransitionType, transition_type,
-                                      TransitionType.叠化)
+                trans_enum = getattr(draft.TransitionType, transition_type,
+                                      draft.TransitionType.叠化)
                 segments[-2].add_transition(
                     trans_enum,
                     duration=int(transition_duration * 1_000_000)
@@ -489,35 +496,195 @@ if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
     return segments
 
 
+def analyze_audio_segments(audio_path: str, fps: int = 10,
+                            min_segment_duration: float = 3.0) -> Dict:
+    """
+    BGM段落结构分析：识别前奏/主歌/副歌/间奏/尾奏等段落
+
+    基于音频能量曲线的变化检测段落边界，根据能量水平和变化模式识别段落类型。
+
+    Args:
+        audio_path: 音频文件路径
+        fps: 能量采样率
+        min_segment_duration: 最短视频时长（秒）
+
+    Returns:
+        {
+            "segments": [
+                {"type": "intro/verse/chorus/bridge/outro",
+                 "start": 0.0, "end": 8.0, "duration": 8.0,
+                 "avg_energy": 0.3, "energy_trend": "rising/stable/falling"},
+                ...
+            ],
+            "total_duration": 20.0,
+            "segment_count": 4,
+            "energy_curve": [...],
+        }
+    """
+    # 分析音频能量
+    energies = analyze_audio_energy(audio_path, fps=fps)
+    if not isinstance(energies, list):
+        energies = energies.get("energies", []) if isinstance(energies, dict) else []
+
+    # 获取音频时长
+    duration = 0
+    try:
+        cmd = [FFPROBE, "-v", "error", "-show_entries", "format=duration",
+               "-of", "default=noprint_wrappers=1:nokey=1", audio_path]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        duration = float(result.stdout.strip())
+    except Exception:
+        duration = len(energies) / fps if energies else 0
+
+    if not energies or duration <= 0:
+        return {"segments": [], "total_duration": 0, "segment_count": 0, "energy_curve": []}
+
+    # 平滑能量曲线（移动平均，窗口=1秒）
+    window = max(1, fps)
+    smoothed = []
+    for i in range(len(energies)):
+        start = max(0, i - window // 2)
+        end = min(len(energies), i + window // 2 + 1)
+        smoothed.append(sum(energies[start:end]) / (end - start))
+
+    # 计算能量变化率（导数）
+    changes = [0.0]
+    for i in range(1, len(smoothed)):
+        changes.append(smoothed[i] - smoothed[i - 1])
+
+    # 检测段落边界：能量变化率超过阈值的点
+    avg_abs_change = sum(abs(c) for c in changes) / len(changes) if changes else 0
+    threshold = max(avg_abs_change * 2.5, 0.02)  # 突变阈值，最低0.02
+
+    boundaries = [0.0]  # 从0开始
+    for i in range(1, len(changes) - 1):
+        if abs(changes[i]) > threshold:
+            time_sec = i / fps
+            # 确保在音频时长范围内
+            if time_sec >= duration:
+                break
+            # 确保段落间隔足够长
+            if time_sec - boundaries[-1] >= min_segment_duration:
+                boundaries.append(time_sec)
+
+    # 确保最后一个边界是duration（如果最后一个边界离结尾太近则合并）
+    if boundaries[-1] < duration - 0.5:
+        boundaries.append(duration)
+    else:
+        boundaries[-1] = duration
+
+    # 识别每个段落的类型
+    segments = []
+    for i in range(len(boundaries) - 1):
+        start = boundaries[i]
+        end = boundaries[i + 1]
+        seg_duration = end - start
+
+        # 计算该段落的平均能量
+        start_idx = int(start * fps)
+        end_idx = min(int(end * fps), len(smoothed))
+        seg_energies = smoothed[start_idx:end_idx]
+        avg_energy = sum(seg_energies) / len(seg_energies) if seg_energies else 0
+
+        # 计算能量趋势
+        if len(seg_energies) >= 3:
+            first_third = sum(seg_energies[:len(seg_energies) // 3]) / (len(seg_energies) // 3)
+            last_third = sum(seg_energies[-len(seg_energies) // 3:]) / (len(seg_energies) // 3)
+            if last_third - first_third > 0.1:
+                trend = "rising"
+            elif first_third - last_third > 0.1:
+                trend = "falling"
+            else:
+                trend = "stable"
+        else:
+            trend = "stable"
+
+        # 识别段落类型
+        if i == 0:
+            # 第一段：前奏（能量较低或上升）
+            seg_type = "intro" if avg_energy < 0.5 or trend == "rising" else "verse"
+        elif i == len(boundaries) - 2:
+            # 最后一段：尾奏（能量下降或较低）
+            seg_type = "outro" if trend == "falling" or avg_energy < 0.4 else "chorus"
+        else:
+            # 中间段落
+            if avg_energy >= 0.6:
+                seg_type = "chorus"  # 高能量=副歌
+            elif trend in ("rising", "falling") and abs(avg_energy - 0.5) < 0.15:
+                seg_type = "bridge"  # 过渡段
+            else:
+                seg_type = "verse"  # 主歌
+
+        segments.append({
+            "type": seg_type,
+            "start": round(start, 2),
+            "end": round(end, 2),
+            "duration": round(seg_duration, 2),
+            "avg_energy": round(avg_energy, 3),
+            "energy_trend": trend,
+            "index": i,
+        })
+
+    return {
+        "segments": segments,
+        "total_duration": round(duration, 2),
+        "segment_count": len(segments),
+        "energy_curve": [round(e, 3) for e in smoothed],
+        "boundaries": [round(b, 2) for b in boundaries],
+    }
+
+
+def print_segment_analysis(result: Dict):
+    """打印BGM段落分析结果"""
+    logger.info("\n" + "=" * 60)
+    logger.info("BGM段落结构分析")
+    logger.info("=" * 60)
+    logger.info(f"总时长: {result.get('total_duration', 0):.1f}秒")
+    logger.info(f"段落数: {result.get('segment_count', 0)}")
+    logger.info(f"\n{'序号':<4} {'类型':<8} {'开始':<8} {'结束':<8} {'时长':<8} {'能量':<8} {'趋势':<8}")
+    logger.info("-" * 60)
+    for seg in result.get("segments", []):
+        type_names = {
+            "intro": "前奏", "verse": "主歌", "chorus": "副歌",
+            "bridge": "间奏", "outro": "尾奏",
+        }
+        type_cn = type_names.get(seg["type"], seg["type"])
+        trend_names = {"rising": "上升", "stable": "稳定", "falling": "下降"}
+        trend_cn = trend_names.get(seg["energy_trend"], seg["energy_trend"])
+        print(f"{seg['index']:<4} {type_cn:<8} {seg['start']:<8.1f} {seg['end']:<8.1f} "
+              f"{seg['duration']:<8.1f} {seg['avg_energy']:<8.2f} {trend_cn:<8}")
+    logger.info("=" * 60)
+
+
 if __name__ == "__main__":
-    print("=" * 60)
-    print("自动卡点模块 v2")
-    print("=" * 60)
-    print("\n功能:")
-    print("  - analyze_audio_energy: 分析音频能量")
-    print("  - detect_beats: 检测节拍点")
-    print("  - load_beats_from_draft: 从高版本草稿读取AI节拍")
-    print("  - classify_beat_intensity: 卡点强度分级(强/中/弱)")
-    print("  - generate_beat_timeline: 生成卡点时间线")
-    print("  - generate_multi_track_beat_edit: 多轨道卡点编排")
-    print("  - apply_beat_cuts: 应用卡点切分")
-    print("  - apply_beat_effects: 根据强度应用特效")
+    logger.info("=" * 60)
+    logger.info("自动卡点模块 v2")
+    logger.info("=" * 60)
+    logger.info("\n功能:")
+    logger.info("  - analyze_audio_energy: 分析音频能量")
+    logger.info("  - detect_beats: 检测节拍点")
+    logger.info("  - load_beats_from_draft: 从高版本草稿读取AI节拍")
+    logger.info("  - classify_beat_intensity: 卡点强度分级(强/中/弱)")
+    logger.info("  - generate_beat_timeline: 生成卡点时间线")
+    logger.info("  - generate_multi_track_beat_edit: 多轨道卡点编排")
+    logger.info("  - apply_beat_cuts: 应用卡点切分")
+    logger.info("  - apply_beat_effects: 根据强度应用特效")
 
     # 测试从高版本草稿读取beats
     draft_dir = r'D:\JianyingProDrafts\JianyingPro Drafts\卡点123'
     if os.path.exists(draft_dir):
-        print(f"\n--- 测试: 从卡点123读取beats ---")
+        logger.info(f"\n--- 测试: 从卡点123读取beats ---")
         beat_data = load_beats_from_draft(draft_dir)
-        print(f"  来源: {beat_data['source']}")
-        print(f"  BPM: {beat_data['bpm']}")
-        print(f"  节拍数: {beat_data['count']}")
+        logger.info(f"  来源: {beat_data['source']}")
+        logger.info(f"  BPM: {beat_data['bpm']}")
+        logger.info(f"  节拍数: {beat_data['count']}")
         if beat_data['beats']:
-            print(f"  前5个节拍: {[round(b, 2) for b in beat_data['beats'][:5]]}")
+            logger.info(f"  前5个节拍: {[round(b, 2) for b in beat_data['beats'][:5]]}")
 
         # 多轨道编排
         multi = generate_multi_track_beat_edit(beat_data, num_tracks=4)
-        print(f"\n  多轨道编排: {multi['total_segments']}个片段")
+        logger.info(f"\n  多轨道编排: {multi['total_segments']}个片段")
         for t in multi['tracks']:
-            print(f"    {t['name']}: {len(t['segments'])}个片段")
+            logger.info(f"    {t['name']}: {len(t['segments'])}个片段")
     else:
-        print(f"\n草稿不存在: {draft_dir}")
+        logger.info(f"\n草稿不存在: {draft_dir}")

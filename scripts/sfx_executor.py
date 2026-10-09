@@ -1,4 +1,4 @@
-﻿"""
+"""
 音效执行器（SFX Executor）
 三层音效生成架构：
   层1: TTS拟声词（砰/啪/嗖/叮咚，Qwen3-TTS，零延迟）
@@ -17,13 +17,15 @@ import sys
 import subprocess
 import json
 import uuid
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 # 添加脚本目录到路径
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
 from sound_library import SoundLibrary
+import logging
+logger = logging.getLogger(__name__)
 
 
 # 音效词典：动作/情绪 → 音效类型
@@ -86,7 +88,7 @@ class SFXExecutor:
 
     def __init__(self, work_dir: str = None, comfyui_url: str = "http://127.0.0.1:8188"):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "ai-video-editor-runtime", "sfx_output"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "ai-video-editor-runtime", "sfx_output"
         )
         os.makedirs(self.work_dir, exist_ok=True)
         self.library = SoundLibrary()
@@ -104,7 +106,7 @@ class SFXExecutor:
                 from tts_executor import TTSExecutor
                 self._tts_executor = TTSExecutor()
             except Exception as e:
-                print(f"  ⚠️ TTS执行器不可用: {e}")
+                logger.info(f"  ⚠️ TTS执行器不可用: {e}")
         return self._tts_executor
 
     def generate(self, sfx_type: str, emotion: str = "normal",
@@ -146,13 +148,13 @@ class SFXExecutor:
             result = self._gen_stable_audio_3(config, duration)
             if result:
                 return result
-            print(f"  ⚠️ 层3(AI生成)失败，降级到层2/层1")
+            logger.info(f"  ⚠️ 层3(AI生成)失败，降级到层2/层1")
 
         if layer >= 2 and "synth" in config:
             result = self._gen_ffmpeg_synth(config, duration)
             if result:
                 return result
-            print(f"  ⚠️ 层2(ffmpeg合成)失败，降级到层1")
+            logger.info(f"  ⚠️ 层2(ffmpeg合成)失败，降级到层1")
 
         if "tts" in config:
             result = self._gen_tts_onomatopoeia(config, emotion)
@@ -206,7 +208,7 @@ class SFXExecutor:
                     "from_cache": False, "sound_id": sound_id,
                 }
         except Exception as e:
-            print(f"  ⚠️ TTS拟声词生成失败: {e}")
+            logger.info(f"  ⚠️ TTS拟声词生成失败: {e}")
         return None
 
     def _gen_ffmpeg_synth(self, config: Dict, duration: float) -> Optional[Dict]:
@@ -252,7 +254,7 @@ class SFXExecutor:
                     "from_cache": False, "sound_id": sound_id,
                 }
         except Exception as e:
-            print(f"  ⚠️ ffmpeg合成失败: {e}")
+            logger.info(f"  ⚠️ ffmpeg合成失败: {e}")
         return None
 
     def _gen_stable_audio_3(self, config: Dict, duration: float) -> Optional[Dict]:
@@ -289,7 +291,7 @@ class SFXExecutor:
         output_path = os.path.join(self.work_dir, f"{sfx_type}_ai_{uuid.uuid4().hex[:6]}.flac")
 
         try:
-            print(f"  ⏳ Stable Audio 3生成中: {en_prompt} ({duration}s)")
+            logger.info(f"  ⏳ Stable Audio 3生成中: {en_prompt} ({duration}s)")
 
             # 构建ComfyUI工作流
             workflow = {
@@ -308,7 +310,7 @@ class SFXExecutor:
             resp = json.loads(urllib.request.urlopen(req, timeout=10).read())
             pid = resp.get('prompt_id')
             if not pid:
-                print(f"  ⚠️ ComfyUI未返回任务ID")
+                logger.info(f"  ⚠️ ComfyUI未返回任务ID")
                 return None
 
             # 等待完成（最多120秒）
@@ -325,11 +327,11 @@ class SFXExecutor:
                                 for a in out['audio']:
                                     output_file = a['filename']
                         break
-                except:
+                except Exception:
                     pass
 
             if not output_file:
-                print(f"  ⚠️ Stable Audio 3生成超时")
+                logger.info(f"  ⚠️ Stable Audio 3生成超时")
                 return None
 
             # 从ComfyUI output目录复制到工作目录
@@ -340,10 +342,10 @@ class SFXExecutor:
                 shutil.copy2(src_path, output_path)
                 try:
                     os.remove(src_path)
-                except:
+                except Exception:
                     pass
             else:
-                print(f"  ⚠️ 输出文件不存在: {src_path}")
+                logger.info(f"  ⚠️ 输出文件不存在: {src_path}")
                 return None
 
             if os.path.exists(output_path):
@@ -375,9 +377,9 @@ class SFXExecutor:
                     "from_cache": False, "sound_id": sound_id,
                 }
         except urllib.error.URLError as e:
-            print(f"  ⚠️ ComfyUI连接失败: {e}")
+            logger.info(f"  ⚠️ ComfyUI连接失败: {e}")
         except Exception as e:
-            print(f"  ⚠️ Stable Audio 3生成失败: {e}")
+            logger.info(f"  ⚠️ Stable Audio 3生成失败: {e}")
         return None
 
     def _get_audio_duration(self, path: str) -> float:
@@ -412,9 +414,9 @@ class SFXExecutor:
             if result:
                 result["start_time"] = sfx.get("start_time", 0)
                 results.append(result)
-                print(f"  ✅ 音效: {sfx_type} → {result['rating']}级 ({'缓存' if result['from_cache'] else '新生成'})")
+                logger.info(f"  ✅ 音效: {sfx_type} → {result['rating']}级 ({'缓存' if result['from_cache'] else '新生成'})")
             else:
-                print(f"  ❌ 音效生成失败: {sfx_type}")
+                logger.info(f"  ❌ 音效生成失败: {sfx_type}")
         return results
 
     def get_library_stats(self) -> Dict:
@@ -423,9 +425,10 @@ class SFXExecutor:
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("音效执行器测试")
-    print("=" * 60)
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.info("=" * 60)
+    logger.info("音效执行器测试")
+    logger.info("=" * 60)
 
     executor = SFXExecutor()
 
@@ -437,11 +440,11 @@ if __name__ == "__main__":
         {"type": "嗖", "emotion": "normal", "duration": 0.5},
     ]
 
-    print("\n生成测试音效:")
+    logger.info("\n生成测试音效:")
     results = executor.batch_generate(test_sfx)
 
-    print(f"\n生成 {len(results)}/{len(test_sfx)} 个音效")
+    logger.info(f"\n生成 {len(results)}/{len(test_sfx)} 个音效")
     for r in results:
-        print(f"  [{r['rating']}] {r['name']} ({r['source']}) - {r['duration']:.1f}s - {'缓存' if r['from_cache'] else '新生成'}")
+        logger.info(f"  [{r['rating']}] {r['name']} ({r['source']}) - {r['duration']:.1f}s - {'缓存' if r['from_cache'] else '新生成'}")
 
-    print(f"\n音效库统计: {json.dumps(executor.get_library_stats(), ensure_ascii=False, indent=2)}")
+    logger.info(f"\n音效库统计: {json.dumps(executor.get_library_stats(), ensure_ascii=False, indent=2)}")

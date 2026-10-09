@@ -13,7 +13,11 @@
     print(plan["effects"])       # 特效方案
     print(plan["subtitle_style"]) # 字幕风格
 """
-from typing import Dict, List, Optional
+
+import logging
+logger = logging.getLogger(__name__)
+
+from typing import Dict, List
 from dataclasses import dataclass, field
 
 
@@ -574,36 +578,36 @@ def main():
     """命令行测试"""
     mapper = EmotionCameraMapper()
 
-    print("=" * 60)
-    print("情绪-镜头映射引擎 v1.0")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("情绪-镜头映射引擎 v1.0")
+    logger.info("=" * 60)
 
     summary = mapper.get_emotion_summary()
-    print(f"\n支持情绪数: {summary['total_emotions']}")
-    print(f"情绪分类:")
+    logger.info(f"\n支持情绪数: {summary['total_emotions']}")
+    logger.info(f"情绪分类:")
     for cat, emotions in summary["categories"].items():
-        print(f"  {cat}: {len(emotions)}种")
+        logger.info(f"  {cat}: {len(emotions)}种")
 
-    print("\n=== 测试：紧张情绪（强度0.8）===")
+    logger.info("\n=== 测试：紧张情绪（强度0.8）===")
     plan = mapper.get_camera_plan("紧张", 0.8)
-    print(f"  运镜: {plan.camera_moves}")
-    print(f"  运镜强度: {plan.camera_intensity}")
-    print(f"  特效: {plan.effects}")
-    print(f"  字幕风格: {plan.subtitle_style}")
-    print(f"  字幕动画: {plan.subtitle_animation}")
-    print(f"  BGM情绪: {plan.bgm_mood}")
-    print(f"  调色: {plan.color_grading}")
+    logger.info(f"  运镜: {plan.camera_moves}")
+    logger.info(f"  运镜强度: {plan.camera_intensity}")
+    logger.info(f"  特效: {plan.effects}")
+    logger.info(f"  字幕风格: {plan.subtitle_style}")
+    logger.info(f"  字幕动画: {plan.subtitle_animation}")
+    logger.info(f"  BGM情绪: {plan.bgm_mood}")
+    logger.info(f"  调色: {plan.color_grading}")
 
-    print("\n=== 测试：生成镜头计划 ===")
+    logger.info("\n=== 测试：生成镜头计划 ===")
     segments = [
         {"start_time": 0, "duration": 5, "emotion": "平静", "intensity": 0.3},
         {"start_time": 5, "duration": 5, "emotion": "紧张", "intensity": 0.8},
         {"start_time": 10, "duration": 5, "emotion": "开心", "intensity": 0.9},
     ]
     shots = mapper.generate_shot_plan(segments, total_duration=15, num_shots=9)
-    print(f"  生成镜头数: {len(shots)}")
+    logger.info(f"  生成镜头数: {len(shots)}")
     for s in shots[:3]:
-        print(f"  [{s['index']}] {s['start_time']}s {s['emotion']} - {s['camera_move']} ({s['camera_intensity']})")
+        logger.info(f"  [{s['index']}] {s['start_time']}s {s['emotion']} - {s['camera_move']} ({s['camera_intensity']})")
 
 
 if __name__ == "__main__":

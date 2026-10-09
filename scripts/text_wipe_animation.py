@@ -13,18 +13,19 @@
 - jianying-editor（JyProject）
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Dict, Any, Tuple
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from mask_keyframe import apply_mask_keyframe, save_with_mask_keyframes
@@ -68,19 +69,19 @@ def create_text_wipe_animation(
     if not _MASK_KF_AVAILABLE:
         return {"status": "failed", "reason": "mask_keyframe模块不可用"}
 
-    print(f"\n{'='*60}")
-    print(f"羽化擦开文字动画特效")
-    print(f"{'='*60}")
-    print(f"文字: {text_main} + {text_sub}")
-    print(f"时长: {duration}s, 羽化: {feather}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"羽化擦开文字动画特效")
+    logger.info(f"{'='*60}")
+    logger.info(f"文字: {text_main} + {text_sub}")
+    logger.info(f"时长: {duration}s, 羽化: {feather}")
 
     # 1. 创建工程
-    print(f"\n[1/4] 创建工程: {project_name} ({width}x{height})")
+    logger.info(f"\n[1/4] 创建工程: {project_name} ({width}x{height})")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 2. 添加主文字（从左向右擦开）
-    print(f"[2/4] 添加主文字: {text_main}")
-    main_style = TextStyle(size=font_size, color=main_color)
+    logger.info(f"[2/4] 添加主文字: {text_main}")
+    main_style = draft.TextStyle(size=font_size, color=main_color)
     main_seg = project.add_text_simple(
         text=text_main,
         start_time="0s",
@@ -90,8 +91,8 @@ def create_text_wipe_animation(
     )
 
     # 3. 添加副文字（从右向左擦开）
-    print(f"[3/4] 添加副文字: {text_sub}")
-    sub_style = TextStyle(size=font_size, color=sub_color)
+    logger.info(f"[3/4] 添加副文字: {text_sub}")
+    sub_style = draft.TextStyle(size=font_size, color=sub_color)
     sub_seg = project.add_text_simple(
         text=text_sub,
         start_time="0s",
@@ -103,13 +104,13 @@ def create_text_wipe_animation(
     # 调整副文字位置（在主文字右侧）
     if sub_seg:
         sub_seg.add_keyframe(
-            KeyframeProperty.position_x,
+            draft.KeyframeProperty.position_x,
             "0s",
             0.3,
         )
 
     # 4. 设置蒙版擦开动画
-    print(f"[4/4] 设置蒙版擦开动画")
+    logger.info(f"[4/4] 设置蒙版擦开动画")
     wipe_duration = duration * 0.4  # 擦开时长占40%
 
     # 主文字：从左向右擦开
@@ -125,7 +126,7 @@ def create_text_wipe_animation(
         # 羽化
         apply_mask_keyframe(project, main_seg, "feather", 0, feather, "Line")
         apply_mask_keyframe(project, main_seg, "feather", int(wipe_duration * 1e6), feather, "Line")
-        print(f"  ✅ 主文字: 左→右擦开, {wipe_duration:.2f}s")
+        logger.info(f"  ✅ 主文字: 左→右擦开, {wipe_duration:.2f}s")
 
     # 副文字：从右向左擦开（延迟0.3秒）
     if sub_seg:
@@ -141,16 +142,16 @@ def create_text_wipe_animation(
         apply_mask_keyframe(project, sub_seg, "size_y", sub_end, 1.0, "Line")
         apply_mask_keyframe(project, sub_seg, "feather", sub_start, feather, "Line")
         apply_mask_keyframe(project, sub_seg, "feather", sub_end, feather, "Line")
-        print(f"  ✅ 副文字: 右→左擦开, 延迟{sub_delay}s, {wipe_duration:.2f}s")
+        logger.info(f"  ✅ 副文字: 右→左擦开, 延迟{sub_delay}s, {wipe_duration:.2f}s")
 
     # 保存工程并注入蒙版关键帧
     result = save_with_mask_keyframes(project, canvas_h=height)
     draft_path = result.get("draft_path", "")
 
-    print(f"\n✅ 羽化擦开文字动画创建完成!")
-    print(f"   工程: {project_name}")
-    print(f"   草稿: {draft_path}")
-    print(f"   蒙版关键帧: {result.get('mask_keyframes_injected', 0)}个")
+    logger.info(f"\n✅ 羽化擦开文字动画创建完成!")
+    logger.info(f"   工程: {project_name}")
+    logger.info(f"   草稿: {draft_path}")
+    logger.info(f"   蒙版关键帧: {result.get('mask_keyframes_injected', 0)}个")
 
     return {
         "status": "success",
@@ -196,7 +197,7 @@ def add_text_wipe_to_project(
     if not _MASK_KF_AVAILABLE:
         return {"status": "failed", "reason": "mask_keyframe模块不可用"}
 
-    main_style = TextStyle(size=font_size, color=main_color)
+    main_style = draft.TextStyle(size=font_size, color=main_color)
     main_seg = project.add_text_simple(
         text=text_main,
         start_time=f"{start_time:.2f}s",
@@ -207,7 +208,7 @@ def add_text_wipe_to_project(
 
     sub_seg = None
     if text_sub:
-        sub_style = TextStyle(size=font_size, color=sub_color)
+        sub_style = draft.TextStyle(size=font_size, color=sub_color)
         sub_seg = project.add_text_simple(
             text=text_sub,
             start_time=f"{start_time:.2f}s",
@@ -216,7 +217,7 @@ def add_text_wipe_to_project(
             style=sub_style,
         )
         if sub_seg:
-            sub_seg.add_keyframe(KeyframeProperty.position_x, f"{start_time:.2f}s", 0.3)
+            sub_seg.add_keyframe(draft.KeyframeProperty.position_x, f"{start_time:.2f}s", 0.3)
 
     wipe_duration = duration * 0.4
     start_us = int(start_time * 1e6)
@@ -253,21 +254,21 @@ def add_text_wipe_to_project(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("羽化擦开文字动画特效模块")
-    print("=" * 60)
-    print(f"\n蒙版关键帧工具: {'✅ 可用' if _MASK_KF_AVAILABLE else '❌ 不可用'}")
-    print("\n核心函数:")
-    print("  create_text_wipe_animation(project_name, text_main, text_sub, ...)")
-    print("  add_text_wipe_to_project(project, text_main, text_sub, ...)")
-    print("\n参数说明:")
-    print("  feather: 蒙版羽化强度 (0-1)，越大边缘越柔和")
-    print("  主文字从左向右擦开，副文字从右向左擦开（延迟0.3s）")
-    print("\n使用示例:")
-    print("  create_text_wipe_animation(")
-    print("    project_name='文字擦开测试',")
-    print("    text_main='组合',")
-    print("    text_sub='动画',")
-    print("    duration=3.0,")
-    print("    feather=0.3")
-    print("  )")
+    logger.info("=" * 60)
+    logger.info("羽化擦开文字动画特效模块")
+    logger.info("=" * 60)
+    logger.info(f"\n蒙版关键帧工具: {'✅ 可用' if _MASK_KF_AVAILABLE else '❌ 不可用'}")
+    logger.info("\n核心函数:")
+    logger.info("  create_text_wipe_animation(project_name, text_main, text_sub, ...)")
+    logger.info("  add_text_wipe_to_project(project, text_main, text_sub, ...)")
+    logger.info("\n参数说明:")
+    logger.info("  feather: 蒙版羽化强度 (0-1)，越大边缘越柔和")
+    logger.info("  主文字从左向右擦开，副文字从右向左擦开（延迟0.3s）")
+    logger.info("\n使用示例:")
+    logger.info("  create_text_wipe_animation(")
+    logger.info("    project_name='文字擦开测试',")
+    logger.info("    text_main='组合',")
+    logger.info("    text_sub='动画',")
+    logger.info("    duration=3.0,")
+    logger.info("    feather=0.3")
+    logger.info("  )")

@@ -1,4 +1,4 @@
-﻿"""
+"""
 剧本改写记忆与自学习引擎 v1.0
 
 核心功能：
@@ -12,11 +12,15 @@
 存储：JSON文件（rewrite_memory.json），自动保存
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
 import time
 import hashlib
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
@@ -94,7 +98,7 @@ class RewriteMemory:
     def __init__(self, memory_path: str = None):
         if memory_path is None:
             memory_path = os.path.join(
-                os.path.expanduser("~"), "Videos", "ai-video-editor-output", "rewrite_memory.json"
+                r"D:\DobaoWork_Project\Ai_Video_Editor", "rewrite_memory.json"
             )
         self.memory_path = memory_path
         self.records: List[RewriteRecord] = []
@@ -121,15 +125,15 @@ class RewriteMemory:
                 }
                 prefs_data = data.get("preferences", {})
                 self.preferences = UserPreferences(**prefs_data)
-                print(f"  📚 记忆加载: {len(self.records)}条记录, {len(self.characters)}个角色, {len(self.style_templates)}个模板")
+                logger.info(f"  📚 记忆加载: {len(self.records)}条记录, {len(self.characters)}个角色, {len(self.style_templates)}个模板")
             except Exception as e:
-                print(f"  ⚠️  记忆加载失败: {e}，使用空记忆")
+                logger.error(f"  ⚠️  记忆加载失败: {e}，使用空记忆")
                 self.records = []
                 self.characters = {}
                 self.style_templates = {}
                 self.preferences = UserPreferences()
         else:
-            print(f"  📚 新建记忆库: {self.memory_path}")
+            logger.info(f"  📚 新建记忆库: {self.memory_path}")
 
     def _save(self):
         """保存到JSON"""
@@ -487,30 +491,30 @@ class RewriteMemory:
     def print_report(self):
         """打印记忆库报告"""
         stats = self.get_stats()
-        print(f"\n{'='*60}")
-        print(f"改写记忆库报告")
-        print(f"{'='*60}")
-        print(f"  总记录: {stats['total_records']} (创意{stats['creative_count']} / 改编{stats['adapt_count']})")
-        print(f"  角色库: {stats['total_characters']}个")
-        print(f"  风格模板: {stats['total_templates']}个")
-        print(f"  平均质量: {stats['avg_quality']}/10")
-        print(f"  质量趋势: {stats['quality_trend']['trend']} (近期{stats['quality_trend']['recent_avg']} vs 早期{stats['quality_trend']['older_avg']})")
-        print(f"  反馈分布: {stats['feedback_distribution']}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"改写记忆库报告")
+        logger.info(f"{'='*60}")
+        logger.info(f"  总记录: {stats['total_records']} (创意{stats['creative_count']} / 改编{stats['adapt_count']})")
+        logger.info(f"  角色库: {stats['total_characters']}个")
+        logger.info(f"  风格模板: {stats['total_templates']}个")
+        logger.info(f"  平均质量: {stats['avg_quality']}/10")
+        logger.info(f"  质量趋势: {stats['quality_trend']['trend']} (近期{stats['quality_trend']['recent_avg']} vs 早期{stats['quality_trend']['older_avg']})")
+        logger.info(f"  反馈分布: {stats['feedback_distribution']}")
         if stats['top_styles']:
-            print(f"  常用风格: {', '.join(f'{s}({c}次)' for s, c in stats['top_styles'])}")
-        print(f"{'='*60}\n")
+            logger.info(f"  常用风格: {', '.join(f'{s}({c}次)' for s, c in stats['top_styles'])}")
+        logger.info(f"{'='*60}\n")
 
 
 if __name__ == "__main__":
     # 测试
-    print("="*60)
-    print("改写记忆与自学习引擎测试")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("改写记忆与自学习引擎测试")
+    logger.info("="*60)
 
     memory = RewriteMemory(memory_path=r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\test_rewrite_memory.json")
 
     # 记录几次改写
-    print("\n记录3次改写...")
+    logger.info("\n记录3次改写...")
     r1 = memory.record_rewrite(
         mode="creative",
         input_text="一个程序员深夜加班，代码自己活了过来",
@@ -519,7 +523,7 @@ if __name__ == "__main__":
         quality_score=7.0,
         quality_gates=[{"gate_id": "Q01", "passed": False}],
     )
-    print(f"  记录1: {r1.record_id}, 质量{r1.quality_score}")
+    logger.info(f"  记录1: {r1.record_id}, 质量{r1.quality_score}")
 
     r2 = memory.record_rewrite(
         mode="adapt",
@@ -531,7 +535,7 @@ if __name__ == "__main__":
         user_feedback="good",
         user_rating=5,
     )
-    print(f"  记录2: {r2.record_id}, 质量{r2.quality_score}, 反馈{r2.user_feedback}")
+    logger.info(f"  记录2: {r2.record_id}, 质量{r2.quality_score}, 反馈{r2.user_feedback}")
 
     r3 = memory.record_rewrite(
         mode="creative",
@@ -543,21 +547,21 @@ if __name__ == "__main__":
         user_feedback="bad",
         user_rating=2,
     )
-    print(f"  记录3: {r3.record_id}, 质量{r3.quality_score}, 反馈{r3.user_feedback}")
+    logger.info(f"  记录3: {r3.record_id}, 质量{r3.quality_score}, 反馈{r3.user_feedback}")
 
     # 相似检索
-    print("\n相似检索（输入：程序员深夜加班）...")
+    logger.info("\n相似检索（输入：程序员深夜加班）...")
     similar = memory.find_similar("程序员深夜加班", top_k=2)
     for s in similar:
-        print(f"  相似: {s.record_id} (质量{s.quality_score})")
+        logger.info(f"  相似: {s.record_id} (质量{s.quality_score})")
 
     # 改写建议
-    print("\n改写建议...")
+    logger.info("\n改写建议...")
     suggestion = memory.get_rewrite_suggestion("程序员深夜加班", mode="creative")
-    print(f"  推荐风格: {suggestion['recommended_style']}")
-    print(f"  质量目标: {suggestion['quality_target']}")
-    print(f"  相似案例: {len(suggestion['similar_cases'])}个")
-    print(f"  提示: {suggestion['tips']}")
+    logger.info(f"  推荐风格: {suggestion['recommended_style']}")
+    logger.info(f"  质量目标: {suggestion['quality_target']}")
+    logger.info(f"  相似案例: {len(suggestion['similar_cases'])}个")
+    logger.info(f"  提示: {suggestion['tips']}")
 
     # 报告
     memory.print_report()
@@ -567,4 +571,4 @@ if __name__ == "__main__":
     test_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\test_rewrite_memory.json"
     if os.path.exists(test_path):
         os.remove(test_path)
-        print("测试文件已清理")
+        logger.info("测试文件已清理")

@@ -1,4 +1,4 @@
-﻿"""
+"""
 P25执行器: TTS语音合成（Qwen3-TTS ComfyUI后端）
 通过ComfyUI API调用Qwen3-TTS生成高质量语音，支持9种内置音色+风格指令
 """
@@ -8,10 +8,16 @@ import json
 import time
 import uuid
 import urllib.request
+import logging
 from typing import Dict, Any, List, Optional
 
+logger = logging.getLogger(__name__)
 
-COMFYUI_URL = "http://127.0.0.1:8188"
+
+try:
+    from paths import COMFYUI_URL
+except ImportError:
+    COMFYUI_URL = "http://127.0.0.1:8188"
 
 # 角色→Qwen3-TTS内置音色映射
 CHARACTER_VOICE_MAP = {
@@ -85,7 +91,7 @@ COMFY_INPUT_DIR = r"D:\Ai\ComfyUI-aki-v3.2\ComfyUI\input"
 class TTSExecutor:
     def __init__(self, output_dir: str = None):
         self.output_dir = output_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output", "tts"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_output", "tts"
         )
         os.makedirs(self.output_dir, exist_ok=True)
         self._comfyui_available = None
@@ -192,14 +198,14 @@ class TTSExecutor:
     def _ensure_ref_audio(self, ref_audio_path: str) -> Optional[str]:
         """确保参考音频在ComfyUI input目录中，返回文件名"""
         if not os.path.exists(ref_audio_path):
-            print(f"  ⚠️  参考音频不存在: {ref_audio_path}")
+            logger.warning(f"  ⚠️  参考音频不存在: {ref_audio_path}")
             return None
         filename = os.path.basename(ref_audio_path)
         dest = os.path.join(COMFY_INPUT_DIR, filename)
         if not os.path.exists(dest):
             import shutil
             shutil.copy2(ref_audio_path, dest)
-            print(f"  📋 已复制参考音频到ComfyUI: {filename}")
+            logger.info(f"  📋 已复制参考音频到ComfyUI: {filename}")
         return filename
 
     def _submit_and_wait(self, prompt: Dict, timeout: int = 120) -> Optional[str]:
@@ -242,7 +248,7 @@ class TTSExecutor:
             urllib.request.urlretrieve(url, local_path)
             return os.path.exists(local_path) and os.path.getsize(local_path) > 0
         except Exception as e:
-            print(f"  ⚠️  下载失败: {e}")
+            logger.warning(f"  ⚠️  下载失败: {e}")
             return False
 
     def synthesize(self, text: str, character: str = "默认",
@@ -252,7 +258,7 @@ class TTSExecutor:
             return None
 
         if not self.check_comfyui():
-            print(f"  ⚠️  ComfyUI不可用，跳过TTS")
+            logger.warning(f"  ⚠️  ComfyUI不可用，跳过TTS")
             return None
 
         # 检查是否配置了克隆音色
@@ -267,14 +273,14 @@ class TTSExecutor:
 
         # 缓存：如果文件已存在且非空，直接复用
         if os.path.exists(output_file) and os.path.getsize(output_file) > 1000:
-            print(f"  ✅ TTS缓存: {character}({'clone' if clone_cfg else emotion}) - {text[:20]}...")
+            logger.info(f"  ✅ TTS缓存: {character}({'clone' if clone_cfg else emotion}) - {text[:20]}...")
             return output_file
 
         if clone_cfg:
             # ===== 克隆音色路径 =====
             ref_filename = self._ensure_ref_audio(clone_cfg["ref_audio"])
             if not ref_filename:
-                print(f"  ⚠️  克隆音色参考音频不可用，降级内置音色")
+                logger.warning(f"  ⚠️  克隆音色参考音频不可用，降级内置音色")
                 clone_cfg = None
             else:
                 prompt = self._build_clone_prompt(
@@ -284,9 +290,9 @@ class TTSExecutor:
                 if result and result[0]:
                     filename, subfolder = result
                     if self._download_audio(filename, subfolder, output_file):
-                        print(f"  ✅ TTS克隆: {character} - {text[:20]}...")
+                        logger.info(f"  ✅ TTS克隆: {character} - {text[:20]}...")
                         return output_file
-                print(f"  ⚠️  克隆音色生成失败，降级内置音色")
+                logger.warning(f"  ⚠️  克隆音色生成失败，降级内置音色")
                 clone_cfg = None
 
         if not clone_cfg:
@@ -299,20 +305,20 @@ class TTSExecutor:
             if result and result[0]:
                 filename, subfolder = result
                 if self._download_audio(filename, subfolder, output_file):
-                    print(f"  ✅ TTS: {character}({speaker}/{emotion}) - {text[:20]}...")
+                    logger.info(f"  ✅ TTS: {character}({speaker}/{emotion}) - {text[:20]}...")
                     return output_file
 
-        print(f"  ⚠️  TTS失败: {character} - {text[:20]}")
+        logger.warning(f"  ⚠️  TTS失败: {character} - {text[:20]}")
         return None
 
     def execute(self, tts_instructions: List[Dict]) -> Dict[str, Any]:
         """批量执行TTS"""
-        print(f"\n{'='*60}")
-        print(f"TTS执行器 (Qwen3-TTS): {len(tts_instructions)}条指令")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"TTS执行器 (Qwen3-TTS): {len(tts_instructions)}条指令")
+        logger.info(f"{'='*60}")
 
         if not self.check_comfyui():
-            print("  ❌ ComfyUI未运行，TTS全部跳过")
+            logger.error("  ❌ ComfyUI未运行，TTS全部跳过")
             return {"status": "failed", "total": len(tts_instructions),
                     "success": 0, "failed": len(tts_instructions),
                     "output_dir": self.output_dir, "results": []}
@@ -344,7 +350,7 @@ class TTSExecutor:
             })
 
         success_count = sum(1 for r in results if r["success"])
-        print(f"\n  完成: {success_count}成功 / {len(results)-success_count}失败")
+        logger.info(f"\n  完成: {success_count}成功 / {len(results)-success_count}失败")
         return {
             "status": "success" if success_count == len(results) else "partial",
             "total": len(results),
@@ -363,4 +369,4 @@ if __name__ == "__main__":
         {"text": "行，那我自己去拿！", "character": "顾客", "emotion": "得意"},
     ]
     result = executor.execute(test)
-    print(f"结果: {result['status']}")
+    logger.info(f"结果: {result['status']}")

@@ -13,19 +13,20 @@ API支持：
 - Pillow预生成拍立得边框
 - 入场动画
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import math
 import time
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Tuple
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -100,15 +101,15 @@ def create_polaroid_wall(
     polaroid_photos = []
     for i, photo in enumerate(photos):
         if not os.path.exists(photo):
-            print(f"  ⚠️  照片不存在，跳过: {photo}")
+            logger.warning(f"  ⚠️  照片不存在，跳过: {photo}")
             continue
         out_path = os.path.join(output_dir, f"polaroid_{i}.png")
         create_polaroid_frame(photo, out_path, border_color=border_color)
         polaroid_photos.append(out_path)
-        print(f"  ✅ 拍立得边框 [{i}]: {out_path}")
+        logger.info(f"  ✅ 拍立得边框 [{i}]: {out_path}")
 
     # 2. 创建工程
-    print(f"\n[1/3] 创建工程: {project_name} ({width}x{height})")
+    logger.info(f"\n[1/3] 创建工程: {project_name} ({width}x{height})")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 3. 添加背景
@@ -120,7 +121,7 @@ def create_polaroid_wall(
             duration=f"{total_duration}s",
             track_name="BG",
         )
-        print(f"  ✅ 背景: {background}")
+        logger.info(f"  ✅ 背景: {background}")
     else:
         # 黑色背景
         from PIL import Image
@@ -132,10 +133,10 @@ def create_polaroid_wall(
             duration=f"{total_duration}s",
             track_name="BG",
         )
-        print(f"  ✅ 黑色背景")
+        logger.info(f"  ✅ 黑色背景")
 
     # 4. 添加拍立得照片（画中画轨道，旋转错落）
-    print(f"\n[2/3] 添加 {len(polaroid_photos)} 张拍立得照片")
+    logger.info(f"\n[2/3] 添加 {len(polaroid_photos)} 张拍立得照片")
     n = len(polaroid_photos)
 
     # 预设位置和旋转角度（错落分布）
@@ -163,7 +164,7 @@ def create_polaroid_wall(
 
         if seg:
             # 设置旋转和位置
-            seg.clip_settings = ClipSettings(
+            seg.clip_settings = draft.ClipSettings(
                 transform_x=x,
                 transform_y=y,
                 rotation=rot,
@@ -172,29 +173,29 @@ def create_polaroid_wall(
             )
             # 入场动画：旋转+缩放
             seg.add_keyframe(
-                KeyframeProperty.uniform_scale,
+                draft.KeyframeProperty.uniform_scale,
                 0, 0.0,
-                **Keyframe.EASE_OUT,
+                **draft.Keyframe.EASE_OUT,
             )
             seg.add_keyframe(
-                KeyframeProperty.uniform_scale,
+                draft.KeyframeProperty.uniform_scale,
                 int(0.5 * 1_000_000), scale,
-                **Keyframe.EASE_OUT,
+                **draft.Keyframe.EASE_OUT,
             )
             seg.add_keyframe(
-                KeyframeProperty.rotation,
+                draft.KeyframeProperty.rotation,
                 0, rot - 30,
-                **Keyframe.EASE_OUT,
+                **draft.Keyframe.EASE_OUT,
             )
             seg.add_keyframe(
-                KeyframeProperty.rotation,
+                draft.KeyframeProperty.rotation,
                 int(0.5 * 1_000_000), rot,
-                **Keyframe.EASE_OUT,
+                **draft.Keyframe.EASE_OUT,
             )
-            print(f"  ✅ 照片 [{i}]: 位置({x:.2f},{y:.2f}) 旋转{rot:.0f}° 缩放{scale:.2f}")
+            logger.info(f"  ✅ 照片 [{i}]: 位置({x:.2f},{y:.2f}) 旋转{rot:.0f}° 缩放{scale:.2f}")
 
     # 5. 保存
-    print(f"\n[3/3] 保存工程")
+    logger.info(f"\n[3/3] 保存工程")
     project.save()
 
     return {
@@ -265,12 +266,12 @@ def add_polaroid_photos_to_project(
         )
 
         if seg:
-            seg.clip_settings = ClipSettings(
+            seg.clip_settings = draft.ClipSettings(
                 transform_x=x, transform_y=y,
                 rotation=rot, scale_x=scale, scale_y=scale,
             )
-            seg.add_keyframe(KeyframeProperty.uniform_scale, 0, 0.0, **Keyframe.EASE_OUT)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, int(0.5 * 1e6), scale, **Keyframe.EASE_OUT)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 0.0, **draft.Keyframe.EASE_OUT)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, int(0.5 * 1e6), scale, **draft.Keyframe.EASE_OUT)
             added.append({"photo": photo_path, "start": seg_start, "rotation": rot})
 
     return {
@@ -283,9 +284,9 @@ def add_polaroid_photos_to_project(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("拍立得照片墙特效")
-    print("=" * 60)
-    print("用法:")
-    print("  create_polaroid_wall('测试', ['photo1.jpg', 'photo2.jpg'])")
-    print("  add_polaroid_photos_to_project(project, ['photo1.jpg'])")
+    logger.info("=" * 60)
+    logger.info("拍立得照片墙特效")
+    logger.info("=" * 60)
+    logger.info("用法:")
+    logger.info("  create_polaroid_wall('测试', ['photo1.jpg', 'photo2.jpg'])")
+    logger.info("  add_polaroid_photos_to_project(project, ['photo1.jpg'])")

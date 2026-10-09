@@ -1,4 +1,4 @@
-﻿"""
+"""
 P25: 中央调度器（Central Orchestrator）
 导演引擎的第三模块：按依赖关系执行指令序列，调度各工具协同工作
 
@@ -17,9 +17,11 @@ import json
 import os
 import time
 import uuid
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Callable
 from dataclasses import dataclass, field, asdict
 from enum import Enum
+import logging
+logger = logging.getLogger(__name__)
 
 
 class TaskStatus(Enum):
@@ -39,6 +41,8 @@ class TaskType(Enum):
     TEXT = "text"                  # 文字排版
     COMFYUI = "comfyui"            # ComfyUI视频生成
     BLENDER = "blender"            # Blender动画
+    REMOTION = "remotion"          # Remotion代码驱动动画
+    PRPROJ = "prproj"              # Pr工程生成
     MEDIA = "media"                # 素材准备
     ASSET = "asset"                # 素材生成（角色图/场景图/道具图）
     COMPOSE = "compose"            # 最终合成
@@ -78,7 +82,7 @@ class CentralOrchestrator:
 
     def __init__(self, work_dir: str = None):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output",
+            r"D:\DobaoWork_Project\Ai_Video_Editor",
             "director_engine_output"
         )
         os.makedirs(self.work_dir, exist_ok=True)
@@ -101,6 +105,8 @@ class CentralOrchestrator:
         self.executors[TaskType.TEXT] = self._execute_text
         self.executors[TaskType.COMFYUI] = self._execute_comfyui
         self.executors[TaskType.BLENDER] = self._execute_blender
+        self.executors[TaskType.REMOTION] = self._execute_remotion
+        self.executors[TaskType.PRPROJ] = self._execute_prproj
         self.executors[TaskType.MEDIA] = self._execute_media
         self.executors[TaskType.ASSET] = self._execute_asset
         self.executors[TaskType.COMPOSE] = self._execute_compose
@@ -248,12 +254,12 @@ class CentralOrchestrator:
         Returns:
             ExecutionReport 执行报告
         """
-        print(f"\n{'='*60}")
-        print(f"中央调度器启动")
-        print(f"{'='*60}")
-        print(f"任务总数: {len(self.tasks)}")
-        print(f"工作目录: {self.work_dir}")
-        print(f"模式: {'模拟执行' if dry_run else '实际执行'}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"中央调度器启动")
+        logger.info(f"{'='*60}")
+        logger.info(f"任务总数: {len(self.tasks)}")
+        logger.info(f"工作目录: {self.work_dir}")
+        logger.info(f"模式: {'模拟执行' if dry_run else '实际执行'}")
 
         start_time = time.time()
         self.report = ExecutionReport(total_tasks=len(self.tasks))
@@ -272,7 +278,7 @@ class CentralOrchestrator:
                 # 检查是否有死锁
                 pending = [t for t in self.tasks if t.status == TaskStatus.PENDING]
                 if pending:
-                    print(f"⚠️ 检测到死锁，{len(pending)}个任务无法执行")
+                    logger.info(f"⚠️ 检测到死锁，{len(pending)}个任务无法执行")
                     for t in pending:
                         t.status = TaskStatus.FAILED
                         t.error = "依赖死锁"
@@ -297,16 +303,16 @@ class CentralOrchestrator:
         task.status = TaskStatus.RUNNING
         task.start_time = time.time()
 
-        print(f"\n▶ [{task.type.value}] {task.name}")
+        logger.info(f"\n▶ [{task.type.value}] {task.name}")
         if task.dependencies:
-            print(f"  依赖: {len(task.dependencies)}个任务")
+            logger.info(f"  依赖: {len(task.dependencies)}个任务")
 
         if dry_run:
             # 模拟执行
             time.sleep(0.1)
             task.status = TaskStatus.SUCCESS
             task.result = {"dry_run": True, "output": f"模拟输出_{task.id}"}
-            print(f"  ✅ 模拟完成")
+            logger.info(f"  ✅ 模拟完成")
         else:
             # 实际执行
             executor = self.executors.get(task.type)
@@ -315,21 +321,21 @@ class CentralOrchestrator:
                     result = executor(task)
                     task.status = TaskStatus.SUCCESS
                     task.result = result
-                    print(f"  ✅ 完成")
+                    logger.info(f"  ✅ 完成")
                 except Exception as e:
                     if task.retry_count < task.max_retries:
                         task.retry_count += 1
-                        print(f"  ⚠️ 失败，重试 {task.retry_count}/{task.max_retries}: {e}")
+                        logger.info(f"  ⚠️ 失败，重试 {task.retry_count}/{task.max_retries}: {e}")
                         task.status = TaskStatus.PENDING  # 重新排队
                         return
                     else:
                         task.status = TaskStatus.FAILED
                         task.error = str(e)
-                        print(f"  ❌ 失败（已重试{task.max_retries}次）: {e}")
+                        logger.info(f"  ❌ 失败（已重试{task.max_retries}次）: {e}")
             else:
                 task.status = TaskStatus.SKIPPED
                 task.error = "无执行器"
-                print(f"  ⏭️ 跳过（无执行器）")
+                logger.info(f"  ⏭️ 跳过（无执行器）")
 
         task.end_time = time.time()
 
@@ -357,15 +363,15 @@ class CentralOrchestrator:
 
     def _print_report(self):
         """打印执行报告"""
-        print(f"\n{'='*60}")
-        print(f"执行报告")
-        print(f"{'='*60}")
-        print(f"总任务: {self.report.total_tasks}")
-        print(f"✅ 成功: {self.report.success_count}")
-        print(f"❌ 失败: {self.report.failed_count}")
-        print(f"⏭️ 跳过: {self.report.skipped_count}")
-        print(f"总耗时: {self.report.total_duration:.2f}秒")
-        print(f"{'='*60}\n")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"执行报告")
+        logger.info(f"{'='*60}")
+        logger.info(f"总任务: {self.report.total_tasks}")
+        logger.info(f"✅ 成功: {self.report.success_count}")
+        logger.info(f"❌ 失败: {self.report.failed_count}")
+        logger.info(f"⏭️ 跳过: {self.report.skipped_count}")
+        logger.info(f"总耗时: {self.report.total_duration:.2f}秒")
+        logger.info(f"{'='*60}\n")
 
     def save_report(self, output_path: str = None):
         """保存执行报告"""
@@ -374,7 +380,7 @@ class CentralOrchestrator:
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(asdict(self.report), f, ensure_ascii=False, indent=2)
-        print(f"✅ 执行报告已保存: {output_path}")
+        logger.info(f"✅ 执行报告已保存: {output_path}")
         return output_path
 
     # ============ 默认执行器（占位实现） ============
@@ -411,9 +417,9 @@ class CentralOrchestrator:
                         "via_adapter": True,
                     }
                 else:
-                    print(f"  ⚠️  适配层TTS失败: {getattr(response, 'error', '未知')}，回退到直连")
+                    logger.info(f"  ⚠️  适配层TTS失败: {getattr(response, 'error', '未知')}，回退到直连")
         except Exception as e:
-            print(f"  ⚠️  适配层TTS初始化失败: {e}，回退到直连")
+            logger.info(f"  ⚠️  适配层TTS初始化失败: {e}，回退到直连")
 
         # 回退到直连TTSExecutor
         try:
@@ -522,9 +528,9 @@ class CentralOrchestrator:
                         "via_adapter": True,
                     }
                 else:
-                    print(f"  ⚠️  适配层SFX失败: {getattr(response, 'error', '未知')}，回退到直连")
+                    logger.info(f"  ⚠️  适配层SFX失败: {getattr(response, 'error', '未知')}，回退到直连")
         except Exception as e:
-            print(f"  ⚠️  适配层SFX初始化失败: {e}，回退到直连")
+            logger.info(f"  ⚠️  适配层SFX初始化失败: {e}，回退到直连")
 
         # 回退到直连SFXExecutor
         try:
@@ -585,7 +591,7 @@ class CentralOrchestrator:
             if not assets:
                 return {"success": True, "assets": [], "message": "无素材需要生成"}
 
-            print(f"\n[ComfyUI] 任务: {task.name}, 生成{len(assets)}个素材")
+            logger.info(f"\n[ComfyUI] 任务: {task.name}, 生成{len(assets)}个素材")
 
             results = executor.generate_batch(assets)
 
@@ -602,12 +608,86 @@ class CentralOrchestrator:
             }
 
         except Exception as e:
-            print(f"  ❌ ComfyUI执行器失败: {e}")
+            logger.info(f"  ❌ ComfyUI执行器失败: {e}")
             return {"success": False, "error": str(e), "assets": []}
 
     def _execute_blender(self, task: Task) -> Dict:
         """Blender执行器（占位）"""
         return {"animation_path": f"{self.work_dir}/animations/{task.id}.mp4"}
+
+    def _execute_remotion(self, task: Task) -> Dict:
+        """Remotion动画执行器：生成带透明背景的ProRes 4444视频"""
+        try:
+            from remotion_executor import RemotionExecutor
+        except ImportError:
+            return {"output_path": None, "error": "remotion_executor不可用", "skipped": True}
+
+        comp = task.params.get("comp", "ComponentTest")
+        duration = task.params.get("duration", 3)
+        fps = task.params.get("fps", 30)
+        output_name = task.params.get("output_name", f"remotion_{task.id}")
+
+        out_dir = os.path.join(self.work_dir, "remotion")
+        os.makedirs(out_dir, exist_ok=True)
+        output_path = os.path.join(out_dir, f"{output_name}.mov")
+
+        try:
+            executor = RemotionExecutor()
+            result = executor.render_animation(
+                comp=comp,
+                output=output_path,
+                duration=duration,
+                fps=fps,
+            )
+            if result.get("success"):
+                return {
+                    "output_path": result["output"],
+                    "alpha": result.get("alpha", True),
+                    "duration": duration,
+                    "fps": fps,
+                    "comp": comp,
+                }
+            else:
+                return {"output_path": None, "error": result.get("error", "渲染失败"), "skipped": True}
+        except Exception as e:
+            return {"output_path": None, "error": str(e), "skipped": True}
+
+    def _execute_prproj(self, task: Task) -> Dict:
+        """Pr工程执行器：基于模板生成可导入剪映的.prproj文件"""
+        try:
+            from prproj_executor import PrprojExecutor
+        except ImportError:
+            return {"output_path": None, "error": "prproj_executor不可用", "skipped": True}
+
+        template = task.params.get("template")
+        media_map = task.params.get("media_map")
+        replace_all = task.params.get("replace_all")
+        output_name = task.params.get("output_name", f"prproj_{task.id}")
+
+        out_dir = os.path.join(self.work_dir, "prproj")
+        os.makedirs(out_dir, exist_ok=True)
+        output_path = os.path.join(out_dir, f"{output_name}.prproj")
+
+        try:
+            executor = PrprojExecutor()
+            result = executor.create_project(
+                output=output_path,
+                template=template,
+                media_map=media_map,
+                replace_all=replace_all,
+            )
+            if result.get("success"):
+                return {
+                    "output_path": result["output"],
+                    "template": result["template"],
+                    "media_replaced": result.get("media_replaced", 0),
+                    "sequences": result.get("sequences", 0),
+                    "next_step": result.get("next_step", ""),
+                }
+            else:
+                return {"output_path": None, "error": result.get("error", "生成失败"), "skipped": True}
+        except Exception as e:
+            return {"output_path": None, "error": str(e), "skipped": True}
 
     def _execute_media(self, task: Task) -> Dict:
         """素材准备执行器（占位）"""
@@ -629,13 +709,13 @@ class CentralOrchestrator:
         os.makedirs(asset_dir, exist_ok=True)
         cached_path = os.path.join(asset_dir, f"{asset_type}_{name}.png")
         if os.path.exists(cached_path):
-            print(f"  ⏭️ 素材已存在，跳过: {os.path.basename(cached_path)}")
+            logger.info(f"  ⏭️ 素材已存在，跳过: {os.path.basename(cached_path)}")
             return {"output_path": cached_path, "asset_type": asset_type, "name": name, "from_cache": True}
 
         try:
             executor = ComfyUIAssetExecutor(work_dir=asset_dir)
             if not executor.is_available():
-                print(f"  ⚠️ ComfyUI不可用，使用占位图")
+                logger.info(f"  ⚠️ ComfyUI不可用，使用占位图")
                 return {"output_path": None, "asset_type": asset_type, "name": name, "placeholder": True}
 
             if asset_type == "character":
@@ -655,10 +735,10 @@ class CentralOrchestrator:
                     "height": result.get("height"),
                 }
             else:
-                print(f"  ⚠️ 素材生成失败: {result.get('error', '未知错误')}")
+                logger.info(f"  ⚠️ 素材生成失败: {result.get('error', '未知错误')}")
                 return {"output_path": None, "asset_type": asset_type, "name": name, "placeholder": True}
         except Exception as e:
-            print(f"  ⚠️ 素材生成异常: {e}")
+            logger.info(f"  ⚠️ 素材生成异常: {e}")
             return {"output_path": None, "asset_type": asset_type, "name": name, "placeholder": True, "error": str(e)}
 
     def _execute_compose(self, task: Task) -> Dict:
@@ -713,8 +793,15 @@ class CentralOrchestrator:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # 测试：用P24输出的指令序列做调度
-    instr_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\instruction_sequence.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_test")
+    instr_path = os.path.join(test_dir, "instruction_sequence.json")
 
     if os.path.exists(instr_path):
         with open(instr_path, "r", encoding="utf-8") as f:
@@ -723,13 +810,13 @@ if __name__ == "__main__":
         orchestrator = CentralOrchestrator()
         tasks = orchestrator.build_tasks_from_instructions(instructions)
 
-        print(f"\n构建任务DAG: {len(tasks)}个任务")
+        logger.info(f"\n构建任务DAG: {len(tasks)}个任务")
         for t in tasks:
             deps = f" (依赖:{len(t.dependencies)})" if t.dependencies else ""
-            print(f"  [{t.type.value}] {t.name}{deps}")
+            logger.info(f"  [{t.type.value}] {t.name}{deps}")
 
         # 模拟执行
         report = orchestrator.execute(dry_run=True)
         orchestrator.save_report()
     else:
-        print(f"❌ 指令序列文件不存在: {instr_path}")
+        logger.info(f"❌ 指令序列文件不存在: {instr_path}")

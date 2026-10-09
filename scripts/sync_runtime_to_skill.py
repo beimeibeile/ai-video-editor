@@ -1,13 +1,13 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-Skill/Runtime 模块自动同步脚本
-runtime为唯一代码源，自动同步runtime中的工具模块到skill目录
+Skill/Runtime 妯″潡鑷姩鍚屾鑴氭湰
+runtime涓哄敮涓€浠ｇ爜婧愶紝鑷姩鍚屾runtime涓殑宸ュ叿妯″潡鍒皊kill鐩綍
 
-用法:
-    python sync_runtime_to_skill.py              # 同步所有差异模块
-    python sync_runtime_to_skill.py --dry-run    # 仅显示差异，不同步
-    python sync_runtime_to_skill.py --module xxx # 同步指定模块
-    python sync_runtime_to_skill.py --list       # 列出所有可同步模块
+鐢ㄦ硶:
+    python sync_runtime_to_skill.py              # 鍚屾鎵€鏈夊樊寮傛ā鍧?
+    python sync_runtime_to_skill.py --dry-run    # 浠呮樉绀哄樊寮傦紝涓嶅悓姝?
+    python sync_runtime_to_skill.py --module xxx # 鍚屾鎸囧畾妯″潡
+    python sync_runtime_to_skill.py --list       # 鍒楀嚭鎵€鏈夊彲鍚屾妯″潡
 """
 import argparse
 import filecmp
@@ -17,8 +17,10 @@ import shutil
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
+import logging
+logger = logging.getLogger(__name__)
 
-# 路径配置
+# 璺緞閰嶇疆
 try:
     from paths import PATHS
     RUNTIME_DIR = Path(PATHS.get("runtime_dir", "")) / "scripts"
@@ -30,18 +32,18 @@ except ImportError:
         r"\.doubao\agent_mode\workspace\.user_skills\ai-video-editor\scripts"
     )
 
-# 不同步的文件（runtime特有，不应复制到skill）
+# 涓嶅悓姝ョ殑鏂囦欢锛坮untime鐗规湁锛屼笉搴斿鍒跺埌skill锛?
 EXCLUDE_FILES = {
-    "paths.py",           # runtime特有配置
-    "remotion_executor.py",  # runtime特有执行器
-    "test_smoke.py",     # 测试文件
-    "run.py",            # 入口点
+    "paths.py",           # runtime鐗规湁閰嶇疆
+    "remotion_executor.py",  # runtime鐗规湁鎵ц鍣?
+    "test_smoke.py",     # 娴嬭瘯鏂囦欢
+    "run.py",            # 鍏ュ彛鐐?
     "__init__.py",
 }
 
 
 def file_hash(path: Path) -> str:
-    """计算文件MD5哈希"""
+    """璁＄畻鏂囦欢MD5鍝堝笇"""
     h = hashlib.md5()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
@@ -50,11 +52,11 @@ def file_hash(path: Path) -> str:
 
 
 def scan_modules() -> Dict[str, Tuple[Path, Path]]:
-    """扫描runtime和skill中的同名模块"""
+    """鎵弿runtime鍜宻kill涓殑鍚屽悕妯″潡"""
     modules = {}
 
     if not RUNTIME_DIR.exists():
-        print(f"❌ runtime目录不存在: {RUNTIME_DIR}")
+        logger.info(f"鉂?runtime鐩綍涓嶅瓨鍦? {RUNTIME_DIR}")
         return modules
 
     runtime_files = {f.name: f for f in RUNTIME_DIR.glob("*.py")
@@ -73,7 +75,7 @@ def scan_modules() -> Dict[str, Tuple[Path, Path]]:
 
 
 def compare_modules(modules: Dict[str, Tuple[Path, Path]]) -> List[Dict]:
-    """比较模块差异"""
+    """姣旇緝妯″潡宸紓"""
     diffs = []
 
     for name, (rt_path, sk_path) in sorted(modules.items()):
@@ -98,7 +100,7 @@ def compare_modules(modules: Dict[str, Tuple[Path, Path]]) -> List[Dict]:
             sk_mtime = sk_path.stat().st_mtime
 
             if rt_hash != sk_hash:
-                # runtime更新
+                # runtime鏇存柊
                 rt_newer = rt_mtime > sk_mtime
                 diffs.append({
                     "name": name,
@@ -117,91 +119,91 @@ def compare_modules(modules: Dict[str, Tuple[Path, Path]]) -> List[Dict]:
 
 
 def sync_module(name: str, rt_path: Path, sk_path: Path, dry_run: bool = False) -> bool:
-    """同步单个模块"""
+    """鍚屾鍗曚釜妯″潡"""
     if dry_run:
         if sk_path is None:
-            print(f"  [新增] {name} -> {SKILL_DIR}")
+            logger.info(f"  [鏂板] {name} -> {SKILL_DIR}")
         else:
-            print(f"  [更新] {name} ({rt_path.stat().st_size}B -> skill)")
+            logger.info(f"  [鏇存柊] {name} ({rt_path.stat().st_size}B -> skill)")
         return True
 
     try:
         SKILL_DIR.mkdir(parents=True, exist_ok=True)
         target = SKILL_DIR / name
         shutil.copy2(rt_path, target)
-        print(f"  ✅ {name}")
+        logger.info(f"  鉁?{name}")
         return True
     except Exception as e:
-        print(f"  ❌ {name}: {e}")
+        logger.info(f"  鉂?{name}: {e}")
         return False
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Runtime→Skill模块同步")
-    parser.add_argument("--dry-run", action="store_true", help="仅显示差异")
-    parser.add_argument("--module", help="同步指定模块")
-    parser.add_argument("--list", action="store_true", help="列出所有模块")
-    parser.add_argument("--force", action="store_true", help="强制同步所有（即使runtime更旧）")
+    parser = argparse.ArgumentParser(description="Runtime鈫扴kill妯″潡鍚屾")
+    parser.add_argument("--dry-run", action="store_true", help="浠呮樉绀哄樊寮?)
+    parser.add_argument("--module", help="鍚屾鎸囧畾妯″潡")
+    parser.add_argument("--list", action="store_true", help="鍒楀嚭鎵€鏈夋ā鍧?)
+    parser.add_argument("--force", action="store_true", help="寮哄埗鍚屾鎵€鏈夛紙鍗充娇runtime鏇存棫锛?)
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("Runtime → Skill 模块同步")
-    print("=" * 60)
-    print(f"Runtime: {RUNTIME_DIR}")
-    print(f"Skill:   {SKILL_DIR}")
-    print()
+    logger.info("=" * 60)
+    logger.info("Runtime 鈫?Skill 妯″潡鍚屾")
+    logger.info("=" * 60)
+    logger.info(f"Runtime: {RUNTIME_DIR}")
+    logger.info(f"Skill:   {SKILL_DIR}")
+    logger.info("")
 
     modules = scan_modules()
-    print(f"扫描到 {len(modules)} 个可同步模块")
+    logger.info(f"鎵弿鍒?{len(modules)} 涓彲鍚屾妯″潡")
 
     if args.list:
-        print("\n模块列表:")
+        logger.info("\n妯″潡鍒楄〃:")
         for name, (rt, sk) in sorted(modules.items()):
-            status = "✅ 同步" if sk and file_hash(rt) == file_hash(sk) else \
-                     "🆕 新增" if sk is None else "🔄 差异"
-            print(f"  {status} {name}")
+            status = "鉁?鍚屾" if sk and file_hash(rt) == file_hash(sk) else \
+                     "馃啎 鏂板" if sk is None else "馃攧 宸紓"
+            logger.info(f"  {status} {name}")
         return
 
     diffs = compare_modules(modules)
 
     if not diffs:
-        print("\n✅ 所有模块已同步，无差异")
+        logger.info("\n鉁?鎵€鏈夋ā鍧楀凡鍚屾锛屾棤宸紓")
         return
 
-    # 过滤
+    # 杩囨护
     if args.module:
         diffs = [d for d in diffs if d["name"] == args.module]
         if not diffs:
-            print(f"\n未找到模块: {args.module}")
+            logger.info(f"\n鏈壘鍒版ā鍧? {args.module}")
             return
 
     if not args.force:
-        # 只同步runtime更新的或新增的
+        # 鍙悓姝untime鏇存柊鐨勬垨鏂板鐨?
         to_sync = [d for d in diffs if d["status"] in ("new", "outdated")]
         skipped = [d for d in diffs if d["status"] == "runtime_older"]
     else:
         to_sync = diffs
         skipped = []
 
-    print(f"\n差异: {len(diffs)}个 (同步{len(to_sync)}个, 跳过{len(skipped)}个)")
-    print("-" * 60)
+    logger.info(f"\n宸紓: {len(diffs)}涓?(鍚屾{len(to_sync)}涓? 璺宠繃{len(skipped)}涓?")
+    logger.info("-" * 60)
 
     for d in diffs:
         if d["status"] == "new":
-            print(f"  🆕 {d['name']} (新增, {d['runtime_size']}B)")
+            logger.info(f"  馃啎 {d['name']} (鏂板, {d['runtime_size']}B)")
         elif d["status"] == "outdated":
-            print(f"  🔄 {d['name']} (skill过期, 差异{d.get('size_diff', 0):+d}B)")
+            logger.info(f"  馃攧 {d['name']} (skill杩囨湡, 宸紓{d.get('size_diff', 0):+d}B)")
         elif d["status"] == "runtime_older":
-            print(f"  ⏭️  {d['name']} (runtime较旧, 跳过)")
+            logger.info(f"  鈴笍  {d['name']} (runtime杈冩棫, 璺宠繃)")
 
     if skipped and not args.force:
-        print(f"\n⚠️  {len(skipped)}个模块runtime版本较旧，使用--force强制覆盖")
+        logger.info(f"\n鈿狅笍  {len(skipped)}涓ā鍧梤untime鐗堟湰杈冩棫锛屼娇鐢?-force寮哄埗瑕嗙洊")
 
     if args.dry_run:
-        print(f"\n[dry-run] 将同步 {len(to_sync)} 个模块")
+        logger.info(f"\n[dry-run] 灏嗗悓姝?{len(to_sync)} 涓ā鍧?)
         return
 
-    print(f"\n同步中...")
+    logger.info(f"\n鍚屾涓?..")
     success = 0
     for d in to_sync:
         if sync_module(d["name"], Path(d["runtime"]),
@@ -209,8 +211,9 @@ def main():
                        dry_run=False):
             success += 1
 
-    print(f"\n✅ 完成: {success}/{len(to_sync)} 个模块已同步")
+    logger.info(f"\n鉁?瀹屾垚: {success}/{len(to_sync)} 涓ā鍧楀凡鍚屾")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     main()

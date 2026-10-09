@@ -12,17 +12,18 @@ API支持：
 - 剪映原生文字轨道，多轨道叠加
 - 支持入场动画
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -142,9 +143,9 @@ def add_text_layout(
             duration=f"{col_duration:.2f}s",
             font_size=size,
             color_rgb=color,
-            style=TextStyle(size=size, bold=True),
-            border=TextBorder(color=(0, 0, 0), width=30),
-            clip_settings=ClipSettings(
+            style=draft.TextStyle(size=size, bold=True),
+            border=draft.TextBorder(color=(0, 0, 0), width=30),
+            clip_settings=draft.ClipSettings(
                 transform_x=x_off,
                 transform_y=y_off,
             ),
@@ -218,8 +219,8 @@ def create_text_layout_demo(
     )
 
     project.save()
-    print(f"✅ 文字排版演示工程创建完成: {project_name}")
-    print(f"   预设数: {len(results)}, 总时长: {current_time:.1f}s")
+    logger.info(f"✅ 文字排版演示工程创建完成: {project_name}")
+    logger.info(f"   预设数: {len(results)}, 总时长: {current_time:.1f}s")
 
     return {
         "project_name": project_name,
@@ -229,12 +230,12 @@ def create_text_layout_demo(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("文字排版预设特效")
-    print("=" * 60)
-    print("可用预设:")
+    logger.info("=" * 60)
+    logger.info("文字排版预设特效")
+    logger.info("=" * 60)
+    logger.info("可用预设:")
     for name, cfg in LAYOUT_PRESETS.items():
-        print(f"  - {name}: {cfg['name']} - {cfg['description']}")
-    print("\n用法:")
-    print("  add_text_layout(project, ['文字1', '文字2'], layout='vertical_stagger')")
-    print("  create_text_layout_demo()")
+        logger.info(f"  - {name}: {cfg['name']} - {cfg['description']}")
+    logger.info("\n用法:")
+    logger.info("  add_text_layout(project, ['文字1', '文字2'], layout='vertical_stagger')")
+    logger.info("  create_text_layout_demo()")

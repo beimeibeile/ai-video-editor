@@ -1,9 +1,13 @@
-﻿"""
+"""
 创意字幕增强模块
 - 半透明字幕条（背景条+文字多轨道叠加）
 - 动态发光文字（多层文字叠加模拟发光）
 - 文字动画组合（入场+循环+出场）
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import subprocess
@@ -11,14 +15,14 @@ import subprocess
 JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
-from adapters.jianying_adapter import KeyframeProperty as KP, TextShadow
+import pyJianYingDraft as draft
+from pyJianYingDraft import KeyframeProperty as KP
 
 
-FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
+try:
+    from paths import FFMPEG
+except ImportError:
+    FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
 
 
 def create_subtitle_bar(width: int = 1080, height: int = 120,
@@ -39,7 +43,7 @@ def create_subtitle_bar(width: int = 1080, height: int = 120,
     """
     if output_path is None:
         output_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "..",
-                                    "Videos", "ai-video-editor-output",
+                                    r"D:\DobaoWork_Project\Ai_Video_Editor",
                                     "material", "Reuse materials", "subtitle_bar.png")
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -109,14 +113,14 @@ def add_subtitle_with_bar(project, text: str, start_time: str, duration: str,
         )
         if bar_seg:
             # 设置背景条位置和缩放
-            bar_seg.clip_settings = ClipSettings(
+            bar_seg.clip_settings = draft.ClipSettings(
                 transform_y=y_position,
                 scale_x=1.0,
                 scale_y=bar_height / 1920 * 2,  # 适配画布高度
             )
             result["bar_segment"] = bar_seg
     except Exception as e:
-        print(f"  ⚠️  背景条添加失败: {e}")
+        logger.error(f"  ⚠️  背景条添加失败: {e}")
 
     # 2. 文字轨道
     try:
@@ -126,16 +130,16 @@ def add_subtitle_with_bar(project, text: str, start_time: str, duration: str,
             duration=duration,
             font_size=font_size,
             color_rgb=text_color,
-            style=TextStyle(size=font_size, bold=True),
-            border=TextBorder(color=(0, 0, 0), width=30),
-            clip_settings=ClipSettings(transform_y=y_position),
+            style=draft.TextStyle(size=font_size, bold=True),
+            border=draft.TextBorder(color=(0, 0, 0), width=30),
+            clip_settings=draft.ClipSettings(transform_y=y_position),
             anim_in=anim_in,
             anim_loop=anim_loop,
             track_name=f"{track_prefix}_Text",
         )
         result["text_segment"] = text_seg
     except Exception as e:
-        print(f"  ⚠️  文字添加失败: {e}")
+        logger.error(f"  ⚠️  文字添加失败: {e}")
 
     return result
 
@@ -183,8 +187,8 @@ def add_glowing_text(project, text: str, start_time: str, duration: str,
                 duration=duration,
                 font_size=layer_size,
                 color_rgb=glow_color,
-                style=TextStyle(size=layer_size, bold=True),
-                clip_settings=ClipSettings(
+                style=draft.TextStyle(size=layer_size, bold=True),
+                clip_settings=draft.ClipSettings(
                     transform_y=y_position,
                     alpha=min(layer_alpha, 0.5),
                 ),
@@ -203,10 +207,10 @@ def add_glowing_text(project, text: str, start_time: str, duration: str,
             duration=duration,
             font_size=font_size,
             color_rgb=core_color,
-            style=TextStyle(size=font_size, bold=True),
-            border=TextBorder(color=(0, 0, 0), width=40),
-            shadow=TextShadow(color=glow_color, distance=10, diffuse=20),
-            clip_settings=ClipSettings(transform_y=y_position),
+            style=draft.TextStyle(size=font_size, bold=True),
+            border=draft.TextBorder(color=(0, 0, 0), width=40),
+            shadow=draft.TextShadow(color=glow_color, distance=10, diffuse=20),
+            clip_settings=draft.ClipSettings(transform_y=y_position),
             anim_in=anim_in,
             anim_loop=anim_loop,
             track_name="GlowCore",
@@ -214,7 +218,7 @@ def add_glowing_text(project, text: str, start_time: str, duration: str,
         if core_seg:
             segments.append(core_seg)
     except Exception as e:
-        print(f"  ⚠️  核心文字添加失败: {e}")
+        logger.error(f"  ⚠️  核心文字添加失败: {e}")
 
     return segments
 
@@ -282,10 +286,10 @@ def add_styled_subtitle(project, text: str, start_time: str, duration: str,
 
 
 if __name__ == "__main__":
-    print("创意字幕增强模块已加载")
-    print("可用风格: news / cinema / vlog / kawaii / tech")
-    print("功能:")
-    print("  - add_subtitle_with_bar: 半透明字幕条")
-    print("  - add_glowing_text: 动态发光文字")
-    print("  - add_styled_subtitle: 预设风格字幕")
-    print("  - create_subtitle_bar: 生成字幕条PNG")
+    logger.info("创意字幕增强模块已加载")
+    logger.info("可用风格: news / cinema / vlog / kawaii / tech")
+    logger.info("功能:")
+    logger.info("  - add_subtitle_with_bar: 半透明字幕条")
+    logger.info("  - add_glowing_text: 动态发光文字")
+    logger.info("  - add_styled_subtitle: 预设风格字幕")
+    logger.info("  - create_subtitle_bar: 生成字幕条PNG")

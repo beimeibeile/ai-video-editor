@@ -1,0 +1,365 @@
+{
+  "script_title": "做一条探店视频，介绍一家藏在巷子里的火锅... | 探店视频",
+  "total_duration": 60.0,
+  "bgm_mood": "轻快电子/城市流行",
+  "notes": "基于剧本自动调度，共5幕13镜头",
+  "shots": [
+    {
+      "shot_id": "act1_hook_s1",
+      "start_time": 0.0,
+      "duration": 1.5,
+      "transition_in": "硬切",
+      "transition_out": "快切",
+      "track_hint": "bg",
+      "effects": [
+        {
+          "name": "蒙版快闪",
+          "type": "transition",
+          "params": {},
+          "confidence": 0.9
+        },
+        {
+          "name": "发光轮廓",
+          "type": "visual",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "高对比度特写画面，冲击力强",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act1_hook_s2",
+      "start_time": 1.5,
+      "duration": 7.5,
+      "transition_in": "硬切",
+      "transition_out": "快切",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "字幕条动画",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "bg",
+          "source": "auto_bg_钩子",
+          "params": {
+            "style": "gradient"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene1_s1",
+      "start_time": 9.0,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "bg",
+      "effects": [
+        {
+          "name": "背景滑入",
+          "type": "transition",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene1_s2",
+      "start_time": 13.67,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "字幕条动画",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene1_s3",
+      "start_time": 18.34,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "overlay+bg",
+      "effects": [
+        {
+          "name": "人物介绍卡",
+          "type": "overlay",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene2_s1",
+      "start_time": 23.0,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "字幕条动画",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene2_s2",
+      "start_time": 27.67,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "overlay+bg",
+      "effects": [
+        {
+          "name": "人物介绍卡",
+          "type": "overlay",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene2_s3",
+      "start_time": 32.34,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "快切",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "文字擦开",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene3_s1",
+      "start_time": 37.0,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "淡入淡出",
+      "track_hint": "overlay+bg",
+      "effects": [
+        {
+          "name": "人物介绍卡",
+          "type": "overlay",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene3_s2",
+      "start_time": 41.67,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "淡入淡出",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "文字擦开",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act2_scene3_s3",
+      "start_time": 46.34,
+      "duration": 4.67,
+      "transition_in": "快切",
+      "transition_out": "淡入淡出",
+      "track_hint": "bg",
+      "effects": [
+        {
+          "name": "背景滑入",
+          "type": "transition",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "ai_generated",
+          "source": "与做一条探店视频，介绍一家藏在巷子里的火锅店相关的高质量画面",
+          "params": {
+            "width": 1080,
+            "height": 1920,
+            "model": "sd_xl_turbo"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act3_cta_s1",
+      "start_time": 51.0,
+      "duration": 4.5,
+      "transition_in": "淡入淡出",
+      "transition_out": "淡出",
+      "track_hint": "text+bg",
+      "effects": [
+        {
+          "name": "文字擦开",
+          "type": "text",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "bg",
+          "source": "auto_bg_收尾",
+          "params": {
+            "style": "gradient"
+          }
+        }
+      ]
+    },
+    {
+      "shot_id": "act3_cta_s2",
+      "start_time": 55.5,
+      "duration": 4.5,
+      "transition_in": "淡入淡出",
+      "transition_out": "淡出",
+      "track_hint": "bg",
+      "effects": [
+        {
+          "name": "蒙版快闪",
+          "type": "transition",
+          "params": {},
+          "confidence": 0.9
+        },
+        {
+          "name": "发光轮廓",
+          "type": "visual",
+          "params": {},
+          "confidence": 0.9
+        }
+      ],
+      "materials": [
+        {
+          "type": "bg",
+          "source": "auto_bg_收尾",
+          "params": {
+            "style": "gradient"
+          }
+        }
+      ]
+    }
+  ]
+}

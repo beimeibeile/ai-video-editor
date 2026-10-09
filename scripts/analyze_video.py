@@ -9,6 +9,10 @@ AI短视频剪辑 - 模式B：视频分析脚本
 依赖：ffmpeg/ffprobe, Python 3.11+
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import json
@@ -206,7 +210,7 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.video):
-        print(f"❌ 视频不存在: {args.video}")
+        logger.info(f"❌ 视频不存在: {args.video}")
         sys.exit(1)
 
     os.makedirs(args.output, exist_ok=True)
@@ -214,23 +218,23 @@ def main():
     os.makedirs(frames_dir, exist_ok=True)
 
     # 1. 基础信息
-    print("[1/4] 探测基础信息...")
+    logger.info("[1/4] 探测基础信息...")
     info = probe_basic(args.video)
-    print(f"  时长: {info.get('duration', 0):.2f}s, 分辨率: {info.get('width')}x{info.get('height')}")
+    logger.info(f"  时长: {info.get('duration', 0):.2f}s, 分辨率: {info.get('width')}x{info.get('height')}")
 
     # 2. 镜头分割
-    print(f"[2/4] 镜头分割（阈值={args.threshold}）...")
+    logger.info(f"[2/4] 镜头分割（阈值={args.threshold}）...")
     scene_times = detect_scenes(args.video, args.threshold)
-    print(f"  检测到 {len(scene_times)} 个场景切换点")
+    logger.info(f"  检测到 {len(scene_times)} 个场景切换点")
 
     # 3. 抽帧
-    print("[3/4] 抽取关键帧...")
+    logger.info("[3/4] 抽取关键帧...")
     duration = info.get("duration", 10)
     shots = extract_shots(args.video, scene_times, duration, frames_dir)
-    print(f"  生成 {len(shots)} 个镜头")
+    logger.info(f"  生成 {len(shots)} 个镜头")
 
     # 4. 音频信息
-    print("[4/4] 探测音频信息...")
+    logger.info("[4/4] 探测音频信息...")
     audio_info = extract_audio_info(args.video)
 
     # 生成报告
@@ -242,11 +246,11 @@ def main():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump({"info": info, "shots": shots, "audio": audio_info}, f, ensure_ascii=False, indent=2)
 
-    print(f"\n✅ 分析完成!")
-    print(f"  报告: {report_path}")
-    print(f"  JSON: {json_path}")
-    print(f"  抽帧: {frames_dir}/")
-    print(f"\n下一步: Read 每个抽帧图片，填写分析报告中的景别/主体/运镜等维度，然后生成仿制分镜表。")
+    logger.info(f"\n✅ 分析完成!")
+    logger.info(f"  报告: {report_path}")
+    logger.info(f"  JSON: {json_path}")
+    logger.info(f"  抽帧: {frames_dir}/")
+    logger.info(f"\n下一步: Read 每个抽帧图片，填写分析报告中的景别/主体/运镜等维度，然后生成仿制分镜表。")
 
 
 if __name__ == "__main__":

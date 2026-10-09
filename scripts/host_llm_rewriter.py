@@ -11,6 +11,10 @@
 集成到script_rewriter中，LLM可用时自动启用，不可用时降级到规则增强。
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import json
@@ -59,7 +63,7 @@ class HostLLMRewriter:
         if rewriter.available:
             result = rewriter.rewrite_style(script, target_style="悬疑")
         else:
-            print("LLM不可用，使用规则增强")
+            logger.info("LLM不可用，使用规则增强")
     """
 
     # 改写策略提示词模板
@@ -209,11 +213,11 @@ class HostLLMRewriter:
                 self.available = self.llm_adapter.is_available
                 self.model = getattr(self.llm_adapter, 'model', '') or getattr(self.llm_adapter._status, 'model', '')
                 if self.available:
-                    print(f"  🤖 适配层LLM可用: {self.model}")
+                    logger.info(f"  🤖 适配层LLM可用: {self.model}")
                 else:
-                    print(f"  ⚠️  适配层LLM不可用，尝试直接初始化LLM客户端")
+                    logger.info(f"  ⚠️  适配层LLM不可用，尝试直接初始化LLM客户端")
             except Exception as e:
-                print(f"  ⚠️  适配层LLM初始化失败: {e}，尝试直接初始化LLM客户端")
+                logger.error(f"  ⚠️  适配层LLM初始化失败: {e}，尝试直接初始化LLM客户端")
 
         # 适配层不可用时，回退到直接初始化LLM客户端
         if not self.available and self.llm_client is None:
@@ -221,16 +225,16 @@ class HostLLMRewriter:
                 from llm_client import LLMClient
                 self.llm_client = LLMClient()
                 if not self.llm_client.is_available:
-                    print(f"  ⚠️  真实LLM不可用，使用模拟LLM客户端（框架测试模式）")
+                    logger.info(f"  ⚠️  真实LLM不可用，使用模拟LLM客户端（框架测试模式）")
                     from mock_llm_client import MockLLMClient
                     self.llm_client = MockLLMClient()
             except Exception as e:
-                print(f"  ⚠️  LLM客户端初始化失败: {e}，使用模拟LLM客户端")
+                logger.error(f"  ⚠️  LLM客户端初始化失败: {e}，使用模拟LLM客户端")
                 try:
                     from mock_llm_client import MockLLMClient
                     self.llm_client = MockLLMClient()
                 except Exception as e2:
-                    print(f"  ⚠️  模拟LLM客户端也加载失败: {e2}")
+                    logger.error(f"  ⚠️  模拟LLM客户端也加载失败: {e2}")
 
         # 检测LLM可用性
         if self.llm_client:
@@ -245,11 +249,11 @@ class HostLLMRewriter:
                 self.available = False
 
         if self.available and self.llm_adapter:
-            print(f"  🤖 宿主LLM可用（适配层）: {self.model}")
+            logger.info(f"  🤖 宿主LLM可用（适配层）: {self.model}")
         elif self.available:
-            print(f"  🤖 宿主LLM可用（直连）: {self.model}")
+            logger.info(f"  🤖 宿主LLM可用（直连）: {self.model}")
         else:
-            print(f"  ⚠️  宿主LLM不可用，深度改写将降级为规则增强")
+            logger.info(f"  ⚠️  宿主LLM不可用，深度改写将降级为规则增强")
 
     def _call_llm(self, prompt: str, system_prompt: str = "你是专业短剧编剧。") -> Optional[str]:
         """调用LLM（优先使用适配层，回退到直连）"""
@@ -269,9 +273,9 @@ class HostLLMRewriter:
                     return response.content
                 else:
                     error = getattr(response, 'error', '未知错误') if response else '无响应'
-                    print(f"  ⚠️  适配层LLM调用失败: {error}，回退到直连")
+                    logger.error(f"  ⚠️  适配层LLM调用失败: {error}，回退到直连")
             except Exception as e:
-                print(f"  ⚠️  适配层LLM调用异常: {e}，回退到直连")
+                logger.info(f"  ⚠️  适配层LLM调用异常: {e}，回退到直连")
 
         # 回退到直连LLM客户端
         if self.llm_client:
@@ -284,7 +288,7 @@ class HostLLMRewriter:
                 )
                 return response
             except Exception as e:
-                print(f"  ⚠️  LLM调用失败: {e}")
+                logger.error(f"  ⚠️  LLM调用失败: {e}")
                 return None
 
         return None
@@ -612,13 +616,13 @@ class HostLLMRewriter:
 
         all_suggestions = []
         for step_name, step_func in steps:
-            print(f"  [LLM改写] {step_name}...")
+            logger.info(f"  [LLM改写] {step_name}...")
             step_result = step_func(current_script)
             if step_result.success and step_result.rewritten_script:
                 current_script = step_result.rewritten_script
                 all_suggestions.extend(step_result.suggestions)
             else:
-                print(f"    ⚠️  {step_name}跳过: {step_result.error}")
+                logger.error(f"    ⚠️  {step_name}跳过: {step_result.error}")
 
         result.success = True
         result.rewritten_script = current_script
@@ -629,9 +633,9 @@ class HostLLMRewriter:
 
 
 if __name__ == "__main__":
-    print("="*60)
-    print("宿主LLM深度改写测试")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("宿主LLM深度改写测试")
+    logger.info("="*60)
 
     rewriter = HostLLMRewriter()
 
@@ -649,11 +653,11 @@ if __name__ == "__main__":
         }
 
         result = rewriter.deep_rewrite(test_script, style="悬疑", duration=15.0)
-        print(f"\n改写成功: {result.success}")
-        print(f"改写类型: {result.rewrite_type}")
-        print(f"建议数: {len(result.suggestions)}")
+        logger.info(f"\n改写成功: {result.success}")
+        logger.info(f"改写类型: {result.rewrite_type}")
+        logger.info(f"建议数: {len(result.suggestions)}")
         if result.rewritten_script:
-            print(f"改写后文本: {result.rewritten_script.get('llm_rewritten_text', '')[:200]}")
+            logger.info(f"改写后文本: {result.rewritten_script.get('llm_rewritten_text', '')[:200]}")
     else:
-        print("LLM不可用，跳过测试")
-        print("提示：配置OPENAI_API_KEY或DOUBAO_API_KEY环境变量后可启用深度改写")
+        logger.warning("LLM不可用，跳过测试")
+        logger.info("提示：配置OPENAI_API_KEY或DOUBAO_API_KEY环境变量后可启用深度改写")

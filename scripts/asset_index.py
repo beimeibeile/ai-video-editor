@@ -15,11 +15,19 @@ import sys
 import json
 import hashlib
 from datetime import datetime
-from typing import List, Dict, Optional, Any, Tuple
+from typing import List, Dict, Optional
+import logging
+logger = logging.getLogger(__name__)
 
 # ffmpeg/ffprobe路径
-FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
-FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
+try:
+    from paths import FFPROBE
+except ImportError:
+    FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
+try:
+    from paths import FFMPEG
+except ImportError:
+    FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
 
 # 支持的文件类型
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff'}
@@ -485,10 +493,10 @@ def build_index(library_root: str, force: bool = False,
     idx = AssetIndex(library_root)
     count = idx.scan(force=force)
     stats = idx.stats()
-    print(f"✅ 索引完成: {count} 个素材新增/更新")
-    print(f"   总计: {stats['total']} 个素材, {stats['total_size_mb']}MB")
-    print(f"   分类: {stats['by_type']}")
-    print(f"   TOP标签: {stats['top_tags'][:5]}")
+    logger.info(f"✅ 索引完成: {count} 个素材新增/更新")
+    logger.info(f"   总计: {stats['total']} 个素材, {stats['total_size_mb']}MB")
+    logger.info(f"   分类: {stats['by_type']}")
+    logger.info(f"   TOP标签: {stats['top_tags'][:5]}")
     return idx
 
 
@@ -499,13 +507,14 @@ def search_assets(library_root: str, **kwargs) -> List[Dict]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # 测试：扫描默认素材库
     default_lib = r"D:\DobaoWork_Project\Ai_Video_Editor\material"
     if os.path.exists(default_lib):
         idx = build_index(default_lib, force=True)
-        print("\n检索测试:")
+        logger.info("\n检索测试:")
         results = idx.search(asset_type="image", tags=["占位"], limit=5)
         for r in results:
-            print(f"  [{r['type']}] {r['filename']} ({r.get('ratio','?')}) tags={r['tags']}")
+            logger.info(f"  [{r['type']}] {r['filename']} ({r.get('ratio','?')}) tags={r['tags']}")
     else:
-        print(f"素材库不存在: {default_lib}")
+        logger.info(f"素材库不存在: {default_lib}")

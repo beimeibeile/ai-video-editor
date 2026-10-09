@@ -12,9 +12,13 @@ Blender片头生成器
     )
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional
 
 # 导入Blender运行器
 _skill_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -129,7 +133,7 @@ def create_blender_intro(
     )
 
     if not runner.is_available():
-        print(f"❌ Blender不可用: {runner.blender_path}")
+        logger.info(f"❌ Blender不可用: {runner.blender_path}")
         return None
 
     # 构建文字列表
@@ -182,17 +186,17 @@ def create_blender_intro(
     )
 
     # 生成并渲染
-    print(f"[Blender片头] 风格: {style}, 标题: {title}")
-    print(f"  分辨率: {width}x{height}, 时长: {duration}s, 粒子: {cfg['particle_count']}")
+    logger.info(f"[Blender片头] 风格: {style}, 标题: {title}")
+    logger.info(f"  分辨率: {width}x{height}, 时长: {duration}s, 粒子: {cfg['particle_count']}")
 
     mp4_path = runner.create_and_render(scene, output_dir)
 
     if mp4_path and os.path.exists(mp4_path):
         size_kb = os.path.getsize(mp4_path) / 1024
-        print(f"✅ Blender片头生成成功: {mp4_path} ({size_kb:.1f}KB)")
+        logger.info(f"✅ Blender片头生成成功: {mp4_path} ({size_kb:.1f}KB)")
         return mp4_path
     else:
-        print(f"❌ Blender片头生成失败")
+        logger.error(f"❌ Blender片头生成失败")
         return None
 
 
@@ -231,18 +235,18 @@ def create_blender_intro_batch(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("Blender片头生成器")
-    print("=" * 60)
-    print("\n可用风格:")
+    logger.info("=" * 60)
+    logger.info("Blender片头生成器")
+    logger.info("=" * 60)
+    logger.info("\n可用风格:")
     for name in INTRO_STYLES:
         cfg = INTRO_STYLES[name]
-        print(f"  - {name}: 标题色{cfg['title_color'][:3]}, 粒子{cfg['particle_count']}个")
+        logger.info(f"  - {name}: 标题色{cfg['title_color'][:3]}, 粒子{cfg['particle_count']}个")
 
-    print("\n使用方法:")
-    print("  create_blender_intro(")
-    print("    title='精彩开始',")
-    print("    subtitle='2024年度回顾',")
-    print("    style='cinematic',")
-    print("    duration=3.0")
-    print("  )")
+    logger.info("\n使用方法:")
+    logger.info("  create_blender_intro(")
+    logger.info("    title='精彩开始',")
+    logger.info("    subtitle='2024年度回顾',")
+    logger.info("    style='cinematic',")
+    logger.info("    duration=3.0")
+    logger.info("  )")

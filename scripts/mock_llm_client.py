@@ -9,9 +9,13 @@
     result = client.chat("你好")
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import json
 import random
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 
 class MockLLMClient:
@@ -173,16 +177,16 @@ class MockLLMClient:
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("模拟LLM客户端测试")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("模拟LLM客户端测试")
+    logger.info("=" * 60)
 
     client = MockLLMClient()
     status = client.get_status()
-    print(f"提供商: {status['provider']}")
-    print(f"模型: {status['model']}")
-    print(f"可用: {status['available']}")
+    logger.info(f"提供商: {status['provider']}")
+    logger.info(f"模型: {status['model']}")
+    logger.info(f"可用: {status['available']}")
 
-    print("\n测试聊天...")
+    logger.info("\n测试聊天...")
     response = client.chat("你好")
-    print(f"回复: {response[:100]}")
+    logger.info(f"回复: {response[:100]}")

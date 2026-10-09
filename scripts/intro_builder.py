@@ -12,9 +12,13 @@
     create_intro("flash_title", title="每日一练", subtitle="剪辑进阶")
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any
 
 # 探测 jianying-editor skill 路径
 SKILL_ROOT = next((p for p in [
@@ -25,10 +29,7 @@ SKILL_ROOT = next((p for p in [
 if SKILL_ROOT:
     sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
     from jy_wrapper import JyProject
-    # pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+    import pyJianYingDraft as draft
 else:
     raise ImportError("Could not find jianying-editor skill root.")
 
@@ -149,9 +150,9 @@ def create_intro(
         output_dir = os.path.join(MODULE_DIR, "intro_assets")
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"[片头生成器] 模板: {cfg['name']} ({template})")
-    print(f"  标题: {title}" + (f" / {subtitle}" if subtitle else ""))
-    print(f"  时长: {cfg['duration']}s")
+    logger.info(f"[片头生成器] 模板: {cfg['name']} ({template})")
+    logger.info(f"  标题: {title}" + (f" / {subtitle}" if subtitle else ""))
+    logger.info(f"  时长: {cfg['duration']}s")
 
     # 1. 创建工程
     project = JyProject(project_name, width=width, height=height, overwrite=True)
@@ -164,7 +165,7 @@ def create_intro(
         bg.save(bg_path)
         project.add_media_safe(bg_path, start_time="0s", duration=f"{cfg['duration']}s", track_name="BG")
     except Exception as e:
-        print(f"  ⚠️ 背景生成失败: {e}")
+        logger.error(f"  ⚠️ 背景生成失败: {e}")
 
     # 3. 添加蒙版快闪（如果有）
     if cfg.get("flash_colors"):
@@ -198,10 +199,10 @@ def create_intro(
                 # 淡出
                 end_us = int(flash_dur * 1e6)
                 fade_start = int(end_us * 0.7)
-                seg.add_keyframe(KeyframeProperty.alpha, fade_start, 1.0, **Keyframe.EASE_OUT)
-                seg.add_keyframe(KeyframeProperty.alpha, end_us, 0.0, **Keyframe.EASE_OUT)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start, 1.0, **draft.Keyframe.EASE_OUT)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, end_us, 0.0, **draft.Keyframe.EASE_OUT)
 
-        print(f"  ✅ 快闪: {len(colors)}色块, {stagger:.2f}s错开")
+        logger.info(f"  ✅ 快闪: {len(colors)}色块, {stagger:.2f}s错开")
 
     # 4. 添加字幕条标题
     bar_start = cfg["duration"] * 0.3  # 快闪后出现
@@ -216,7 +217,7 @@ def create_intro(
         anim_in=cfg["bar_anim_in"],
         output_dir=output_dir,
     )
-    print(f"  ✅ 标题: {title} ({cfg['bar_style']})")
+    logger.info(f"  ✅ 标题: {title} ({cfg['bar_style']})")
 
     # 5. 添加副标题
     if subtitle:
@@ -228,17 +229,17 @@ def create_intro(
             duration=f"{sub_duration:.2f}s",
             font_size=6.0,
             color_rgb=(200, 200, 200),
-            style=TextStyle(size=6.0),
-            clip_settings=ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
+            style=draft.TextStyle(size=6.0),
+            clip_settings=draft.ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
             anim_in="渐显",
             track_name="Subtitle",
         )
-        print(f"  ✅ 副标题: {subtitle}")
+        logger.info(f"  ✅ 副标题: {subtitle}")
 
     # 6. 保存
     project.save()
-    print(f"\n✅ 片头工程创建完成: {project_name}")
-    print(f"   草稿路径: {os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'JianyingPro', 'User Data', 'Projects', 'com.lveditor.draft', project_name)}")
+    logger.info(f"\n✅ 片头工程创建完成: {project_name}")
+    logger.info(f"   草稿路径: {os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'JianyingPro', 'User Data', 'Projects', 'com.lveditor.draft', project_name)}")
 
     return {
         "project_name": project_name,
@@ -331,7 +332,7 @@ def add_intro_to_project(
             track_name="IntroBG",
         )
     except Exception as e:
-        print(f"  ⚠️ 片头背景生成失败: {e}")
+        logger.error(f"  ⚠️ 片头背景生成失败: {e}")
 
     # 2. 添加蒙版快闪
     if cfg.get("flash_colors"):
@@ -361,8 +362,8 @@ def add_intro_to_project(
                 )
                 end_us = int(flash_dur * 1e6)
                 fade_start = int(end_us * 0.7)
-                seg.add_keyframe(KeyframeProperty.alpha, fade_start, 1.0, **Keyframe.EASE_OUT)
-                seg.add_keyframe(KeyframeProperty.alpha, end_us, 0.0, **Keyframe.EASE_OUT)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, fade_start, 1.0, **draft.Keyframe.EASE_OUT)
+                seg.add_keyframe(draft.KeyframeProperty.alpha, end_us, 0.0, **draft.Keyframe.EASE_OUT)
 
     # 3. 添加字幕条标题
     bar_start = start_time + duration * 0.3
@@ -388,28 +389,28 @@ def add_intro_to_project(
             duration=f"{sub_duration:.2f}s",
             font_size=6.0,
             color_rgb=(200, 200, 200),
-            style=TextStyle(size=6.0),
-            clip_settings=ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
+            style=draft.TextStyle(size=6.0),
+            clip_settings=draft.ClipSettings(transform_y=cfg["bar_position_y"] - 0.25),
             anim_in="渐显",
             track_name="IntroSub",
         )
 
-    print(f"  ✅ 片头已添加: {title} ({template}, {duration}s, 起始{start_time}s)")
+    logger.info(f"  ✅ 片头已添加: {title} ({template}, {duration}s, 起始{start_time}s)")
     return duration
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("片头生成器 - 可用模板")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("片头生成器 - 可用模板")
+    logger.info("=" * 60)
     for tid, tcfg in INTRO_TEMPLATES.items():
-        print(f"\n  {tid}: {tcfg['name']}")
-        print(f"    {tcfg['description']}")
-        print(f"    时长: {tcfg['duration']}s, 字幕条: {tcfg['bar_style']}")
+        logger.info(f"\n  {tid}: {tcfg['name']}")
+        logger.info(f"    {tcfg['description']}")
+        logger.info(f"    时长: {tcfg['duration']}s, 字幕条: {tcfg['bar_style']}")
 
-    print("\n" + "=" * 60)
-    print("测试: 创建5种模板片头")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("测试: 创建5种模板片头")
+    logger.info("=" * 60)
 
     test_dir = r"D:\DobaoWork_Project\Ai_Video_Editor\debug\intro_test"
     os.makedirs(test_dir, exist_ok=True)
@@ -426,4 +427,4 @@ if __name__ == "__main__":
         try:
             create_intro(**t, output_dir=os.path.join(test_dir, "assets"))
         except Exception as e:
-            print(f"❌ {t['template']} 失败: {e}")
+            logger.error(f"❌ {t['template']} 失败: {e}")

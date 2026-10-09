@@ -1,4 +1,6 @@
 r"""`n剪映工程帧对齐后处理工具
+import logging
+logger = logging.getLogger(__name__)
 对已生成的draft_content.json进行帧对齐修正，确保所有时间点对齐到fps帧边界
 
 使用方法:
@@ -8,7 +10,7 @@ r"""`n剪映工程帧对齐后处理工具
 import os
 import json
 import shutil
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any
 
 
 def align_to_frame(timestamp_us: int, fps: int = 30) -> int:
@@ -56,7 +58,7 @@ def align_draft_to_frames(draft_dir: str, fps: int = 30, backup: bool = True) ->
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except Exception as e:
-            print(f"  读取失败: {e}")
+            logger.error(f"  读取失败: {e}")
             return False
 
         modified = False
@@ -140,20 +142,20 @@ def align_draft_to_frames(draft_dir: str, fps: int = 30, backup: bool = True) ->
         return modified
 
     # 对齐content和info
-    print(f"对齐 draft_content.json...")
+    logger.info(f"对齐 draft_content.json...")
     _align_file(content_file)
     if os.path.exists(info_file):
-        print(f"对齐 draft_info.json...")
+        logger.info(f"对齐 draft_info.json...")
         _align_file(info_file)
 
     stats["status"] = "success"
     stats["fps"] = fps
-    print(f"\n✅ 帧对齐完成:")
-    print(f"   修改片段: {stats['segments_modified']}")
-    print(f"   修改时间点: {stats['timestamps_modified']}")
-    print(f"   修改转场: {stats['transitions_modified']}")
-    print(f"   修改关键帧: {stats['keyframes_modified']}")
-    print(f"   备份: .bak文件")
+    logger.info(f"\n✅ 帧对齐完成:")
+    logger.info(f"   修改片段: {stats['segments_modified']}")
+    logger.info(f"   修改时间点: {stats['timestamps_modified']}")
+    logger.info(f"   修改转场: {stats['transitions_modified']}")
+    logger.info(f"   修改关键帧: {stats['keyframes_modified']}")
+    logger.info(f"   备份: .bak文件")
     return stats
 
 
@@ -164,5 +166,5 @@ if __name__ == "__main__":
     else:
         draft_dir = r"D:\JianyingProDrafts\JianyingPro Drafts\P0_E2E_Test"
 
-    print(f"帧对齐: {draft_dir}")
+    logger.info(f"帧对齐: {draft_dir}")
     align_draft_to_frames(draft_dir, fps=30)

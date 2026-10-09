@@ -15,12 +15,16 @@
     save_with_compound(project, info)
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
 import uuid
 import shutil
 import hashlib
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 
 
 def _generate_id() -> str:
@@ -205,7 +209,7 @@ def create_compound(
         project._compound_patches = []
     project._compound_patches.append(info)
 
-    print(f"  ✅ 复合片段已创建: {name} (id={combination_id[:8]}...)")
+    logger.info(f"  ✅ 复合片段已创建: {name} (id={combination_id[:8]}...)")
     return info
 
 
@@ -238,7 +242,7 @@ def add_image_to_compound(
         "duration_us": duration_us,
         "track_index": track_index,
     })
-    print(f"  ✅ 已标记添加图片到复合片段: {os.path.basename(image_path)}")
+    logger.info(f"  ✅ 已标记添加图片到复合片段: {os.path.basename(image_path)}")
     return True
 
 
@@ -263,7 +267,7 @@ def inject_compound_to_draft(draft_path: str, patches: list) -> bool:
         if os.path.exists(info_file):
             shutil.copy2(info_file, content_file)
         else:
-            print(f"❌ 草稿文件不存在: {draft_path}")
+            logger.info(f"❌ 草稿文件不存在: {draft_path}")
             return False
 
     try:
@@ -286,7 +290,7 @@ def inject_compound_to_draft(draft_path: str, patches: list) -> bool:
             for img_info in patch.get("_pending_images", []):
                 src_path = img_info["path"]
                 if not os.path.exists(src_path):
-                    print(f"  ⚠️  图片不存在: {src_path}")
+                    logger.info(f"  ⚠️  图片不存在: {src_path}")
                     continue
 
                 # 复制到草稿目录
@@ -352,10 +356,10 @@ def inject_compound_to_draft(draft_path: str, patches: list) -> bool:
             with open(info_file, "w", encoding="utf-8") as f:
                 json.dump(idata, f, ensure_ascii=False, indent=2)
 
-        print(f"  ✅ 已注入 {len(patches)} 个复合片段到草稿")
+        logger.info(f"  ✅ 已注入 {len(patches)} 个复合片段到草稿")
         return True
     except Exception as e:
-        print(f"❌ 注入复合片段失败: {e}")
+        logger.error(f"❌ 注入复合片段失败: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -385,15 +389,15 @@ def save_with_compound(project) -> dict:
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("复合片段工具模块 v2")
-    print("=" * 60)
-    print("\n使用方法:")
-    print("  info = create_compound(project, name='复合片段1')")
-    print("  add_image_to_compound(info, 'photo.jpg')")
-    print("  save_with_compound(project)")
-    print("\n核心函数:")
-    print("  create_compound() - 创建复合片段")
-    print("  add_image_to_compound() - 向复合片段内添加图片")
-    print("  inject_compound_to_draft() - 注入到草稿JSON")
-    print("  save_with_compound() - 保存并自动注入")
+    logger.info("=" * 60)
+    logger.info("复合片段工具模块 v2")
+    logger.info("=" * 60)
+    logger.info("\n使用方法:")
+    logger.info("  info = create_compound(project, name='复合片段1')")
+    logger.info("  add_image_to_compound(info, 'photo.jpg')")
+    logger.info("  save_with_compound(project)")
+    logger.info("\n核心函数:")
+    logger.info("  create_compound() - 创建复合片段")
+    logger.info("  add_image_to_compound() - 向复合片段内添加图片")
+    logger.info("  inject_compound_to_draft() - 注入到草稿JSON")
+    logger.info("  save_with_compound() - 保存并自动注入")

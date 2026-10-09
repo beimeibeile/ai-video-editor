@@ -10,11 +10,15 @@
     lib.apply("mask_flash_transition", project, **kwargs)  # 应用特效
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
 import sys
 import importlib.util
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional
 
 
 class EffectLibrary:
@@ -171,26 +175,26 @@ class EffectLibrary:
 
     def print_library(self):
         """打印特效库概览"""
-        print("=" * 60)
-        print(f"特效库 v{self.effects.get('version', '1.0')}")
-        print(f"共 {len(self.effects.get('effects', []))} 个特效")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info(f"特效库 v{self.effects.get('version', '1.0')}")
+        logger.info(f"共 {len(self.effects.get('effects', []))} 个特效")
+        logger.info("=" * 60)
 
         categories = self.effects.get("categories", {})
         for cat_id, cat_name in categories.items():
             cat_effects = [e for e in self.effects.get("effects", []) if e.get("category") == cat_id]
             if cat_effects:
-                print(f"\n【{cat_name}】({len(cat_effects)})")
+                logger.info(f"\n【{cat_name}】({len(cat_effects)})")
                 for e in cat_effects:
                     status = "✅" if e.get("status") == "verified" else "🔧"
-                    print(f"  {status} {e['id']}: {e['name']}")
-                    print(f"     {e.get('description', '')[:50]}")
-                    print(f"     标签: {', '.join(e.get('tags', []))}")
+                    logger.info(f"  {status} {e['id']}: {e['name']}")
+                    logger.info(f"     {e.get('description', '')[:50]}")
+                    logger.info(f"     标签: {', '.join(e.get('tags', []))}")
 
 
 if __name__ == "__main__":
     lib = EffectLibrary()
     lib.print_library()
-    print("\n搜索'字幕':")
+    logger.info("\n搜索'字幕':")
     for e in lib.search("字幕"):
-        print(f"  - {e['id']}: {e['name']}")
+        logger.info(f"  - {e['id']}: {e['name']}")

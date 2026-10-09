@@ -12,6 +12,10 @@ AI短视频剪辑 - 模式B：仿制模板 剪映工程创建脚本模板（多�
 依赖：jianying-editor skill, ffmpeg, Python 3.11+
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import subprocess
@@ -111,11 +115,7 @@ if not skill_root:
     raise ImportError("Could not find jianying-editor skill root.")
 
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
-from jy_wrapper import JyProject
-# 适配层导入
-_AVR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _AVR not in sys.path: sys.path.insert(0, _AVR)
-from adapters.jianying_adapter import ClipSettings
+from jy_wrapper import JyProject, draft
 
 
 def time_to_seconds(t):
@@ -218,92 +218,92 @@ def main():
     shot_cache = {}  # 缓存已裁剪的镜头
 
     # 1. 探测原视频
-    print(f"[1/7] 探测原视频: {ORIGINAL_VIDEO}")
+    logger.info(f"[1/7] 探测原视频: {ORIGINAL_VIDEO}")
     width, height = probe_video(ORIGINAL_VIDEO)
-    print(f"  分辨率: {width}x{height}")
+    logger.info(f"  分辨率: {width}x{height}")
 
     # 2. 提取BGM
     bgm_path = None
     if EXTRACT_BGM_FROM_ORIGINAL:
-        print("[2/7] 提取原视频BGM")
+        logger.info("[2/7] 提取原视频BGM")
         bgm_path = os.path.join(OUTPUT_DIR, "bgm.mp3")
         extract_bgm(ORIGINAL_VIDEO, bgm_path)
         if os.path.exists(bgm_path):
-            print(f"  ✅ BGM已提取: {bgm_path}")
+            logger.info(f"  ✅ BGM已提取: {bgm_path}")
         else:
-            print("  ⚠️  BGM提取失败")
+            logger.error("  ⚠️  BGM提取失败")
 
     # 3. 创建剪映工程
-    print(f"[3/7] 创建剪映工程: {PROJECT_NAME} ({width}x{height})")
+    logger.info(f"[3/7] 创建剪映工程: {PROJECT_NAME} ({width}x{height})")
     project = JyProject(PROJECT_NAME, width=width, height=height, overwrite=True)
 
     # 4. 多轨道导入原始素材
-    print("[4/7] 多轨道导入原始素材（不加特效）")
+    logger.info("[4/7] 多轨道导入原始素材（不加特效）")
 
     # 主轨道
-    print(f"  主轨道: {len(MAIN_TRACK)} 个素材")
+    logger.info(f"  主轨道: {len(MAIN_TRACK)} 个素材")
     for media_ref, start, duration in MAIN_TRACK:
         path = resolve_media(media_ref, shots_dir, shot_cache)
         if os.path.exists(path):
             seg = project.add_media_safe(path, start_time=start, duration=duration, track_name="VideoTrack")
             if seg:
-                print(f"    ✅ {os.path.basename(path)} ({start}, {duration})")
+                logger.info(f"    ✅ {os.path.basename(path)} ({start}, {duration})")
 
     # 画中画轨道（多层）
     for pip_idx, pip_clips in enumerate(PIP_TRACKS):
         track_name = f"PIP_{pip_idx+1}"
-        print(f"  画中画轨道{pip_idx+1}: {len(pip_clips)} 个素材")
+        logger.info(f"  画中画轨道{pip_idx+1}: {len(pip_clips)} 个素材")
         for media_ref, start, duration in pip_clips:
             path = resolve_media(media_ref, shots_dir, shot_cache)
             if os.path.exists(path):
                 seg = project.add_media_safe(path, start_time=start, duration=duration, track_name=track_name)
                 if seg:
-                    print(f"    ✅ {os.path.basename(path)} ({start}, {duration})")
+                    logger.info(f"    ✅ {os.path.basename(path)} ({start}, {duration})")
 
     # 文字轨道
-    print(f"  文字轨道: {len(TEXT_TRACK)} 条字幕")
+    logger.info(f"  文字轨道: {len(TEXT_TRACK)} 条字幕")
     for text, start, duration, y, size, color in TEXT_TRACK:
         try:
             project.add_text_simple(
                 text, start_time=start, duration=duration,
-                clip_settings=ClipSettings(transform_y=y),
+                clip_settings=draft.ClipSettings(transform_y=y),
                 font_size=size, color_rgb=color
             )
-            print(f"    ✅ {text[:20]}")
+            logger.info(f"    ✅ {text[:20]}")
         except Exception as e:
-            print(f"    ⚠️  字幕失败: {e}")
+            logger.error(f"    ⚠️  字幕失败: {e}")
 
     # 贴纸轨道
-    print(f"  贴纸轨道: {len(STICKER_TRACK)} 个贴纸")
+    logger.info(f"  贴纸轨道: {len(STICKER_TRACK)} 个贴纸")
     for path, start, duration in STICKER_TRACK:
         if os.path.exists(path):
             seg = project.add_media_safe(path, start_time=start, duration=duration, track_name="Sticker")
             if seg:
-                print(f"    ✅ {os.path.basename(path)}")
+                logger.info(f"    ✅ {os.path.basename(path)}")
 
     # 音频轨道（多轨）
     for track_name, clips in AUDIO_TRACKS.items():
-        print(f"  音频轨道[{track_name}]: {len(clips)} 个音频")
+        logger.info(f"  音频轨道[{track_name}]: {len(clips)} 个音频")
         for path, start, duration in clips:
             if os.path.exists(path):
                 seg = project.add_media_safe(path, start_time=start, duration=duration, track_name=track_name)
                 if seg:
-                    print(f"    ✅ {os.path.basename(path)}")
+                    logger.info(f"    ✅ {os.path.basename(path)}")
 
     # 如果配置了从原视频提取BGM且BGM轨道为空，自动添加
     if EXTRACT_BGM_FROM_ORIGINAL and bgm_path and not AUDIO_TRACKS.get("BGM"):
         try:
             project.add_media_safe(bgm_path, start_time="0s", track_name="BGM")
-            print("    ✅ 原视频BGM自动添加到BGM轨道")
+            logger.info("    ✅ 原视频BGM自动添加到BGM轨道")
         except Exception as e:
-            print(f"    ⚠️  BGM自动添加失败: {e}")
+            logger.error(f"    ⚠️  BGM自动添加失败: {e}")
 
     # 5. 保存工程
-    print("[5/7] 保存工程")
+    logger.info("[5/7] 保存工程")
     project.save()
 
     # 6. 生成特效实现清单（供阶段5 GUI操作）
-    print("[6/7] 生成特效实现清单")
+    logger.info("[6/7] 生成特效实现清单")
     effects_path = os.path.join(OUTPUT_DIR, "特效实现清单.md")
     with open(effects_path, "w", encoding="utf-8") as f:
         f.write(f"# {PROJECT_NAME} 特效实现清单\n\n")
@@ -325,10 +325,10 @@ def main():
         f.write("6. 混合模式（画中画轨道）\n")
         f.write("7. 抠像（画中画轨道）\n")
         f.write("8. 贴纸/文字动画\n")
-    print(f"  ✅ 特效实现清单: {effects_path}")
+    logger.info(f"  ✅ 特效实现清单: {effects_path}")
 
     # 7. 生成模板发布指引 + 替换素材指引
-    print("[7/7] 生成模板发布指引和替换素材指引")
+    logger.info("[7/7] 生成模板发布指引和替换素材指引")
 
     publish_path = os.path.join(OUTPUT_DIR, "模板发布指引.md")
     with open(publish_path, "w", encoding="utf-8") as f:
@@ -388,25 +388,25 @@ def main():
         f.write("- 图片建议提前裁剪到模板比例（避免关键内容被裁掉）\n")
         f.write("- 替换后可预览效果，满意后导出\n")
 
-    print(f"  ✅ 模板发布指引: {publish_path}")
-    print(f"  ✅ 替换素材指引: {replace_path}")
+    logger.info(f"  ✅ 模板发布指引: {publish_path}")
+    logger.info(f"  ✅ 替换素材指引: {replace_path}")
 
     # 完成
-    print(f"\n{'='*50}")
-    print(f"✅ 仿制草稿创建完成: {PROJECT_NAME}")
-    print(f"   工程分辨率: {width}x{height}")
-    print(f"   输出目录: {OUTPUT_DIR}")
-    print(f"\n生成的文件:")
-    print(f"  - 特效实现清单: {effects_path}")
-    print(f"  - 模板发布指引: {publish_path}")
-    print(f"  - 替换素材指引: {replace_path}")
+    logger.info(f"\n{'='*50}")
+    logger.info(f"✅ 仿制草稿创建完成: {PROJECT_NAME}")
+    logger.info(f"   工程分辨率: {width}x{height}")
+    logger.info(f"   输出目录: {OUTPUT_DIR}")
+    logger.info(f"\n生成的文件:")
+    logger.info(f"  - 特效实现清单: {effects_path}")
+    logger.info(f"  - 模板发布指引: {publish_path}")
+    logger.info(f"  - 替换素材指引: {replace_path}")
     if os.path.exists(shots_dir):
-        print(f"  - 占位镜头片段: {shots_dir}/")
-    print(f"\n下一步:")
-    print(f"  1. 在剪映里打开工程「{PROJECT_NAME}」")
-    print(f"  2. 按《特效实现清单》通过GUI操作添加特效/转场/滤镜/关键帧/蒙版")
-    print(f"  3. 预览确认效果")
-    print(f"  4. 按《模板发布指引》发布模板")
+        logger.info(f"  - 占位镜头片段: {shots_dir}/")
+    logger.info(f"\n下一步:")
+    logger.info(f"  1. 在剪映里打开工程「{PROJECT_NAME}」")
+    logger.info(f"  2. 按《特效实现清单》通过GUI操作添加特效/转场/滤镜/关键帧/蒙版")
+    logger.info(f"  3. 预览确认效果")
+    logger.info(f"  4. 按《模板发布指引》发布模板")
 
 
 if __name__ == "__main__":

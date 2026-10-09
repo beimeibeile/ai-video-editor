@@ -35,7 +35,10 @@
 import os
 import json
 import sys
+import logging
 from typing import List, Dict, Optional, Union, Any
+
+logger = logging.getLogger(__name__)
 
 # pyJianYingDraft路径
 JY_VENDOR = r'C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor\scripts\vendor'
@@ -52,10 +55,8 @@ from pyJianYingDraft.animation import VideoAnimation, SegmentAnimations
 from pyJianYingDraft.time_util import Timerange, tim
 from pyJianYingDraft.track import TrackType
 
-# 特效索引路径（skill内部effect_catalog目录）
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_ROOT = os.path.dirname(_SCRIPT_DIR)
-CATALOG_PATH = os.path.join(_SKILL_ROOT, 'effect_catalog', 'effect_catalog.json')
+# 特效索引路径
+CATALOG_PATH = r'D:\DobaoWork_Project\Ai_Video_Editor\effect_catalog\effect_catalog.json'
 
 
 class JianyingEffectAPI:
@@ -192,7 +193,7 @@ class JianyingEffectAPI:
         """
         info = self.get_effect_info(effect_name)
         if not info or info['type'] != 'scene':
-            print(f'[ERROR] 场景特效不存在: {effect_name}')
+            logger.error(f'场景特效不存在: {effect_name}')
             return False
 
         try:
@@ -207,7 +208,7 @@ class JianyingEffectAPI:
             script.add_effect(info['enum'], tr, track_name=track_name, params=params)
             return True
         except Exception as e:
-            print(f'[ERROR] 应用场景特效失败 {effect_name}: {e}')
+            logger.error(f'应用场景特效失败 {effect_name}: {e}')
             import traceback
             traceback.print_exc()
             return False
@@ -232,7 +233,7 @@ class JianyingEffectAPI:
         """
         info = self.get_effect_info(filter_name)
         if not info or info['type'] != 'filter':
-            print(f'[ERROR] 滤镜不存在: {filter_name}')
+            logger.error(f'滤镜不存在: {filter_name}')
             return False
 
         try:
@@ -247,7 +248,7 @@ class JianyingEffectAPI:
             script.add_filter(info['enum'], tr, track_name=track_name, intensity=intensity)
             return True
         except Exception as e:
-            print(f'[ERROR] 应用滤镜失败 {filter_name}: {e}')
+            logger.error(f'应用滤镜失败 {filter_name}: {e}')
             import traceback
             traceback.print_exc()
             return False
@@ -269,7 +270,7 @@ class JianyingEffectAPI:
         """
         info = self.get_effect_info(effect_name)
         if not info or info['type'] != 'character':
-            print(f'[ERROR] 角色特效不存在: {effect_name}')
+            logger.error(f'角色特效不存在: {effect_name}')
             return False
 
         try:
@@ -284,7 +285,7 @@ class JianyingEffectAPI:
             script.add_effect(info['enum'], tr, track_name=track_name, params=params)
             return True
         except Exception as e:
-            print(f'[ERROR] 应用角色特效失败 {effect_name}: {e}')
+            logger.error(f'应用角色特效失败 {effect_name}: {e}')
             import traceback
             traceback.print_exc()
             return False
@@ -406,7 +407,7 @@ class JianyingEffectAPI:
         enum_map = {'in': IntroType, 'out': OutroType, 'group': GroupAnimationType}
         enum_cls = enum_map.get(anim_type)
         if not enum_cls:
-            print(f'[ERROR] 动画类型无效: {anim_type}（应为in/out/group）')
+            logger.error(f'动画类型无效: {anim_type}（应为in/out/group）')
             return False
 
         target_enum = None
@@ -421,7 +422,7 @@ class JianyingEffectAPI:
                     target_enum = member
                     break
         if not target_enum:
-            print(f'[ERROR] 动画不存在: {anim_name}（类型={anim_type}）')
+            logger.error(f'动画不存在: {anim_name}（类型={anim_type}）')
             return False
 
         try:
@@ -447,7 +448,7 @@ class JianyingEffectAPI:
 
             return True
         except Exception as e:
-            print(f'[ERROR] 应用动画失败 {anim_name}: {e}')
+            logger.error(f'应用动画失败 {anim_name}: {e}')
             import traceback
             traceback.print_exc()
             return False
@@ -536,7 +537,7 @@ class JianyingEffectAPI:
                     target_enum = member
                     break
         if not target_enum:
-            print(f'[ERROR] 转场不存在: {transition_name}')
+            logger.error(f'转场不存在: {transition_name}')
             return False
 
         try:
@@ -546,7 +547,7 @@ class JianyingEffectAPI:
             segment.transition = Transition(target_enum, int(dur * 1_000_000))
             return True
         except Exception as e:
-            print(f'[ERROR] 应用转场失败 {transition_name}: {e}')
+            logger.error(f'应用转场失败 {transition_name}: {e}')
             import traceback
             traceback.print_exc()
             return False
@@ -658,14 +659,14 @@ class JianyingEffectAPI:
                 if target_enum:
                     break
         if not target_enum:
-            print(f'[ERROR] 音频特效不存在: {effect_name}')
+            logger.error(f'音频特效不存在: {effect_name}')
             return False
 
         try:
             segment.add_effect(target_enum, params)
             return True
         except Exception as e:
-            print(f'[ERROR] 应用音频特效失败 {effect_name}: {e}')
+            logger.error(f'应用音频特效失败 {effect_name}: {e}')
             import traceback
             traceback.print_exc()
             return False
@@ -753,25 +754,27 @@ def search_effects(keyword, effect_type=None):
 
 
 if __name__ == '__main__':
+    # 配置logging
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # 自测
     api = JianyingEffectAPI()
-    print('=== 特效库统计 ===')
+    logger.info('=== 特效库统计 ===')
     stats = api.stats()
-    print(f"总计: {stats['total']}种")
-    print(f"  场景特效: {stats['scene_effects']}种")
-    print(f"  滤镜: {stats['filters']}种")
-    print(f"  角色特效: {stats['character_effects']}种")
+    logger.info(f"总计: {stats['total']}种")
+    logger.info(f"  场景特效: {stats['scene_effects']}种")
+    logger.info(f"  滤镜: {stats['filters']}种")
+    logger.info(f"  角色特效: {stats['character_effects']}种")
 
-    print('\n=== 搜索"故障" ===')
+    logger.info('\n=== 搜索"故障" ===')
     results = api.search('故障')
     for r in results[:10]:
-        print(f"  [{r['type']}] {r['name']} ({r.get('category', '?')})")
+        logger.info(f"  [{r['type']}] {r['name']} ({r.get('category', '?')})")
 
-    print('\n=== 搜索"电影"滤镜 ===')
+    logger.info('\n=== 搜索"电影"滤镜 ===')
     results = api.search('电影', effect_type='filter')
     for r in results[:10]:
-        print(f"  {r['name']} ({r.get('category', '?')})")
+        logger.info(f"  {r['name']} ({r.get('category', '?')})")
 
-    print('\n=== 场景特效分类统计 ===')
+    logger.info('\n=== 场景特效分类统计 ===')
     for cat, count in sorted(api.get_categories('scene').items(), key=lambda x: -x[1]):
-        print(f"  {cat}: {count}种")
+        logger.info(f"  {cat}: {count}种")

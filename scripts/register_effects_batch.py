@@ -2,6 +2,10 @@
 特效库批量注册脚本
 将scripts目录下已有的特效模块批量注册到effects/index.json
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import json
 import os
 
@@ -237,18 +241,18 @@ def main():
 
     for effect in NEW_EFFECTS:
         if effect['id'] in existing_ids:
-            print(f"  ⏭ 跳过(已存在): {effect['id']}")
+            logger.warning(f"  ⏭ 跳过(已存在): {effect['id']}")
             skipped += 1
         else:
             index['effects'].append(effect)
-            print(f"  ✅ 新增: {effect['id']} - {effect['name']}")
+            logger.info(f"  ✅ 新增: {effect['id']} - {effect['name']}")
             added += 1
 
     # 更新分类
     for cat_id, cat_name in NEW_CATEGORIES.items():
         if cat_id not in index.get('categories', {}):
             index['categories'][cat_id] = cat_name
-            print(f"  📁 新增分类: {cat_id} - {cat_name}")
+            logger.info(f"  📁 新增分类: {cat_id} - {cat_name}")
 
     index['last_updated'] = '2026-10-02'
     index['version'] = '1.4'
@@ -257,11 +261,11 @@ def main():
         json.dump(index, f, ensure_ascii=False, indent=2)
 
     total = len(index['effects'])
-    print(f"\n✅ 特效库更新完成:")
-    print(f"   新增: {added}")
-    print(f"   跳过: {skipped}")
-    print(f"   总计: {total}个特效")
-    print(f"   分类: {list(index['categories'].keys())}")
+    logger.info(f"\n✅ 特效库更新完成:")
+    logger.info(f"   新增: {added}")
+    logger.warning(f"   跳过: {skipped}")
+    logger.info(f"   总计: {total}个特效")
+    logger.info(f"   分类: {list(index['categories'].keys())}")
 
 
 if __name__ == "__main__":

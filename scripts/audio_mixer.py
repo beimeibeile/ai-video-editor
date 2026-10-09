@@ -19,7 +19,9 @@ v2.0 新增功能：
 """
 
 import os
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List
+import logging
+logger = logging.getLogger(__name__)
 
 
 # ============ 音量预设（根据音频类型） ============
@@ -151,12 +153,12 @@ class AudioMixer:
         Returns:
             处理后的音频文件列表（增加了fade_in/fade_out/duck_keyframes/semantic_adjust等字段）
         """
-        print(f"\n[AudioMixer] 混音处理: {len(audio_files)}个音频文件")
+        logger.info(f"\n[AudioMixer] 混音处理: {len(audio_files)}个音频文件")
         if deep_analysis and self.semantic_enabled:
             tone = deep_analysis.get("overall_tone", "中性")
             conflict = deep_analysis.get("conflict_level", 0)
             volatility = deep_analysis.get("emotion_volatility", 0)
-            print(f"  🧠 语义驱动: 基调={tone}, 冲突等级={conflict}, 情绪波动={volatility}")
+            logger.info(f"  🧠 语义驱动: 基调={tone}, 冲突等级={conflict}, 情绪波动={volatility}")
 
         # 1. 应用音量预设和淡入淡出
         mixed_files = []
@@ -214,7 +216,7 @@ class AudioMixer:
         for f in mixed_files:
             t = f.get("audio_type", "unknown")
             type_counts[t] = type_counts.get(t, 0) + 1
-        print(f"  ✅ 混音完成: {type_counts}")
+        logger.info(f"  ✅ 混音完成: {type_counts}")
 
         return mixed_files
 
@@ -257,7 +259,7 @@ class AudioMixer:
 
         # 1. 整体基调调整
         tone_adjust = SCENE_TONE_ADJUST.get(overall_tone, SCENE_TONE_ADJUST["中性"])
-        print(f"  🎭 基调调整: {overall_tone} -> {tone_adjust}")
+        logger.info(f"  🎭 基调调整: {overall_tone} -> {tone_adjust}")
 
         for audio in audio_files:
             audio_type = audio.get("audio_type", "unknown")
@@ -315,7 +317,7 @@ class AudioMixer:
 
         # 3. 冲突点音量提升（对BGM和音效）
         if conflict_points:
-            print(f"  ⚔️  冲突点音量提升: {len(conflict_points)}个冲突点")
+            logger.info(f"  ⚔️  冲突点音量提升: {len(conflict_points)}个冲突点")
             for audio in audio_files:
                 audio_type = audio.get("audio_type", "")
                 if audio_type not in ("bgm", "sfx", "effect"):
@@ -503,7 +505,7 @@ class AudioMixer:
                 ducked_count += 1
 
         trigger_label = "人声" if trigger_type == "tts" else "音效"
-        print(f"  🎚️  Ducking({trigger_label}触发): {ducked_count}个音频应用了自动音量平衡")
+        logger.info(f"  🎚️  Ducking({trigger_label}触发): {ducked_count}个音频应用了自动音量平衡")
         return audio_files
 
     def _normalize(self, audio_files: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -528,7 +530,7 @@ class AudioMixer:
                 normalized_count += 1
 
         if normalized_count > 0:
-            print(f"  📊 标准化: {normalized_count}个音频音量被调整到合理范围")
+            logger.info(f"  📊 标准化: {normalized_count}个音频音量被调整到合理范围")
 
         return audio_files
 
@@ -575,6 +577,7 @@ class AudioMixer:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # 测试 v2.0
     mixer = AudioMixer(ducking_enabled=True, normalize_enabled=True, semantic_enabled=True)
 
@@ -612,30 +615,30 @@ if __name__ == "__main__":
     result = mixer.mix(audio_files, tts_segments, total_duration=10, deep_analysis=deep_analysis)
 
     # 打印结果
-    print("\n" + "=" * 60)
-    print("混音结果:")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("混音结果:")
+    logger.info("=" * 60)
     for audio in result:
-        print(f"\n  {audio['track_name']} ({audio['audio_type']}, priority={audio['priority']}):")
-        print(f"    volume={audio['volume']:.3f}, base={audio['base_volume']:.3f}")
-        print(f"    fade_in={audio['fade_in']:.2f}s, fade_out={audio['fade_out']:.2f}s")
+        logger.info(f"\n  {audio['track_name']} ({audio['audio_type']}, priority={audio['priority']}):")
+        logger.info(f"    volume={audio['volume']:.3f}, base={audio['base_volume']:.3f}")
+        logger.info(f"    fade_in={audio['fade_in']:.2f}s, fade_out={audio['fade_out']:.2f}s")
         if audio.get("semantic_adjust"):
-            print(f"    语义调整: tone_factor={audio['semantic_adjust']['tone_factor']:.2f}")
+            logger.info(f"    语义调整: tone_factor={audio['semantic_adjust']['tone_factor']:.2f}")
         if audio.get("duck_keyframes"):
-            print(f"    Ducking关键帧: {len(audio['duck_keyframes'])}个")
+            logger.info(f"    Ducking关键帧: {len(audio['duck_keyframes'])}个")
         if audio.get("emotion_keyframes"):
-            print(f"    情绪驱动关键帧: {len(audio['emotion_keyframes'])}个")
+            logger.info(f"    情绪驱动关键帧: {len(audio['emotion_keyframes'])}个")
 
     # 生成报告
     report = mixer.generate_mix_report(result)
-    print(f"\n{'=' * 60}")
-    print("混音报告:")
-    print(f"  总音频数: {report['total']}")
-    print(f"  按类型: {report['by_type']}")
-    print(f"  按优先级: {report['by_priority']}")
-    print(f"  音量范围: {report['volume_range']['min']:.3f} - {report['volume_range']['max']:.3f}")
-    print(f"  平均音量: {report['average_volume']:.3f}")
-    print(f"  Ducking应用: {report['ducking_applied']}个")
-    print(f"  语义调整: {report['semantic_adjusted']}个")
-    print(f"  情绪关键帧总数: {report['emotion_keyframes']}")
-    print(f"  淡入淡出: {report['has_fade']}个")
+    logger.info(f"\n{'=' * 60}")
+    logger.info("混音报告:")
+    logger.info(f"  总音频数: {report['total']}")
+    logger.info(f"  按类型: {report['by_type']}")
+    logger.info(f"  按优先级: {report['by_priority']}")
+    logger.info(f"  音量范围: {report['volume_range']['min']:.3f} - {report['volume_range']['max']:.3f}")
+    logger.info(f"  平均音量: {report['average_volume']:.3f}")
+    logger.info(f"  Ducking应用: {report['ducking_applied']}个")
+    logger.info(f"  语义调整: {report['semantic_adjusted']}个")
+    logger.info(f"  情绪关键帧总数: {report['emotion_keyframes']}")
+    logger.info(f"  淡入淡出: {report['has_fade']}个")

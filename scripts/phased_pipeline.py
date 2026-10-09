@@ -17,12 +17,16 @@
     result = pipeline.run_phase("素材准备", ...)
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import json
 import time
 import shutil
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Optional, Callable
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 
@@ -187,9 +191,9 @@ class PhasedPipeline:
         result = PhaseResult(phase_name=phase_name, status=PhaseStatus.RUNNING)
         result.start_time = time.time()
 
-        print(f"\n{'='*60}")
-        print(f"  阶段: {phase_name}")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"  阶段: {phase_name}")
+        logger.info(f"{'='*60}")
 
         try:
             artifacts = phase_func(state)
@@ -202,16 +206,16 @@ class PhasedPipeline:
             if qc_issues:
                 result.qc_passed = False
                 result.fix_suggestions = [s["fix"] for s in QCFixer.analyze(qc_issues)]
-                print(f"  ⚠ 质检发现 {len(qc_issues)} 个问题")
+                logger.info(f"  ⚠ 质检发现 {len(qc_issues)} 个问题")
                 for issue in qc_issues[:3]:
-                    print(f"    - {issue}")
+                    logger.info(f"    - {issue}")
             else:
-                print(f"  ✅ 质检通过")
+                logger.info(f"  ✅ 质检通过")
 
         except Exception as e:
             result.status = PhaseStatus.FAILED
             result.error = str(e)
-            print(f"  ❌ 失败: {e}")
+            logger.error(f"  ❌ 失败: {e}")
 
         result.end_time = time.time()
         result.duration = result.end_time - result.start_time
@@ -235,7 +239,7 @@ class PhasedPipeline:
                 qc_result = quick_qc(draft_path, output_dir=os.path.join(state.output_dir, "qc"))
                 issues = qc_result.get("issues", [])
             except Exception as e:
-                print(f"  质检跳过: {e}")
+                logger.warning(f"  质检跳过: {e}")
 
         # 阶段特定检查
         if phase_name == "原型验证":
@@ -315,8 +319,8 @@ class PhasedPipeline:
 
         # 检查是否有角色素材
         # 这里可以集成角色生成（ComfyUI）和去背景
-        print("  素材准备：角色PNG生成+去背景")
-        print("  （此阶段需用户提供或生成角色素材）")
+        logger.info("  素材准备：角色PNG生成+去背景")
+        logger.info("  （此阶段需用户提供或生成角色素材）")
 
         # 如果有需要去背景的图片，自动处理
         from remove_background import remove_bg
@@ -333,7 +337,7 @@ class PhasedPipeline:
     def _phase_single_shot(self, state: PipelineState) -> List[str]:
         """阶段3：单镜头验证"""
         artifacts = []
-        print("  单镜头验证：构建1个关键镜头并质检")
+        logger.info("  单镜头验证：构建1个关键镜头并质检")
         # 这里集成具体的镜头构建逻辑
         # 先验证坐标和基本动画
         return artifacts
@@ -341,13 +345,13 @@ class PhasedPipeline:
     def _phase_full_composite(self, state: PipelineState) -> List[str]:
         """阶段4：全片合成"""
         artifacts = []
-        print("  全片合成：所有镜头按时间轴合成")
+        logger.info("  全片合成：所有镜头按时间轴合成")
         return artifacts
 
     def _phase_qc_delivery(self, state: PipelineState) -> List[str]:
         """阶段5：质检交付"""
         artifacts = []
-        print("  质检交付：全片质检+修复+导出")
+        logger.info("  质检交付：全片质检+修复+导出")
         return artifacts
 
     def run(self, source_video: str, output_dir: str,
@@ -373,7 +377,7 @@ class PhasedPipeline:
         checkpoint_path = os.path.join(output_dir, "pipeline_state.json")
         if os.path.exists(checkpoint_path) and start_phase is None:
             state = PipelineState.load(checkpoint_path)
-            print(f"📂 恢复checkpoint: 当前阶段={state.current_phase}")
+            logger.info(f"📂 恢复checkpoint: 当前阶段={state.current_phase}")
         else:
             state = PipelineState(
                 project_name=project_name,
@@ -403,35 +407,35 @@ class PhasedPipeline:
 
             # 跳过已通过的阶段
             if phase_name in state.phases and state.phases[phase_name].status == PhaseStatus.PASSED:
-                print(f"\n⏭ 跳过已完成阶段: {phase_name}")
+                logger.warning(f"\n⏭ 跳过已完成阶段: {phase_name}")
                 continue
 
             result = self._run_phase(phase_name, state, phase_funcs[phase_name])
 
             # 如果失败，停止执行
             if result.status == PhaseStatus.FAILED:
-                print(f"\n❌ Pipeline在'{phase_name}'阶段失败")
-                print(f"   修复后可从该阶段恢复: start_phase='{phase_name}'")
+                logger.error(f"\n❌ Pipeline在'{phase_name}'阶段失败")
+                logger.info(f"   修复后可从该阶段恢复: start_phase='{phase_name}'")
                 break
 
             # 如果质检失败，询问是否继续（自动模式下继续，但记录问题）
             if not result.qc_passed:
-                print(f"\n⚠ 阶段'{phase_name}'质检未通过，但继续执行")
-                print(f"   修复建议: {result.fix_suggestions[:3]}")
+                logger.info(f"\n⚠ 阶段'{phase_name}'质检未通过，但继续执行")
+                logger.info(f"   修复建议: {result.fix_suggestions[:3]}")
 
         # 最终总结
-        print(f"\n{'='*60}")
-        print(f"  Pipeline完成")
-        print(f"{'='*60}")
-        print(f"  项目: {state.project_name}")
-        print(f"  迭代: {state.iterations}")
-        print(f"  总质检问题: {state.total_qc_issues}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"  Pipeline完成")
+        logger.info(f"{'='*60}")
+        logger.info(f"  项目: {state.project_name}")
+        logger.info(f"  迭代: {state.iterations}")
+        logger.info(f"  总质检问题: {state.total_qc_issues}")
         for phase_name in self.PHASES:
             if phase_name in state.phases:
                 r = state.phases[phase_name]
                 status_icon = "✅" if r.status == PhaseStatus.PASSED else "❌" if r.status == PhaseStatus.FAILED else "⏳"
-                print(f"  {status_icon} {phase_name}: {r.status.value} ({r.duration:.1f}s, {len(r.qc_issues)}问题)")
-        print(f"{'='*60}")
+                logger.info(f"  {status_icon} {phase_name}: {r.status.value} ({r.duration:.1f}s, {len(r.qc_issues)}问题)")
+        logger.info(f"{'='*60}")
 
         return state
 

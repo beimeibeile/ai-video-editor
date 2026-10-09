@@ -12,17 +12,18 @@ API限制：
 - 3D倾斜用2D旋转+缩放模拟
 - 边框用Pillow预生成带边框的图片
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Tuple
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -113,7 +114,7 @@ def create_framed_portrait(
         framed.save(output_path, quality=95)
         return output_path
     except Exception as e:
-        print(f"  ⚠️ 边框生成失败，使用原图: {e}")
+        logger.error(f"  ⚠️ 边框生成失败，使用原图: {e}")
         return image_path
 
 
@@ -140,7 +141,7 @@ def create_gradient_background(
         img.save(output_path, quality=90)
         return output_path
     except Exception as e:
-        print(f"  ⚠️ 渐变背景生成失败: {e}")
+        logger.error(f"  ⚠️ 渐变背景生成失败: {e}")
         return None
 
 
@@ -161,31 +162,31 @@ def add_card_entrance_animation(
     anim_dur = int(duration_us * 0.4)  # 前40%做入场动画
 
     # 缩放：0→1
-    segment.add_keyframe(KeyframeProperty.uniform_scale, 0, 0.3, **Keyframe.EASE_OUT)
-    segment.add_keyframe(KeyframeProperty.uniform_scale, anim_dur, 1.0, **Keyframe.EASE_OUT)
+    segment.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 0.3, **draft.Keyframe.EASE_OUT)
+    segment.add_keyframe(draft.KeyframeProperty.uniform_scale, anim_dur, 1.0, **draft.Keyframe.EASE_OUT)
 
     # 位移
     if direction == "up":
-        segment.add_keyframe(KeyframeProperty.position_y, 0, -0.5, **Keyframe.EASE_OUT)
-        segment.add_keyframe(KeyframeProperty.position_y, anim_dur, 0.0, **Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_y, 0, -0.5, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_y, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
     elif direction == "down":
-        segment.add_keyframe(KeyframeProperty.position_y, 0, 0.5, **Keyframe.EASE_OUT)
-        segment.add_keyframe(KeyframeProperty.position_y, anim_dur, 0.0, **Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_y, 0, 0.5, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_y, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
     elif direction == "left":
-        segment.add_keyframe(KeyframeProperty.position_x, 0, -0.5, **Keyframe.EASE_OUT)
-        segment.add_keyframe(KeyframeProperty.position_x, anim_dur, 0.0, **Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_x, 0, -0.5, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_x, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
     elif direction == "right":
-        segment.add_keyframe(KeyframeProperty.position_x, 0, 0.5, **Keyframe.EASE_OUT)
-        segment.add_keyframe(KeyframeProperty.position_x, anim_dur, 0.0, **Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_x, 0, 0.5, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.position_x, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
 
     # 旋转（如果有）
     if rotation != 0:
-        segment.add_keyframe(KeyframeProperty.rotation, 0, rotation, **Keyframe.EASE_OUT)
-        segment.add_keyframe(KeyframeProperty.rotation, anim_dur, 0.0, **Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.rotation, 0, rotation, **draft.Keyframe.EASE_OUT)
+        segment.add_keyframe(draft.KeyframeProperty.rotation, anim_dur, 0.0, **draft.Keyframe.EASE_OUT)
 
     # 透明度
-    segment.add_keyframe(KeyframeProperty.alpha, 0, 0.0, **Keyframe.EASE_OUT)
-    segment.add_keyframe(KeyframeProperty.alpha, int(anim_dur * 0.5), 1.0, **Keyframe.EASE_OUT)
+    segment.add_keyframe(draft.KeyframeProperty.alpha, 0, 0.0, **draft.Keyframe.EASE_OUT)
+    segment.add_keyframe(draft.KeyframeProperty.alpha, int(anim_dur * 0.5), 1.0, **draft.Keyframe.EASE_OUT)
 
 
 def create_character_intro(
@@ -220,16 +221,16 @@ def create_character_intro(
     os.makedirs(output_dir, exist_ok=True)
 
     # 1. 生成背景
-    print(f"[1/4] 生成渐变背景...")
+    logger.info(f"[1/4] 生成渐变背景...")
     bg_path = os.path.join(output_dir, f"bg_{preset}.png")
     create_gradient_background(cfg["bg_color"], cfg["bg_gradient"], width, height, bg_path)
 
     # 2. 生成带框人物照
-    print(f"[2/4] 生成 {len(characters)} 张带框人物照...")
+    logger.info(f"[2/4] 生成 {len(characters)} 张带框人物照...")
     framed_images = []
     for i, char in enumerate(characters):
         if not os.path.exists(char.get("image", "")):
-            print(f"  ⚠️ 人物{i}图片不存在，跳过")
+            logger.warning(f"  ⚠️ 人物{i}图片不存在，跳过")
             continue
         framed_path = os.path.join(output_dir, f"framed_{i}.png")
         create_framed_portrait(
@@ -238,10 +239,10 @@ def create_character_intro(
             border_width=cfg["border_width"],
         )
         framed_images.append((framed_path, char))
-        print(f"  ✅ {char.get('name', f'人物{i}')}")
+        logger.info(f"  ✅ {char.get('name', f'人物{i}')}")
 
     # 3. 创建工程
-    print(f"[3/4] 创建工程: {project_name}")
+    logger.info(f"[3/4] 创建工程: {project_name}")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 添加背景
@@ -249,7 +250,7 @@ def create_character_intro(
     project.add_media_safe(bg_path, start_time="0s", duration=f"{total_duration}s", track_name="BG")
 
     # 4. 添加人物卡片+名字
-    print(f"[4/4] 添加人物卡片和名字...")
+    logger.info(f"[4/4] 添加人物卡片和名字...")
     directions = ["up", "down", "left", "right", "up", "down"]
     rotations = [-5, 5, -3, 3, -8, 8]
 
@@ -268,7 +269,7 @@ def create_character_intro(
         if seg:
             # 设置卡片位置（垂直排列，错开）
             y_offset = (i - len(framed_images) / 2 + 0.5) * 0.35
-            seg.clip_settings = ClipSettings(
+            seg.clip_settings = draft.ClipSettings(
                 transform_x=0.0,
                 transform_y=y_offset,
             )
@@ -289,9 +290,9 @@ def create_character_intro(
                 duration=f"{card_dur - 0.2}s",
                 font_size=cfg["name_size"],
                 color_rgb=tuple(c / 255 for c in name_color),
-                style=TextStyle(size=cfg["name_size"], bold=True),
-                border=TextBorder(color=(0, 0, 0), width=40),
-                clip_settings=ClipSettings(transform_y=name_y),
+                style=draft.TextStyle(size=cfg["name_size"], bold=True),
+                border=draft.TextBorder(color=(0, 0, 0), width=40),
+                clip_settings=draft.ClipSettings(transform_y=name_y),
                 anim_in="弹入",
                 track_name=f"Name_{i}",
             )
@@ -304,17 +305,17 @@ def create_character_intro(
                     duration=f"{card_dur - 0.4}s",
                     font_size=6.0,
                     color_rgb=(200, 200, 200),
-                    style=TextStyle(size=6.0),
-                    clip_settings=ClipSettings(transform_y=name_y - 0.12),
+                    style=draft.TextStyle(size=6.0),
+                    clip_settings=draft.ClipSettings(transform_y=name_y - 0.12),
                     anim_in="渐显",
                     track_name=f"Sub_{i}",
                 )
 
-            print(f"  ✅ {char.get('name', f'人物{i}')} ({start_time:.1f}s)")
+            logger.info(f"  ✅ {char.get('name', f'人物{i}')} ({start_time:.1f}s)")
 
     project.save()
-    print(f"\n✅ 人物介绍卡片工程创建完成: {project_name}")
-    print(f"   人物数: {len(framed_images)}, 总时长: {total_duration:.1f}s")
+    logger.info(f"\n✅ 人物介绍卡片工程创建完成: {project_name}")
+    logger.info(f"   人物数: {len(framed_images)}, 总时长: {total_duration:.1f}s")
 
     return {
         "project_name": project_name,
@@ -362,7 +363,7 @@ def add_character_intro_to_project(
     framed_images = []
     for i, char in enumerate(characters):
         if not os.path.exists(char.get("image", "")):
-            print(f"  ⚠️ 人物{i}图片不存在，跳过")
+            logger.warning(f"  ⚠️ 人物{i}图片不存在，跳过")
             continue
         framed_path = os.path.join(output_dir, f"framed_{i}.png")
         create_framed_portrait(
@@ -402,7 +403,7 @@ def add_character_intro_to_project(
 
         if seg:
             y_offset = (i - len(framed_images) / 2 + 0.5) * 0.35
-            seg.clip_settings = ClipSettings(
+            seg.clip_settings = draft.ClipSettings(
                 transform_x=0.0,
                 transform_y=y_offset,
             )
@@ -422,9 +423,9 @@ def add_character_intro_to_project(
                 duration=f"{card_dur - 0.2:.2f}s",
                 font_size=cfg["name_size"],
                 color_rgb=tuple(c / 255 for c in name_color),
-                style=TextStyle(size=cfg["name_size"], bold=True),
-                border=TextBorder(color=(0, 0, 0), width=40),
-                clip_settings=ClipSettings(transform_y=name_y),
+                style=draft.TextStyle(size=cfg["name_size"], bold=True),
+                border=draft.TextBorder(color=(0, 0, 0), width=40),
+                clip_settings=draft.ClipSettings(transform_y=name_y),
                 anim_in="弹入",
                 track_name=f"CharName_{i}",
             )
@@ -437,8 +438,8 @@ def add_character_intro_to_project(
                     duration=f"{card_dur - 0.4:.2f}s",
                     font_size=6.0,
                     color_rgb=(200, 200, 200),
-                    style=TextStyle(size=6.0),
-                    clip_settings=ClipSettings(transform_y=name_y - 0.12),
+                    style=draft.TextStyle(size=6.0),
+                    clip_settings=draft.ClipSettings(transform_y=name_y - 0.12),
                     anim_in="渐显",
                     track_name=f"CharSub_{i}",
                 )
@@ -453,18 +454,18 @@ def add_character_intro_to_project(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("人物介绍卡片特效")
-    print("=" * 60)
-    print("可用预设:")
+    logger.info("=" * 60)
+    logger.info("人物介绍卡片特效")
+    logger.info("=" * 60)
+    logger.info("可用预设:")
     for name in CARD_PRESETS:
-        print(f"  - {name}")
-    print("\n用法:")
-    print("  create_character_intro(")
-    print("    project_name='测试',")
-    print("    characters=[")
-    print("      {'image': 'person1.jpg', 'name': '张三', 'subtitle': '主角'},")
-    print("      {'image': 'person2.jpg', 'name': '李四', 'subtitle': '反派'},")
-    print("    ],")
-    print("    preset='red_drama'")
-    print("  )")
+        logger.info(f"  - {name}")
+    logger.info("\n用法:")
+    logger.info("  create_character_intro(")
+    logger.info("    project_name='测试',")
+    logger.info("    characters=[")
+    logger.info("      {'image': 'person1.jpg', 'name': '张三', 'subtitle': '主角'},")
+    logger.info("      {'image': 'person2.jpg', 'name': '李四', 'subtitle': '反派'},")
+    logger.info("    ],")
+    logger.info("    preset='red_drama'")
+    logger.info("  )")

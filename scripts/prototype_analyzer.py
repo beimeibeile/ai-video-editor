@@ -13,21 +13,31 @@
     from prototype_analyzer import PrototypeAnalyzer
     analyzer = PrototypeAnalyzer()
     result = analyzer.analyze("参考视频.mp4")
-    print(result["summary"])
+    logger.info(result["summary"])
     result.save("原型卡.json")
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 import os
 import sys
 import json
 import subprocess
 import math
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass, field, asdict
 
 # ffmpeg路径
-FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
-FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
+try:
+    from paths import FFMPEG
+except ImportError:
+    FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
+try:
+    from paths import FFPROBE
+except ImportError:
+    FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
 
 
 @dataclass
@@ -344,29 +354,29 @@ class PrototypeAnalyzer:
         os.makedirs(output_dir, exist_ok=True)
         self.temp_dir = output_dir
 
-        print(f"\n{'='*60}")
-        print(f"  原型理解引擎")
-        print(f"{'='*60}")
-        print(f"  视频: {os.path.basename(video_path)}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"  原型理解引擎")
+        logger.info(f"{'='*60}")
+        logger.info(f"  视频: {os.path.basename(video_path)}")
 
         # 1. 基本信息
-        print("\n[1/5] 获取视频信息...")
+        logger.info("\n[1/5] 获取视频信息...")
         info = self._get_video_info(video_path)
-        print(f"  时长: {info['duration']:.1f}s, {info['width']}x{info['height']}, {info['fps']:.0f}fps")
+        logger.info(f"  时长: {info['duration']:.1f}s, {info['width']}x{info['height']}, {info['fps']:.0f}fps")
 
         # 2. 场景切换检测
-        print("\n[2/5] 检测场景切换...")
+        logger.info("\n[2/5] 检测场景切换...")
         scene_changes = self._detect_scene_changes(video_path)
-        print(f"  检测到 {len(scene_changes)} 个场景切换点")
+        logger.info(f"  检测到 {len(scene_changes)} 个场景切换点")
 
         # 3. 抽帧分析
-        print("\n[3/5] 抽帧分析...")
+        logger.info("\n[3/5] 抽帧分析...")
         frames_dir = os.path.join(output_dir, "frames")
         frames = self._extract_frames(video_path, frames_dir, fps=1.0)
-        print(f"  抽取 {len(frames)} 帧")
+        logger.info(f"  抽取 {len(frames)} 帧")
 
         # 4. 构建镜头信息
-        print("\n[4/5] 分析镜头特征...")
+        logger.info("\n[4/5] 分析镜头特征...")
         shots = []
         all_times = [0.0] + scene_changes + [info["duration"]]
         for i in range(len(all_times) - 1):
@@ -399,10 +409,10 @@ class PrototypeAnalyzer:
         shot_density = self._classify_shot_density(len(shots), info["duration"])
 
         # 5. 音频分析
-        print("\n[5/5] 分析音频...")
+        logger.info("\n[5/5] 分析音频...")
         energies = self._analyze_audio_energy(video_path)
         audio_events = self._detect_audio_events(energies)
-        print(f"  检测到 {len(audio_events)} 个音频事件")
+        logger.info(f"  检测到 {len(audio_events)} 个音频事件")
 
         # 构建时间轴摘要
         timeline = self._build_timeline_summary(shots, audio_events)
@@ -458,11 +468,11 @@ class PrototypeAnalyzer:
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(card.summary())
 
-        print(f"\n✅ 原型卡生成完成")
-        print(f"  JSON: {json_path}")
-        print(f"  摘要: {md_path}")
-        print(f"  帧目录: {frames_dir}")
-        print(card.summary())
+        logger.info(f"\n✅ 原型卡生成完成")
+        logger.info(f"  JSON: {json_path}")
+        logger.info(f"  摘要: {md_path}")
+        logger.info(f"  帧目录: {frames_dir}")
+        logger.info(card.summary())
 
         return card
 

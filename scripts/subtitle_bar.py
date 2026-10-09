@@ -14,10 +14,14 @@
 - 可批量生成，适合模板创作者
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import math
-from typing import Tuple, Optional, List, Dict, Any, Literal
+from typing import Tuple, List, Dict, Any
 
 # 探测 jianying-editor skill 路径
 SKILL_ROOT = next((p for p in [
@@ -28,10 +32,7 @@ SKILL_ROOT = next((p for p in [
 if SKILL_ROOT:
     sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
     from jy_wrapper import JyProject
-    # pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+    import pyJianYingDraft as draft
 else:
     raise ImportError("Could not find jianying-editor skill root.")
 
@@ -306,14 +307,14 @@ def add_subtitle_bar(
 
     if bar_seg:
         # 设置位置
-        bar_seg.clip_settings = ClipSettings(
+        bar_seg.clip_settings = draft.ClipSettings(
             transform_x=0.0,
             transform_y=position_y,
         )
         # 入场动画
         if anim_in:
             try:
-                bar_seg.add_animation(IntroType[anim_in] if hasattr(IntroType, anim_in) else None, 0, 500000)
+                bar_seg.add_animation(draft.IntroType[anim_in] if hasattr(draft.IntroType, anim_in) else None, 0, 500000)
             except Exception:
                 pass
 
@@ -326,9 +327,9 @@ def add_subtitle_bar(
         duration=duration,
         font_size=cfg["text_size"],
         color_rgb=cfg["text_color"],
-        style=TextStyle(size=cfg["text_size"], bold=True),
-        border=TextBorder(color=(0, 0, 0), width=30),
-        clip_settings=ClipSettings(transform_x=0.0, transform_y=position_y),
+        style=draft.TextStyle(size=cfg["text_size"], bold=True),
+        border=draft.TextBorder(color=(0, 0, 0), width=30),
+        clip_settings=draft.ClipSettings(transform_x=0.0, transform_y=position_y),
         anim_in="向左滑动",
         track_name="SubtitleBar_Text",
     )
@@ -400,7 +401,7 @@ def create_subtitle_bar_demo(
         )
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"[1/2] 创建工程: {project_name}")
+    logger.info(f"[1/2] 创建工程: {project_name}")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 添加黑色背景
@@ -410,7 +411,7 @@ def create_subtitle_bar_demo(
         bg.save(bg_path)
         project.add_media_safe(bg_path, start_time="0s", duration="12s", track_name="BG")
 
-    print(f"[2/2] 添加6种样式字幕条")
+    logger.info(f"[2/2] 添加6种样式字幕条")
     styles = list(BAR_STYLES.keys())
     texts = ["每日一练", "精彩瞬间", "重点来了", "温馨提示", "高能预警", "下期预告"]
     positions = [-0.7, -0.4, -0.1, 0.2, 0.5, 0.8]
@@ -424,23 +425,23 @@ def create_subtitle_bar_demo(
             anim_in="向左滑动",
             output_dir=output_dir,
         )
-        print(f"  ✅ [{i+1}] {style}: {text}")
+        logger.info(f"  ✅ [{i+1}] {style}: {text}")
 
     project.save()
     return {"project_name": project_name, "styles_count": len(styles)}
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("半透明字幕条特效模块")
-    print("=" * 60)
-    print("\n核心函数:")
-    print("  create_gradient_bar(...) - 生成半透明渐变圆角矩形")
-    print("  create_highlight_circle(...) - 生成高光圆形")
-    print("  add_subtitle_bar(project, text, ...) - 给工程加字幕条")
-    print("  add_subtitle_bars(project, items) - 批量加字幕条")
-    print("  create_subtitle_bar_demo() - 创建演示工程")
-    print("\n预设样式:")
+    logger.info("=" * 60)
+    logger.info("半透明字幕条特效模块")
+    logger.info("=" * 60)
+    logger.info("\n核心函数:")
+    logger.info("  create_gradient_bar(...) - 生成半透明渐变圆角矩形")
+    logger.info("  create_highlight_circle(...) - 生成高光圆形")
+    logger.info("  add_subtitle_bar(project, text, ...) - 给工程加字幕条")
+    logger.info("  add_subtitle_bars(project, items) - 批量加字幕条")
+    logger.info("  create_subtitle_bar_demo() - 创建演示工程")
+    logger.info("\n预设样式:")
     for name in BAR_STYLES:
         s = BAR_STYLES[name]
-        print(f"  {name}: {s['color_start']}→{s['color_end']}, {s['width']}x{s['height']}")
+        logger.info(f"  {name}: {s['color_start']}→{s['color_end']}, {s['width']}x{s['height']}")

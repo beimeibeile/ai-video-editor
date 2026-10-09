@@ -11,12 +11,16 @@ AnySearch 灵感搜索集成 v1.0
 集成到script_rewriter中，作为改写前的灵感获取步骤。
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import json
 import re
 import subprocess
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from dataclasses import dataclass, field, asdict
 
 
@@ -61,7 +65,7 @@ class AnySearchInspiration:
     使用方式：
         searcher = AnySearchInspiration()
         report = searcher.get_inspiration("程序员加班代码活了", style="suspense")
-        print(report.trending_topics)
+        logger.info(report.trending_topics)
     """
 
     def __init__(self, cli_path: str = None, python_path: str = None):
@@ -88,9 +92,9 @@ class AnySearchInspiration:
         self.available = cli_path is not None and os.path.exists(cli_path)
 
         if self.available:
-            print(f"  🔍 AnySearch可用: {os.path.basename(cli_path)}")
+            logger.info(f"  🔍 AnySearch可用: {os.path.basename(cli_path)}")
         else:
-            print(f"  ⚠️  AnySearch不可用，灵感搜索将跳过")
+            logger.warning(f"  ⚠️  AnySearch不可用，灵感搜索将跳过")
 
     def _run_search(self, query: str, max_results: int = 5, domain: str = None) -> List[SearchResult]:
         """
@@ -129,10 +133,10 @@ class AnySearchInspiration:
             return self._parse_search_output(output)
 
         except subprocess.TimeoutExpired:
-            print(f"  ⚠️  搜索超时: {query}")
+            logger.info(f"  ⚠️  搜索超时: {query}")
             return []
         except Exception as e:
-            print(f"  ⚠️  搜索异常: {e}")
+            logger.info(f"  ⚠️  搜索异常: {e}")
             return []
 
     def _parse_search_output(self, output: str) -> List[SearchResult]:
@@ -254,46 +258,46 @@ class AnySearchInspiration:
 
         report = InspirationReport(query=theme)
 
-        print(f"\n{'='*60}")
-        print(f"🔍 AnySearch灵感搜索: {theme}")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"🔍 AnySearch灵感搜索: {theme}")
+        logger.info(f"{'='*60}")
 
         # 同类剧本
-        print(f"\n[1/5] 搜索同类剧本参考...")
+        logger.info(f"\n[1/5] 搜索同类剧本参考...")
         report.similar_scripts = self.search_similar_scripts(theme, style)
-        print(f"  找到 {len(report.similar_scripts)} 条")
+        logger.info(f"  找到 {len(report.similar_scripts)} 条")
 
         # 热门梗
         if include_trending:
-            print(f"[2/5] 搜索热门梗/流行语...")
+            logger.info(f"[2/5] 搜索热门梗/流行语...")
             report.trending_topics = self.search_trending(theme)
-            print(f"  找到 {len(report.trending_topics)} 条")
+            logger.info(f"  找到 {len(report.trending_topics)} 条")
 
         # 角色参考
         if character_desc:
-            print(f"[3/5] 搜索角色设定参考...")
+            logger.info(f"[3/5] 搜索角色设定参考...")
             report.character_refs = self.search_character_ref(character_desc)
-            print(f"  找到 {len(report.character_refs)} 条")
+            logger.info(f"  找到 {len(report.character_refs)} 条")
 
         # 场景参考
         if scene_desc:
-            print(f"[4/5] 搜索场景/道具参考...")
+            logger.info(f"[4/5] 搜索场景/道具参考...")
             report.scene_refs = self.search_scene_ref(scene_desc)
-            print(f"  找到 {len(report.scene_refs)} 条")
+            logger.info(f"  找到 {len(report.scene_refs)} 条")
 
         # 电影参考
         if include_film:
-            print(f"[5/5] 搜索电影/剧集参考...")
+            logger.info(f"[5/5] 搜索电影/剧集参考...")
             report.film_refs = self.search_film_ref(theme)
-            print(f"  找到 {len(report.film_refs)} 条")
+            logger.info(f"  找到 {len(report.film_refs)} 条")
 
         report.search_time = time.time() - start
 
         total = (len(report.similar_scripts) + len(report.trending_topics) +
                  len(report.character_refs) + len(report.scene_refs) +
                  len(report.film_refs))
-        print(f"\n✅ 灵感搜索完成: 共{total}条参考, 耗时{report.search_time:.1f}s")
-        print(f"{'='*60}\n")
+        logger.info(f"\n✅ 灵感搜索完成: 共{total}条参考, 耗时{report.search_time:.1f}s")
+        logger.info(f"{'='*60}\n")
 
         return report
 
@@ -321,9 +325,9 @@ class AnySearchInspiration:
 
 if __name__ == "__main__":
     # 测试
-    print("="*60)
-    print("AnySearch灵感搜索测试")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("AnySearch灵感搜索测试")
+    logger.info("="*60)
 
     searcher = AnySearchInspiration()
 
@@ -335,7 +339,7 @@ if __name__ == "__main__":
             scene_desc="办公室 深夜 电脑",
         )
 
-        print("\n灵感摘要:")
-        print(searcher.get_inspiration_summary(report))
+        logger.info("\n灵感摘要:")
+        logger.info(searcher.get_inspiration_summary(report))
     else:
-        print("AnySearch不可用，跳过测试")
+        logger.warning("AnySearch不可用，跳过测试")

@@ -9,21 +9,21 @@
 使用方法：
     python semantic_builder.py --semantic semantic_card.json --output 豆包被打_v10
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import json
 import argparse
-from typing import Dict, List, Any, Optional
 
 SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 sys.path.insert(0, os.path.join(SKILL, "scripts", "vendor"))
 
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 # 导入P22工具
 P22_SKILL = r"C:\Users\Administrator\AppData\Local\DoubaoWork\User Data\Default\.doubaowork\agent_mode\workspace\.user_skills\ai-video-editor\scripts"
@@ -52,12 +52,12 @@ class SemanticBuilder:
         """构建完整工程"""
         duration = self.semantic.get("duration", 20.0)
 
-        print(f"\n{'='*60}")
-        print(f"  语义驱动构建: {project_name}")
-        print(f"{'='*60}")
-        print(f"  时长: {duration:.1f}s")
-        print(f"  角色: {[c['name'] for c in self.semantic['characters']]}")
-        print(f"  叙事弧线: {self.semantic['narrative_arc']}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"  语义驱动构建: {project_name}")
+        logger.info(f"{'='*60}")
+        logger.info(f"  时长: {duration:.1f}s")
+        logger.info(f"  角色: {[c['name'] for c in self.semantic['characters']]}")
+        logger.info(f"  叙事弧线: {self.semantic['narrative_arc']}")
 
         # 1. 创建工程+背景
         self._create_project(project_name, width, height, duration)
@@ -80,7 +80,7 @@ class SemanticBuilder:
         # 7. 保存
         result = self.project.save()
         draft_path = result.get("draft_path", "")
-        print(f"\n✅ 工程已保存: {draft_path}")
+        logger.info(f"\n✅ 工程已保存: {draft_path}")
 
         # 复制到D盘
         import shutil
@@ -88,29 +88,29 @@ class SemanticBuilder:
         if os.path.exists(target):
             shutil.rmtree(target)
         shutil.copytree(draft_path, target)
-        print(f"✅ 已复制到: {target}")
+        logger.info(f"✅ 已复制到: {target}")
 
         return target
 
     def _create_project(self, name: str, w: int, h: int, duration: float):
         """创建工程+背景"""
-        print(f"\n[1/7] 创建工程+背景")
+        logger.info(f"\n[1/7] 创建工程+背景")
         self.project = JyProject(name, width=w, height=h, overwrite=True)
 
         bg_path = os.path.join(self.assets_dir, "clean_bg_1080.png")
         if os.path.exists(bg_path):
             bg = self.project.add_media_safe(bg_path, "0s", f"{duration}s", "BG")
-            bg.add_keyframe(KeyframeProperty.position_x, 0, 0)
-            bg.add_keyframe(KeyframeProperty.position_y, 0, 0)
-            bg.add_keyframe(KeyframeProperty.uniform_scale, 0, 1.0)
-            bg.add_keyframe(KeyframeProperty.alpha, 0, 1.0)
-            print(f"  ✅ 背景: {os.path.basename(bg_path)}")
+            bg.add_keyframe(draft.KeyframeProperty.position_x, 0, 0)
+            bg.add_keyframe(draft.KeyframeProperty.position_y, 0, 0)
+            bg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 1.0)
+            bg.add_keyframe(draft.KeyframeProperty.alpha, 0, 1.0)
+            logger.info(f"  ✅ 背景: {os.path.basename(bg_path)}")
         else:
-            print(f"  ⚠️ 背景不存在: {bg_path}")
+            logger.info(f"  ⚠️ 背景不存在: {bg_path}")
 
     def _create_characters(self, duration: float):
         """创建角色层"""
-        print(f"\n[2/7] 创建角色层")
+        logger.info(f"\n[2/7] 创建角色层")
         char_files = {
             "豆包": "doubao.png",
             "机器人": "robot.png",
@@ -123,7 +123,7 @@ class SemanticBuilder:
             path = os.path.join(self.assets_dir, "characters", filename)
 
             if not os.path.exists(path):
-                print(f"  ⚠️ {name}素材不存在: {path}")
+                logger.info(f"  ⚠️ {name}素材不存在: {path}")
                 continue
 
             # 确定初始位置
@@ -141,19 +141,19 @@ class SemanticBuilder:
                 init_alpha = 1.0
 
             seg = self.project.add_media_safe(path, "0s", f"{duration}s", f"Char_{name}")
-            seg.add_keyframe(KeyframeProperty.position_x, 0, init_x)
-            seg.add_keyframe(KeyframeProperty.position_y, 0, init_y)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, 0, init_scale)
-            seg.add_keyframe(KeyframeProperty.alpha, 0, init_alpha)
-            seg.add_keyframe(KeyframeProperty.rotation, 0, 0.0)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, 0, init_x)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, 0, init_y)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, init_scale)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, 0, init_alpha)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, 0, 0.0)
 
             self.segments[name] = seg
             self.segment_ids[name] = seg.id if hasattr(seg, 'id') else str(id(seg))
-            print(f"  ✅ {name}: ({init_x:.3f}, {init_y:.3f}) scale={init_scale} alpha={init_alpha}")
+            logger.info(f"  ✅ {name}: ({init_x:.3f}, {init_y:.3f}) scale={init_scale} alpha={init_alpha}")
 
     def _apply_actions(self):
         """应用动作关键帧"""
-        print(f"\n[3/7] 应用动作关键帧")
+        logger.info(f"\n[3/7] 应用动作关键帧")
         for char in self.semantic["characters"]:
             name = char["name"]
             if name not in self.segments:
@@ -179,15 +179,15 @@ class SemanticBuilder:
                 elif name == "女杀手":
                     self._apply_killer_action(seg, action_type, t_us, dur_us, intensity, direction)
 
-            print(f"  ✅ {name}: {len(actions)}个动作")
+            logger.info(f"  ✅ {name}: {len(actions)}个动作")
 
     def _apply_doubao_action(self, seg, action_type, t_us, dur_us, intensity, direction):
         """豆包动作"""
         if action_type == "idle":
             # 呼吸动画
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us, 0.30)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us + dur_us // 2, 0.31)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us + dur_us, 0.30)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us, 0.30)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us + dur_us // 2, 0.31)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us + dur_us, 0.30)
 
         elif action_type == "impact":
             # 被打：震动+下沉+旋转+缩放
@@ -195,81 +195,81 @@ class SemanticBuilder:
             # 震动
             for i, (dx, dy) in enumerate([(0.03, 0.02), (-0.02, -0.03), (0.02, 0.01), (0, 0)]):
                 tt = t_us + int(dur_us * i / 4)
-                seg.add_keyframe(KeyframeProperty.position_x, tt, AVATAR_X + dx * intensity)
-                seg.add_keyframe(KeyframeProperty.position_y, tt, base_y + dy * intensity)
+                seg.add_keyframe(draft.KeyframeProperty.position_x, tt, AVATAR_X + dx * intensity)
+                seg.add_keyframe(draft.KeyframeProperty.position_y, tt, base_y + dy * intensity)
             # 旋转
             rot = (-1 if direction == "left" else 1) * (10 + intensity * 20)
-            seg.add_keyframe(KeyframeProperty.rotation, t_us, 0)
-            seg.add_keyframe(KeyframeProperty.rotation, t_us + dur_us // 3, rot)
-            seg.add_keyframe(KeyframeProperty.rotation, t_us + dur_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, t_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, t_us + dur_us // 3, rot)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, t_us + dur_us, 0)
             # 缩放（被打压缩）
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us, 0.30)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us + dur_us // 3, 0.30 - 0.06 * intensity)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us + dur_us, 0.30)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us, 0.30)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us + dur_us // 3, 0.30 - 0.06 * intensity)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us + dur_us, 0.30)
 
         elif action_type == "recover":
             # 恢复
-            seg.add_keyframe(KeyframeProperty.position_y, t_us, AVATAR_Y - 0.03)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us + dur_us, AVATAR_Y)
-            seg.add_keyframe(KeyframeProperty.rotation, t_us, 5)
-            seg.add_keyframe(KeyframeProperty.rotation, t_us + dur_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us, AVATAR_Y - 0.03)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us + dur_us, AVATAR_Y)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, t_us, 5)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, t_us + dur_us, 0)
 
         elif action_type == "fall":
             # 倒地（在框内下沉+旋转）
-            seg.add_keyframe(KeyframeProperty.position_y, t_us, AVATAR_Y)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us + dur_us, AVATAR_Y - 0.08)
-            seg.add_keyframe(KeyframeProperty.rotation, t_us, 0)
-            seg.add_keyframe(KeyframeProperty.rotation, t_us + dur_us, -30)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us, 0.30)
-            seg.add_keyframe(KeyframeProperty.uniform_scale, t_us + dur_us, 0.25)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us, AVATAR_Y)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us + dur_us, AVATAR_Y - 0.08)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, t_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.rotation, t_us + dur_us, -30)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us, 0.30)
+            seg.add_keyframe(draft.KeyframeProperty.uniform_scale, t_us + dur_us, 0.25)
 
     def _apply_robot_action(self, seg, action_type, t_us, dur_us, intensity, direction):
         """机器人动作"""
         if action_type == "enter":
             # 从右侧滑入
-            seg.add_keyframe(KeyframeProperty.alpha, t_us, 0)
-            seg.add_keyframe(KeyframeProperty.alpha, t_us + 300_000, 1.0)
-            seg.add_keyframe(KeyframeProperty.position_x, t_us, 1.5)
-            seg.add_keyframe(KeyframeProperty.position_x, t_us + dur_us, -0.35)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us + 300_000, 1.0)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, t_us, 1.5)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, t_us + dur_us, -0.35)
 
         elif action_type == "attack":
             # 出拳：快速前冲+收回
-            seg.add_keyframe(KeyframeProperty.position_x, t_us, -0.35)
-            seg.add_keyframe(KeyframeProperty.position_x, t_us + int(dur_us * 0.3), -0.55)
-            seg.add_keyframe(KeyframeProperty.position_x, t_us + dur_us, -0.35)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, t_us, -0.35)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, t_us + int(dur_us * 0.3), -0.55)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, t_us + dur_us, -0.35)
 
         elif action_type == "exit":
             # 退出
-            seg.add_keyframe(KeyframeProperty.alpha, t_us, 1.0)
-            seg.add_keyframe(KeyframeProperty.alpha, t_us + dur_us, 0)
-            seg.add_keyframe(KeyframeProperty.position_x, t_us, -0.35)
-            seg.add_keyframe(KeyframeProperty.position_x, t_us + dur_us, 1.5)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us, 1.0)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us + dur_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, t_us, -0.35)
+            seg.add_keyframe(draft.KeyframeProperty.position_x, t_us + dur_us, 1.5)
 
     def _apply_killer_action(self, seg, action_type, t_us, dur_us, intensity, direction):
         """女杀手动作"""
         if action_type == "enter":
             # 从下方升起
-            seg.add_keyframe(KeyframeProperty.alpha, t_us, 0)
-            seg.add_keyframe(KeyframeProperty.alpha, t_us + 300_000, 1.0)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us, -1.5)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us + dur_us, 0.15)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us + 300_000, 1.0)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us, -1.5)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us + dur_us, 0.15)
 
         elif action_type == "attack":
             # 出拳：向上冲
-            seg.add_keyframe(KeyframeProperty.position_y, t_us, 0.15)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us + int(dur_us * 0.3), 0.25)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us + dur_us, 0.15)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us, 0.15)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us + int(dur_us * 0.3), 0.25)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us + dur_us, 0.15)
 
         elif action_type == "exit":
             # 退出
-            seg.add_keyframe(KeyframeProperty.alpha, t_us, 1.0)
-            seg.add_keyframe(KeyframeProperty.alpha, t_us + dur_us, 0)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us, 0.15)
-            seg.add_keyframe(KeyframeProperty.position_y, t_us + dur_us, -1.5)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us, 1.0)
+            seg.add_keyframe(draft.KeyframeProperty.alpha, t_us + dur_us, 0)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us, 0.15)
+            seg.add_keyframe(draft.KeyframeProperty.position_y, t_us + dur_us, -1.5)
 
     def _apply_masks(self):
         """应用圆形蒙版"""
-        print(f"\n[4/7] 应用圆形蒙版")
+        logger.info(f"\n[4/7] 应用圆形蒙版")
         if "豆包" in self.segments:
             seg = self.segments["豆包"]
             # 豆包添加圆形蒙版（头像框裁切）
@@ -280,7 +280,7 @@ class SemanticBuilder:
                 avatar_radius=AVATAR_R,
                 feather=3.0,
             )
-            print(f"  ✅ 豆包: 圆形蒙版 (status={result['status']})")
+            logger.info(f"  ✅ 豆包: 圆形蒙版 (status={result['status']})")
 
             # 被打时蒙版震动
             impact_times = [9.5, 11.8, 14.9, 15.2, 15.5, 15.9]
@@ -293,11 +293,11 @@ class SemanticBuilder:
                     base_x=AVATAR_X,
                     base_y=AVATAR_Y,
                 )
-            print(f"  ✅ 豆包: {len(impact_times)}个蒙版震动")
+            logger.info(f"  ✅ 豆包: {len(impact_times)}个蒙版震动")
 
     def _apply_blend_modes(self):
         """应用混合模式（保存后注入）"""
-        print(f"\n[5/7] 应用混合模式（保存后注入）")
+        logger.info(f"\n[5/7] 应用混合模式（保存后注入）")
         # 这一步在save后执行，先记录需要应用的效果
         self._pending_blend = {
             "impact_times": [9.5, 11.8, 14.9, 15.2, 15.5, 15.9],
@@ -306,20 +306,20 @@ class SemanticBuilder:
 
     def _apply_audio(self, duration: float):
         """应用音效"""
-        print(f"\n[6/7] 应用音效")
+        logger.info(f"\n[6/7] 应用音效")
         audio_path = os.path.join(self.assets_dir, "ref_detail", "audio.wav")
         if os.path.exists(audio_path):
             try:
                 self.project.add_audio(audio_path, "0s", f"{duration}s")
-                print(f"  ✅ 原视频音频: {os.path.basename(audio_path)}")
+                logger.info(f"  ✅ 原视频音频: {os.path.basename(audio_path)}")
             except Exception as e:
-                print(f"  ⚠️ 音频添加失败: {e}")
+                logger.error(f"  ⚠️ 音频添加失败: {e}")
         else:
-            print(f"  ⚠️ 音频不存在: {audio_path}")
+            logger.info(f"  ⚠️ 音频不存在: {audio_path}")
 
     def post_save(self, draft_path: str):
         """保存后处理：注入混合模式关键帧"""
-        print(f"\n[7/7] 保存后处理：注入混合模式")
+        logger.info(f"\n[7/7] 保存后处理：注入混合模式")
         if not hasattr(self, '_pending_blend'):
             return
 
@@ -337,7 +337,7 @@ class SemanticBuilder:
                     flash_mode="screen",
                     base_mode="normal",
                 )
-            print(f"  ✅ 豆包: {len(impact_times)}次闪白")
+            logger.info(f"  ✅ 豆包: {len(impact_times)}次闪白")
 
         # 闪白层
         flash_path = os.path.join(self.assets_dir, "flash_white.png")
@@ -358,7 +358,7 @@ def main():
     builder = SemanticBuilder(args.semantic, args.assets)
     draft_path = builder.build(args.name, args.width, args.height)
     builder.post_save(draft_path)
-    print(f"\n🎉 构建完成: {draft_path}")
+    logger.info(f"\n🎉 构建完成: {draft_path}")
 
 
 if __name__ == "__main__":

@@ -15,13 +15,14 @@
     - 中心:   x=0,    y=0
     - 头像框: x=-0.653, y=+0.561 (1080x1920)
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import sys, os
 sys.path.insert(0, r'C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor\scripts')
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -44,7 +45,7 @@ def make_label(text, color, size=300):
     # 文字
     try:
         font = ImageFont.truetype("arial.ttf", 28)
-    except:
+    except Exception:
         font = ImageFont.load_default()
     bbox = draw.textbbox((0,0), text, font=font)
     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
@@ -55,9 +56,9 @@ def make_label(text, color, size=300):
 
 
 def main():
-    print("=" * 60)
-    print("坐标验证工具 v1.0")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("坐标验证工具 v1.0")
+    logger.info("=" * 60)
 
     # 生成6张测试图
     points = [
@@ -74,14 +75,14 @@ def main():
         path = make_label(label, color)
         if path:
             images.append((label, x, y, path))
-            print(f"  ✅ {label}: ({x}, {y}) -> {os.path.basename(path)}")
+            logger.info(f"  ✅ {label}: ({x}, {y}) -> {os.path.basename(path)}")
 
     if not images:
-        print("❌ Pillow不可用，无法生成测试图")
+        logger.info("❌ Pillow不可用，无法生成测试图")
         return
 
     # 创建剪映工程
-    print(f"\n创建工程: 坐标验证 (1080x1920)")
+    logger.info(f"\n创建工程: 坐标验证 (1080x1920)")
     project = JyProject("坐标验证", width=1080, height=1920, overwrite=True)
 
     # 黑色背景
@@ -91,10 +92,10 @@ def main():
     # 每个点一张图，scale=0.25
     for label, x, y, path in images:
         seg = project.add_media_safe(path, start_time='0s', duration='5s', track_name=f'Point_{label.split()[0]}')
-        seg.add_keyframe(KeyframeProperty.position_x, 0, x)
-        seg.add_keyframe(KeyframeProperty.position_y, 0, y)
-        seg.add_keyframe(KeyframeProperty.uniform_scale, 0, 0.25)
-        print(f"  ✅ {label} 位置已设置")
+        seg.add_keyframe(draft.KeyframeProperty.position_x, 0, x)
+        seg.add_keyframe(draft.KeyframeProperty.position_y, 0, y)
+        seg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 0.25)
+        logger.info(f"  ✅ {label} 位置已设置")
 
     # 保存
     result = project.save()
@@ -107,16 +108,16 @@ def main():
         shutil.rmtree(dst)
     shutil.copytree(draft_path, dst)
 
-    print(f"\n✅ 坐标验证工程已创建:")
-    print(f"   {dst}")
-    print(f"\n验证清单:")
-    print(f"   1. 左上(红)应在屏幕左上角附近")
-    print(f"   2. 右上(绿)应在屏幕右上角附近")
-    print(f"   3. 左下(蓝)应在屏幕左下角附近")
-    print(f"   4. 右下(黄)应在屏幕右下角附近")
-    print(f"   5. 中心(紫)应在屏幕正中心")
-    print(f"   6. 头像框(青)应在左上角圆形头像框位置")
-    print(f"\n如果位置不对，说明坐标方向理解有误，需要调整转换公式。")
+    logger.info(f"\n✅ 坐标验证工程已创建:")
+    logger.info(f"   {dst}")
+    logger.info(f"\n验证清单:")
+    logger.info(f"   1. 左上(红)应在屏幕左上角附近")
+    logger.info(f"   2. 右上(绿)应在屏幕右上角附近")
+    logger.info(f"   3. 左下(蓝)应在屏幕左下角附近")
+    logger.info(f"   4. 右下(黄)应在屏幕右下角附近")
+    logger.info(f"   5. 中心(紫)应在屏幕正中心")
+    logger.info(f"   6. 头像框(青)应在左上角圆形头像框位置")
+    logger.info(f"\n如果位置不对，说明坐标方向理解有误，需要调整转换公式。")
 
 
 if __name__ == "__main__":

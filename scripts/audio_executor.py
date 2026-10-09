@@ -1,4 +1,4 @@
-﻿"""
+"""
 P25执行器: 音频合成
 基于ffmpeg生成BGM/音效/环境音
 """
@@ -7,15 +7,20 @@ import os
 import subprocess
 import random
 from typing import Dict, Any, List, Optional
+import logging
+logger = logging.getLogger(__name__)
 
 
-FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
+try:
+    from paths import FFMPEG
+except ImportError:
+    FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
 
 
 class AudioExecutor:
     def __init__(self, output_dir: str = None):
         self.output_dir = output_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output", "audio"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_output", "audio"
         )
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -28,10 +33,10 @@ class AudioExecutor:
             if result.returncode == 0 and os.path.exists(output_file):
                 return True
             else:
-                print(f"  ⚠️  ffmpeg失败: {result.stderr[:100]}")
+                logger.info(f"  ⚠️  ffmpeg失败: {result.stderr[:100]}")
                 return False
         except Exception as e:
-            print(f"  ⚠️  ffmpeg异常: {e}")
+            logger.info(f"  ⚠️  ffmpeg异常: {e}")
             return False
 
     def generate_hit(self, output_file: str = None, duration: float = 0.3) -> Optional[str]:
@@ -45,7 +50,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 击打声: {duration}s")
+            logger.info(f"  ✅ 击打声: {duration}s")
             return output_file
         return None
 
@@ -60,7 +65,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 挥拳声: {duration}s")
+            logger.info(f"  ✅ 挥拳声: {duration}s")
             return output_file
         return None
 
@@ -74,7 +79,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 脚步声: {duration}s")
+            logger.info(f"  ✅ 脚步声: {duration}s")
             return output_file
         return None
 
@@ -88,7 +93,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 闪白音效: {duration}s")
+            logger.info(f"  ✅ 闪白音效: {duration}s")
             return output_file
         return None
 
@@ -105,7 +110,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 环境音({ambient_type}): {duration}s")
+            logger.info(f"  ✅ 环境音({ambient_type}): {duration}s")
             return output_file
         return None
 
@@ -125,7 +130,7 @@ class AudioExecutor:
         filter_complex = ";".join(filters) + ";" + "".join([f"[a{i}]" for i in range(len(notes))]) + f"concat=n={len(notes)}:v=0:a=1[out]"
         args = inputs + ["-filter_complex", filter_complex, "-map", "[out]", "-ar", "44100", "-ac", "1"]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ BGM({style}): {duration}s")
+            logger.info(f"  ✅ BGM({style}): {duration}s")
             return output_file
         return None
 
@@ -139,7 +144,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 笑声: {duration}s")
+            logger.info(f"  ✅ 笑声: {duration}s")
             return output_file
         return None
 
@@ -153,7 +158,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 掌声: {duration}s")
+            logger.info(f"  ✅ 掌声: {duration}s")
             return output_file
         return None
 
@@ -167,7 +172,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 风声: {duration}s")
+            logger.info(f"  ✅ 风声: {duration}s")
             return output_file
         return None
 
@@ -181,7 +186,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 雨声: {duration}s")
+            logger.info(f"  ✅ 雨声: {duration}s")
             return output_file
         return None
 
@@ -195,7 +200,7 @@ class AudioExecutor:
             "-ar", "44100", "-ac", "1"
         ]
         if self._run_ffmpeg(args, output_file):
-            print(f"  ✅ 欢呼声: {duration}s")
+            logger.info(f"  ✅ 欢呼声: {duration}s")
             return output_file
         return None
 
@@ -219,9 +224,9 @@ class AudioExecutor:
     }
 
     def execute(self, audio_instructions: List[Dict]) -> Dict[str, Any]:
-        print(f"\n{'='*60}")
-        print(f"音频执行器: {len(audio_instructions)}条指令")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"音频执行器: {len(audio_instructions)}条指令")
+        logger.info(f"{'='*60}")
         results = []
         for i, instr in enumerate(audio_instructions):
             audio_type = instr.get("type", "")
@@ -264,7 +269,7 @@ class AudioExecutor:
             })
 
         success_count = sum(1 for r in results if r["success"])
-        print(f"\n  完成: {success_count}成功 / {len(results)-success_count}失败")
+        logger.info(f"\n  完成: {success_count}成功 / {len(results)-success_count}失败")
         return {
             "status": "success" if success_count == len(results) else "partial",
             "total": len(results), "success": success_count,
@@ -274,6 +279,7 @@ class AudioExecutor:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     executor = AudioExecutor()
     test = [
         {"type": "sfx", "name": "击打声", "duration": 0.3, "volume": 1.0},
@@ -282,4 +288,4 @@ if __name__ == "__main__":
         {"type": "ambient", "name": "轻微室内音", "duration": 5.0, "volume": 0.3},
     ]
     result = executor.execute(test)
-    print(f"结果: {result['status']}")
+    logger.info(f"结果: {result['status']}")

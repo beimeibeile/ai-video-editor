@@ -14,6 +14,10 @@
 - 支持能力降级（skill不可用时自动切换到替代方案）
 - 支持动态注册（新skill安装后自动发现）
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import json
@@ -593,22 +597,22 @@ def invoke_capability(name: str, *args, **kwargs) -> Any:
 if __name__ == "__main__":
     registry = get_registry()
 
-    print(registry.summary())
+    logger.info(registry.summary())
 
-    print("\n=== 健康检查（基础） ===")
+    logger.info("\n=== 健康检查（基础） ===")
     for sid, detail in registry.check_health().items():
-        print(f"  {sid}: {detail['status']} (路径存在: {detail['path_exists']})")
+        logger.info(f"  {sid}: {detail['status']} (路径存在: {detail['path_exists']})")
 
-    print("\n=== 版本兼容检测 ===")
-    print(f"  anysearch >=3.0.0: {registry.check_version_compatibility('anysearch-skill', '>=3.0.0')}")
-    print(f"  ai-video-editor >=2.0.0: {registry.check_version_compatibility('ai-video-editor', '>=2.0.0')}")
+    logger.info("\n=== 版本兼容检测 ===")
+    logger.info(f"  anysearch >=3.0.0: {registry.check_version_compatibility('anysearch-skill', '>=3.0.0')}")
+    logger.info(f"  ai-video-editor >=2.0.0: {registry.check_version_compatibility('ai-video-editor', '>=2.0.0')}")
 
-    print("\n=== 能力查询测试 ===")
+    logger.info("\n=== 能力查询测试 ===")
     cap = registry.get_capability("transparent_animation")
     if cap:
-        print(f"  transparent_animation: {cap.description} (优先级{cap.priority})")
+        logger.info(f"  transparent_animation: {cap.description} (优先级{cap.priority})")
     else:
-        print("  transparent_animation: 未找到")
+        logger.info("  transparent_animation: 未找到")
 
     alts = registry.find_alternatives("text_to_image")
-    print(f"  text_to_image 替代方案: {len(alts)}个")
+    logger.info(f"  text_to_image 替代方案: {len(alts)}个")

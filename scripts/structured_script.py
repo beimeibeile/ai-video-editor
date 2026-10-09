@@ -16,10 +16,14 @@
 - StructuredScript: 结构化剧本
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import re
 import json
 import os
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 
@@ -176,7 +180,7 @@ MAX_DIALOGUE_CHARS = 35  # 单句台词最大字数
 def estimate_dialogue_duration(text: str) -> float:
     """估算台词时长（按语速折算）"""
     # 去掉标点
-    clean = re.sub(r'[，。！？、；：""''（）\s]', '', text)
+    clean = re.sub(r"[，。！？、；：\"\"''（）\s]", '', text)
     char_count = len(clean)
     return max(1.0, round(char_count / CHINESE_SPEECH_RATE, 1))
 
@@ -422,7 +426,7 @@ def run_quality_gates(script: StructuredScript) -> List[QualityGateResult]:
     long_lines = []
     for beat in script.all_beats:
         if beat.beat_type == BeatType.DIALOGUE:
-            clean = re.sub(r'[，。！？、；：""''（）\s]', '', beat.content)
+            clean = re.sub(r"[，。！？、；：\"\"''（）\s]", '', beat.content)
             if len(clean) > MAX_DIALOGUE_CHARS:
                 long_lines.append(f"{beat.speaker}: {beat.content[:20]}...({len(clean)}字)")
     results.append(QualityGateResult(
@@ -554,18 +558,18 @@ def print_quality_report(results: List[QualityGateResult]):
     passed = sum(1 for r in results if r.passed)
     total = len(results)
 
-    print(f"\n{'='*60}")
-    print(f"质量门报告: {passed}/{total} 通过")
-    print(f"{'='*60}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"质量门报告: {passed}/{total} 通过")
+    logger.info(f"{'='*60}")
 
     for r in results:
         status = "✅" if r.passed else "❌"
-        print(f"  {status} {r.gate_id} {r.name}: {r.message}")
+        logger.info(f"  {status} {r.gate_id} {r.name}: {r.message}")
         if not r.passed and r.details:
             for d in r.details[:3]:
-                print(f"      → {d}")
+                logger.info(f"      → {d}")
 
-    print(f"{'='*60}\n")
+    logger.info(f"{'='*60}\n")
     return passed == total
 
 
@@ -698,9 +702,9 @@ if __name__ == "__main__":
     小张：...那我下班了？
     """
 
-    print("="*60)
-    print("结构化剧本内核测试")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("结构化剧本内核测试")
+    logger.info("="*60)
 
     # 解析
     script = parse_to_structured_script(
@@ -709,20 +713,20 @@ if __name__ == "__main__":
         target_duration_sec=20.0,
     )
 
-    print(f"\n解析结果:")
-    print(f"  场次: {len(script.scenes)}")
-    print(f"  节拍: {len(script.all_beats)}")
-    print(f"  角色: {script.character_names}")
-    print(f"  估算时长: {script.total_duration_sec:.1f}s")
-    print(f"  钩子: {script.hook}")
-    print(f"  悬念: {script.suspense}")
+    logger.info(f"\n解析结果:")
+    logger.info(f"  场次: {len(script.scenes)}")
+    logger.info(f"  节拍: {len(script.all_beats)}")
+    logger.info(f"  角色: {script.character_names}")
+    logger.info(f"  估算时长: {script.total_duration_sec:.1f}s")
+    logger.info(f"  钩子: {script.hook}")
+    logger.info(f"  悬念: {script.suspense}")
 
     for scene in script.scenes:
-        print(f"\n  {scene.scene_id} ({scene.location}, {scene.duration_sec:.1f}s):")
+        logger.info(f"\n  {scene.scene_id} ({scene.location}, {scene.duration_sec:.1f}s):")
         for beat in scene.beats:
             type_label = "💬" if beat.beat_type == BeatType.DIALOGUE else "🎬"
             speaker = f" [{beat.speaker}/{beat.tone}]" if beat.speaker else ""
-            print(f"    {type_label} #{beat.beat_index} ({beat.duration_sec:.1f}s){speaker}: {beat.content[:30]}")
+            logger.info(f"    {type_label} #{beat.beat_index} ({beat.duration_sec:.1f}s){speaker}: {beat.content[:30]}")
 
     # 质量门
     gates = run_quality_gates(script)
@@ -730,9 +734,9 @@ if __name__ == "__main__":
 
     # 标准格式
     standard = to_standard_format(script)
-    print(f"标准格式转换: {len(standard['scenes'])}场景, {sum(len(s['shots']) for s in standard['scenes'])}镜头")
+    logger.info(f"标准格式转换: {len(standard['scenes'])}场景, {sum(len(s['shots']) for s in standard['scenes'])}镜头")
 
     # 体检模式
-    print("\n体检模式测试:")
+    logger.info("\n体检模式测试:")
     report = health_check(test_script, title="代码觉醒体检", target_duration=20.0)
-    print(f"  通过: {report['passed']}/{report['total']}")
+    logger.info(f"  通过: {report['passed']}/{report['total']}")

@@ -27,7 +27,9 @@ import json
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Dict, Tuple
+import logging
+logger = logging.getLogger(__name__)
 
 
 # ==================== 数据结构 ====================
@@ -596,6 +598,7 @@ class JianyingAudioOptimizer:
 # ==================== CLI入口 ====================
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     import argparse
 
     parser = argparse.ArgumentParser(description="多音轨混音优化器")
@@ -622,14 +625,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == "presets":
-        print("可用预设：")
+        logger.info("可用预设：")
         for name, p in PRESETS.items():
-            print(f"  {name:15s} - {p['description']}")
+            logger.info(f"  {name:15s} - {p['description']}")
 
     elif args.command == "loudness":
         mixer = MultiTrackMixer(ffmpeg_path=args.ffmpeg)
         result = mixer.analyze_loudness(args.input)
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        logger.info(json.dumps(result, indent=2, ensure_ascii=False))
 
     elif args.command == "mix":
         tracks = []
@@ -647,16 +650,16 @@ if __name__ == "__main__":
                 tracks.append(AudioTrack(name=f"sfx_{i}", path=sfx_path, track_type="sfx"))
 
         if not tracks:
-            print("错误：至少需要一条音轨")
+            logger.info("错误：至少需要一条音轨")
             sys.exit(1)
 
         mixer = MultiTrackMixer(ffmpeg_path=args.ffmpeg)
         result = mixer.mix_from_preset(tracks, args.preset, args.output)
 
         if result["success"]:
-            print(f"✅ 混音完成: {result['output_path']}")
-            print(f"   时长: {result['duration']}秒")
-            print(f"   音轨数: {result['track_count']}")
+            logger.info(f"✅ 混音完成: {result['output_path']}")
+            logger.info(f"   时长: {result['duration']}秒")
+            logger.info(f"   音轨数: {result['track_count']}")
         else:
-            print(f"❌ 混音失败: {result.get('error', '未知错误')}")
+            logger.info(f"❌ 混音失败: {result.get('error', '未知错误')}")
             sys.exit(1)

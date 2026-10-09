@@ -18,12 +18,16 @@
     python sync_manager.py report
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import json
 import subprocess
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 # 四姊妹项目路径（DoubaoWork）
 BASE_DIR = r"C:\Users\Administrator\AppData\Local\DoubaoWork\User Data\Default\.doubaowork\agent_mode\workspace\.user_skills"
@@ -148,9 +152,9 @@ def get_version(path: str) -> str:
 
 def check_sync() -> Dict:
     """检查四项目同步状态"""
-    print("=" * 70)
-    print("四姊妹项目同步状态检查")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("四姊妹项目同步状态检查")
+    logger.info("=" * 70)
 
     results = {}
     versions = {}
@@ -158,68 +162,68 @@ def check_sync() -> Dict:
     all_clean = True
 
     for name, cfg in PROJECTS.items():
-        print(f"\n[{name}] {cfg['role']}")
+        logger.info(f"\n[{name}] {cfg['role']}")
         info = get_git_info(cfg["path"])
         version = get_version(cfg["path"])
         results[name] = {**info, "version": version, "role": cfg["role"]}
         versions[name] = version
         commits[name] = info["commit"]
 
-        print(f"  路径: {cfg['path']}")
-        print(f"  版本: {version}")
-        print(f"  分支: {info['branch']}")
-        print(f"  commit: {info['commit']} - {info['commit_msg'][:40]}")
-        print(f"  最后提交: {info['last_commit_time']}")
+        logger.info(f"  路径: {cfg['path']}")
+        logger.info(f"  版本: {version}")
+        logger.info(f"  分支: {info['branch']}")
+        logger.info(f"  commit: {info['commit']} - {info['commit_msg'][:40]}")
+        logger.info(f"  最后提交: {info['last_commit_time']}")
 
         if info["ahead"] > 0:
-            print(f"  ⚠️  领先远程 {info['ahead']} 个提交（需push）")
+            logger.info(f"  ⚠️  领先远程 {info['ahead']} 个提交（需push）")
             all_clean = False
         if info["behind"] > 0:
-            print(f"  ⚠️  落后远程 {info['behind']} 个提交（需pull）")
+            logger.info(f"  ⚠️  落后远程 {info['behind']} 个提交（需pull）")
             all_clean = False
         if info["modified"]:
-            print(f"  ⚠️  未提交修改 ({len(info['modified'])}个):")
+            logger.info(f"  ⚠️  未提交修改 ({len(info['modified'])}个):")
             for m in info["modified"][:5]:
-                print(f"      {m}")
+                logger.info(f"      {m}")
             if len(info["modified"]) > 5:
-                print(f"      ... 还有{len(info['modified'])-5}个")
+                logger.info(f"      ... 还有{len(info['modified'])-5}个")
             all_clean = False
         if info["untracked"]:
-            print(f"  ⚠️  未跟踪文件 ({len(info['untracked'])}个):")
+            logger.info(f"  ⚠️  未跟踪文件 ({len(info['untracked'])}个):")
             for u in info["untracked"][:5]:
-                print(f"      {u}")
+                logger.info(f"      {u}")
             all_clean = False
         if not info["modified"] and not info["untracked"] and info["ahead"] == 0:
-            print(f"  ✅ 工作区干净")
+            logger.info(f"  ✅ 工作区干净")
 
     # 版本一致性检查
-    print("\n" + "=" * 70)
-    print("版本一致性:")
+    logger.info("\n" + "=" * 70)
+    logger.info("版本一致性:")
     unique_versions = set(versions.values())
     if len(unique_versions) == 1:
-        print(f"  ✅ 所有项目版本一致: {list(unique_versions)[0]}")
+        logger.info(f"  ✅ 所有项目版本一致: {list(unique_versions)[0]}")
     else:
-        print(f"  ❌ 版本不一致:")
+        logger.info(f"  ❌ 版本不一致:")
         for name, ver in versions.items():
-            print(f"      {name}: {ver}")
+            logger.info(f"      {name}: {ver}")
         all_clean = False
 
     # 分支一致性检查
     branches = {name: info["branch"] for name, info in results.items()}
     unique_branches = set(branches.values())
     if len(unique_branches) == 1:
-        print(f"  ✅ 所有项目分支一致: {list(unique_branches)[0]}")
+        logger.info(f"  ✅ 所有项目分支一致: {list(unique_branches)[0]}")
     else:
-        print(f"  ⚠️  分支不一致:")
+        logger.info(f"  ⚠️  分支不一致:")
         for name, br in branches.items():
-            print(f"      {name}: {br}")
+            logger.info(f"      {name}: {br}")
 
-    print("\n" + "=" * 70)
+    logger.info("\n" + "=" * 70)
     if all_clean:
-        print("✅ 四项目全部同步，工作区干净")
+        logger.info("✅ 四项目全部同步，工作区干净")
     else:
-        print("⚠️  存在不同步项，详见上方")
-    print("=" * 70)
+        logger.info("⚠️  存在不同步项，详见上方")
+    logger.info("=" * 70)
 
     return {
         "projects": results,
@@ -231,7 +235,7 @@ def check_sync() -> Dict:
 
 def sync_version(version: str) -> bool:
     """同步版本号到四个项目"""
-    print(f"\n同步版本号到 {version}")
+    logger.info(f"\n同步版本号到 {version}")
     success = True
 
     for name, cfg in PROJECTS.items():
@@ -239,9 +243,9 @@ def sync_version(version: str) -> bool:
         try:
             with open(version_file, "w", encoding="utf-8") as f:
                 f.write(version + "\n")
-            print(f"  ✅ {name}: VERSION -> {version}")
+            logger.info(f"  ✅ {name}: VERSION -> {version}")
         except Exception as e:
-            print(f"  ❌ {name}: {e}")
+            logger.info(f"  ❌ {name}: {e}")
             success = False
 
         # 同步更新SKILL.md中的version
@@ -254,31 +258,31 @@ def sync_version(version: str) -> bool:
                 content = re.sub(r"^version:.*$", f"version: {version}", content, flags=re.MULTILINE)
                 with open(skill_md, "w", encoding="utf-8") as f:
                     f.write(content)
-                print(f"  ✅ {name}: SKILL.md version -> {version}")
+                logger.info(f"  ✅ {name}: SKILL.md version -> {version}")
             except Exception as e:
-                print(f"  ⚠️  {name}: SKILL.md更新失败: {e}")
+                logger.error(f"  ⚠️  {name}: SKILL.md更新失败: {e}")
 
     return success
 
 
 def batch_commit(message: str) -> Dict:
     """批量提交四个项目"""
-    print(f"\n批量提交: {message}")
+    logger.info(f"\n批量提交: {message}")
     results = {}
 
     for name, cfg in PROJECTS.items():
-        print(f"\n[{name}]")
+        logger.info(f"\n[{name}]")
         # add all
         out, err, code = run_git(cfg["path"], ["add", "-A"])
         if code != 0:
-            print(f"  ❌ add失败: {err}")
+            logger.error(f"  ❌ add失败: {err}")
             results[name] = "add_failed"
             continue
 
         # 检查是否有变更
         out, _, _ = run_git(cfg["path"], ["status", "--porcelain"])
         if not out:
-            print(f"  ⏭️  无变更，跳过")
+            logger.warning(f"  ⏭️  无变更，跳过")
             results[name] = "no_changes"
             continue
 
@@ -287,10 +291,10 @@ def batch_commit(message: str) -> Dict:
         if code == 0:
             # 获取新commit
             commit_out, _, _ = run_git(cfg["path"], ["rev-parse", "--short", "HEAD"])
-            print(f"  ✅ 提交成功: {commit_out}")
+            logger.info(f"  ✅ 提交成功: {commit_out}")
             results[name] = f"committed:{commit_out}"
         else:
-            print(f"  ❌ 提交失败: {err[:100]}")
+            logger.error(f"  ❌ 提交失败: {err[:100]}")
             results[name] = "commit_failed"
 
     return results
@@ -298,22 +302,22 @@ def batch_commit(message: str) -> Dict:
 
 def batch_push() -> Dict:
     """批量推送四个项目"""
-    print("\n批量推送到远程")
+    logger.info("\n批量推送到远程")
     results = {}
 
     for name, cfg in PROJECTS.items():
-        print(f"\n[{name}]")
+        logger.info(f"\n[{name}]")
         out, err, code = run_git(cfg["path"], ["push", "origin", "HEAD"])
         if code == 0:
-            print(f"  ✅ 推送成功")
+            logger.info(f"  ✅ 推送成功")
             results[name] = "pushed"
         else:
             # 检查是否是"Everything up-to-date"
             if "up-to-date" in err or "up-to-date" in out:
-                print(f"  ⏭️  已是最新")
+                logger.info(f"  ⏭️  已是最新")
                 results[name] = "up_to_date"
             else:
-                print(f"  ❌ 推送失败: {err[:150]}")
+                logger.error(f"  ❌ 推送失败: {err[:150]}")
                 results[name] = "push_failed"
 
     return results
@@ -376,18 +380,18 @@ code {{ background: #21262d; padding: 2px 6px; border-radius: 3px; font-size: 12
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html)
 
-    print(f"\n报告已生成: {output_path}")
+    logger.info(f"\n报告已生成: {output_path}")
     return output_path
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("用法:")
-        print("  python sync_manager.py check          # 检查同步状态")
-        print("  python sync_manager.py sync_version X  # 同步版本号")
-        print("  python sync_manager.py batch_commit M # 批量提交")
-        print("  python sync_manager.py batch_push     # 批量推送")
-        print("  python sync_manager.py report         # 生成HTML报告")
+        logger.info("用法:")
+        logger.info("  python sync_manager.py check          # 检查同步状态")
+        logger.info("  python sync_manager.py sync_version X  # 同步版本号")
+        logger.info("  python sync_manager.py batch_commit M # 批量提交")
+        logger.info("  python sync_manager.py batch_push     # 批量推送")
+        logger.info("  python sync_manager.py report         # 生成HTML报告")
         sys.exit(0)
 
     cmd = sys.argv[1]
@@ -396,7 +400,7 @@ if __name__ == "__main__":
         check_sync()
     elif cmd == "sync_version":
         if len(sys.argv) < 3:
-            print("请指定版本号，如: python sync_manager.py sync_version 1.2.0")
+            logger.info("请指定版本号，如: python sync_manager.py sync_version 1.2.0")
         else:
             sync_version(sys.argv[2])
     elif cmd == "batch_commit":
@@ -407,4 +411,4 @@ if __name__ == "__main__":
     elif cmd == "report":
         generate_report()
     else:
-        print(f"未知命令: {cmd}")
+        logger.info(f"未知命令: {cmd}")

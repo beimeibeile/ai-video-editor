@@ -14,6 +14,10 @@
     create_date_badge("测试", date_text="10.01", style="circle")
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import math
@@ -22,10 +26,7 @@ from typing import Tuple, Optional, Dict, Any
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -209,10 +210,10 @@ def create_date_badge(
 
     style_cfg = BADGE_STYLES.get(style, BADGE_STYLES["circle"])
 
-    print(f"\n{'='*60}")
-    print(f"圆形日期标签特效")
-    print(f"{'='*60}")
-    print(f"日期: {date_text}, 风格: {style_cfg['name']}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"圆形日期标签特效")
+    logger.info(f"{'='*60}")
+    logger.info(f"日期: {date_text}, 风格: {style_cfg['name']}")
 
     # 1. 创建标签背景
     badge_path = None
@@ -231,14 +232,14 @@ def create_date_badge(
             shape=style_cfg["shape"],
         )
         if badge_path:
-            print(f"  ✅ 标签背景: {badge_path}")
+            logger.info(f"  ✅ 标签背景: {badge_path}")
 
     # 2. 创建工程
-    print(f"\n[1/2] 创建工程: {project_name}")
+    logger.info(f"\n[1/2] 创建工程: {project_name}")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 3. 添加标签
-    print(f"[2/2] 添加日期标签")
+    logger.info(f"[2/2] 添加日期标签")
     if badge_path:
         # 图片标签模式
         badge_seg = project.add_media_safe(
@@ -250,45 +251,45 @@ def create_date_badge(
         if badge_seg:
             # 设置位置
             badge_seg.add_keyframe(
-                KeyframeProperty.position_x, 0, position[0],
-                **Keyframe.EASE_OUT
+                draft.KeyframeProperty.position_x, 0, position[0],
+                **draft.Keyframe.EASE_OUT
             )
             badge_seg.add_keyframe(
-                KeyframeProperty.position_y, 0, position[1],
-                **Keyframe.EASE_OUT
+                draft.KeyframeProperty.position_y, 0, position[1],
+                **draft.Keyframe.EASE_OUT
             )
             # 入场动画（弹入=缩放从0→1）
             anim = style_cfg.get("anim_in", "弹入")
             if anim == "弹入":
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_x, 0, 0.0,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_x, 0, 0.0,
+                    **draft.Keyframe.EASE_OUT
                 )
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_x, int(0.4 * 1e6), 1.0 * scale,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_x, int(0.4 * 1e6), 1.0 * scale,
+                    **draft.Keyframe.EASE_OUT
                 )
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_y, 0, 0.0,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_y, 0, 0.0,
+                    **draft.Keyframe.EASE_OUT
                 )
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_y, int(0.4 * 1e6), 1.0 * scale,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_y, int(0.4 * 1e6), 1.0 * scale,
+                    **draft.Keyframe.EASE_OUT
                 )
             elif anim == "渐显":
                 badge_seg.add_keyframe(
-                    KeyframeProperty.alpha, 0, 0.0,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.alpha, 0, 0.0,
+                    **draft.Keyframe.EASE_OUT
                 )
                 badge_seg.add_keyframe(
-                    KeyframeProperty.alpha, int(0.5 * 1e6), 1.0,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.alpha, int(0.5 * 1e6), 1.0,
+                    **draft.Keyframe.EASE_OUT
                 )
-            print(f"  ✅ 图片标签已添加 (位置{position}, 动画:{anim})")
+            logger.info(f"  ✅ 图片标签已添加 (位置{position}, 动画:{anim})")
     else:
         # 纯文字模式
-        text_style = TextStyle(
+        text_style = draft.TextStyle(
             size=15.0 * scale,
             color=tuple(c / 255 for c in style_cfg.get("text_color", (255, 255, 255))),
         )
@@ -302,22 +303,22 @@ def create_date_badge(
         )
         if text_seg:
             text_seg.add_keyframe(
-                KeyframeProperty.position_x, 0, position[0],
-                **Keyframe.EASE_OUT
+                draft.KeyframeProperty.position_x, 0, position[0],
+                **draft.Keyframe.EASE_OUT
             )
             text_seg.add_keyframe(
-                KeyframeProperty.position_y, 0, position[1],
-                **Keyframe.EASE_OUT
+                draft.KeyframeProperty.position_y, 0, position[1],
+                **draft.Keyframe.EASE_OUT
             )
-            print(f"  ✅ 纯文字标签已添加")
+            logger.info(f"  ✅ 纯文字标签已添加")
 
     # 4. 保存
     result = project.save()
     draft_path = result.get("draft_path", "")
 
-    print(f"\n✅ 圆形日期标签创建完成!")
-    print(f"   工程: {project_name}")
-    print(f"   草稿: {draft_path}")
+    logger.info(f"\n✅ 圆形日期标签创建完成!")
+    logger.info(f"   工程: {project_name}")
+    logger.info(f"   草稿: {draft_path}")
 
     return {
         "status": "success",
@@ -386,33 +387,33 @@ def add_date_badge_to_project(
         )
         if badge_seg:
             badge_seg.add_keyframe(
-                KeyframeProperty.position_x, int(start_time * 1e6), position[0],
-                **Keyframe.EASE_OUT
+                draft.KeyframeProperty.position_x, int(start_time * 1e6), position[0],
+                **draft.Keyframe.EASE_OUT
             )
             badge_seg.add_keyframe(
-                KeyframeProperty.position_y, int(start_time * 1e6), position[1],
-                **Keyframe.EASE_OUT
+                draft.KeyframeProperty.position_y, int(start_time * 1e6), position[1],
+                **draft.Keyframe.EASE_OUT
             )
             anim = style_cfg.get("anim_in", "弹入")
             if anim == "弹入":
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_x, int(start_time * 1e6), 0.0,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_x, int(start_time * 1e6), 0.0,
+                    **draft.Keyframe.EASE_OUT
                 )
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_x, int((start_time + 0.4) * 1e6), 1.0 * scale,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_x, int((start_time + 0.4) * 1e6), 1.0 * scale,
+                    **draft.Keyframe.EASE_OUT
                 )
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_y, int(start_time * 1e6), 0.0,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_y, int(start_time * 1e6), 0.0,
+                    **draft.Keyframe.EASE_OUT
                 )
                 badge_seg.add_keyframe(
-                    KeyframeProperty.scale_y, int((start_time + 0.4) * 1e6), 1.0 * scale,
-                    **Keyframe.EASE_OUT
+                    draft.KeyframeProperty.scale_y, int((start_time + 0.4) * 1e6), 1.0 * scale,
+                    **draft.Keyframe.EASE_OUT
                 )
     else:
-        text_style = TextStyle(
+        text_style = draft.TextStyle(
             size=15.0 * scale,
             color=tuple(c / 255 for c in style_cfg.get("text_color", (255, 255, 255))),
         )
@@ -434,14 +435,14 @@ def add_date_badge_to_project(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("圆形日期标签特效模块")
-    print("=" * 60)
-    print(f"\nPillow: {'可用' if _PIL_AVAILABLE else '不可用(纯文字模式)'}")
-    print("\n可用风格:")
+    logger.info("=" * 60)
+    logger.info("圆形日期标签特效模块")
+    logger.info("=" * 60)
+    logger.info(f"\nPillow: {'可用' if _PIL_AVAILABLE else '不可用(纯文字模式)'}")
+    logger.info("\n可用风格:")
     for name, cfg in BADGE_STYLES.items():
-        print(f"  {name}: {cfg['name']}")
-    print("\n使用示例:")
-    print("  create_date_badge('测试', date_text='10.01', style='circle')")
-    print("  create_date_badge('测试', date_text='OCT 01', style='circle_dark')")
-    print("  create_date_badge('测试', date_text='2026.10.01', style='pill')")
+        logger.info(f"  {name}: {cfg['name']}")
+    logger.info("\n使用示例:")
+    logger.info("  create_date_badge('测试', date_text='10.01', style='circle')")
+    logger.info("  create_date_badge('测试', date_text='OCT 01', style='circle_dark')")
+    logger.info("  create_date_badge('测试', date_text='2026.10.01', style='pill')")

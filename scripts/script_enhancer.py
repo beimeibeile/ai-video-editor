@@ -10,10 +10,14 @@ P23增强: 剧本深度语义理解
 5. 剧情结构分析（开头/发展/高潮/结尾、节奏、冲突）
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import re
 import json
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 
 
 class ScriptEnhancer:
@@ -42,10 +46,10 @@ class ScriptEnhancer:
                 from llm_client import LLMClient
                 self.llm_client = LLMClient()
                 if not self.llm_client.is_available:
-                    print("  ℹ️  LLM不可用，使用规则增强模式")
+                    logger.info("  ℹ️  LLM不可用，使用规则增强模式")
                     self.llm_client = None
             except ImportError:
-                print("  ℹ️  LLM客户端未安装，使用规则增强模式")
+                logger.info("  ℹ️  LLM客户端未安装，使用规则增强模式")
 
     @property
     def llm_available(self) -> bool:
@@ -63,8 +67,8 @@ class ScriptEnhancer:
         Returns:
             增强后的剧本解析结果
         """
-        print(f"\n[ScriptEnhancer] 深度语义增强...")
-        print(f"  LLM模式: {'开启' if self.llm_available else '规则增强'}")
+        logger.info(f"\n[ScriptEnhancer] 深度语义增强...")
+        logger.info(f"  LLM模式: {'开启' if self.llm_available else '规则增强'}")
 
         result = parsed_script.copy()
 
@@ -101,9 +105,9 @@ class ScriptEnhancer:
         # 统计
         char_count = len(result.get("characters", []))
         scene_count = len(result.get("scenes", []))
-        print(f"  ✅ 增强完成: {char_count}角色, {scene_count}分镜")
+        logger.info(f"  ✅ 增强完成: {char_count}角色, {scene_count}分镜")
         if result.get("structure"):
-            print(f"  剧情结构: {result['structure'].get('summary', '')}")
+            logger.info(f"  剧情结构: {result['structure'].get('summary', '')}")
 
         return result
 
@@ -810,7 +814,7 @@ class ScriptEnhancer:
 
 请只返回JSON，不要包含其他文字。"""
 
-        print("  🤖 LLM深度理解中...")
+        logger.info("  🤖 LLM深度理解中...")
         result = self.llm_client.chat_json(
             message=f"请分析以下剧本：\n\n{script[:5000]}",  # 限制长度
             system_prompt=system_prompt,
@@ -819,9 +823,9 @@ class ScriptEnhancer:
         )
 
         if result:
-            print("  ✅ LLM深度理解完成")
+            logger.info("  ✅ LLM深度理解完成")
         else:
-            print("  ⚠️  LLM深度理解失败，使用规则增强结果")
+            logger.error("  ⚠️  LLM深度理解失败，使用规则增强结果")
 
         return result
 
@@ -899,11 +903,11 @@ if __name__ == "__main__":
     # 增强
     enhanced = enhancer.enhance(parsed, test_script)
 
-    print("\n增强结果:")
-    print(f"  角色数: {len(enhanced['characters'])}")
+    logger.info("\n增强结果:")
+    logger.info(f"  角色数: {len(enhanced['characters'])}")
     for char in enhanced["characters"]:
         print(f"    {char['name']}: gender={char.get('gender')}, "
               f"personality={char.get('personality', [])}, "
               f"importance={char.get('importance')}")
-    print(f"  剧情结构: {enhanced.get('structure', {}).get('summary', '')}")
-    print(f"  LLM增强: {enhanced.get('enhanced_by_llm', False)}")
+    logger.info(f"  剧情结构: {enhanced.get('structure', {}).get('summary', '')}")
+    logger.info(f"  LLM增强: {enhanced.get('enhanced_by_llm', False)}")

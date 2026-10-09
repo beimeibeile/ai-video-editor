@@ -15,6 +15,10 @@
     visual = EMOTION_VISUAL_MAP_V2.get("快乐", EMOTION_VISUAL_MAP_V2["舒缓"])
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 EMOTION_VISUAL_MAP_V2 = {
     # ===== 基础情绪（6种，保留原有） =====
     "激昂": {
@@ -526,23 +530,23 @@ def get_emotion_categories() -> dict:
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("情绪-镜头视觉映射表 v2.0")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("情绪-镜头视觉映射表 v2.0")
+    logger.info("=" * 60)
     emotions = get_emotion_list()
-    print(f"\n支持情绪数: {len(emotions)}种")
-    print(f"\n情绪列表:")
+    logger.info(f"\n支持情绪数: {len(emotions)}种")
+    logger.info(f"\n情绪列表:")
     for i, e in enumerate(emotions, 1):
-        print(f"  {i:2d}. {e}")
+        logger.info(f"  {i:2d}. {e}")
 
-    print(f"\n情绪分类:")
+    logger.info(f"\n情绪分类:")
     for cat, emos in get_emotion_categories().items():
-        print(f"  {cat}: {', '.join(emos)}")
+        logger.info(f"  {cat}: {', '.join(emos)}")
 
-    print(f"\n测试: 快乐(强度0.8)")
+    logger.info(f"\n测试: 快乐(强度0.8)")
     visual = get_emotion_visual("快乐", 0.8)
-    print(f"  推荐镜头时长: {visual['shot_duration']['recommended']}s")
-    print(f"  运镜: {visual['camera_moves']}")
-    print(f"  转场: {visual['transitions']}")
-    print(f"  调色: {visual['color_grade']}")
-    print(f"  节奏: {visual['pacing']}")
+    logger.info(f"  推荐镜头时长: {visual['shot_duration']['recommended']}s")
+    logger.info(f"  运镜: {visual['camera_moves']}")
+    logger.info(f"  转场: {visual['transitions']}")
+    logger.info(f"  调色: {visual['color_grade']}")
+    logger.info(f"  节奏: {visual['pacing']}")

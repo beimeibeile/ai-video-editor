@@ -1,4 +1,4 @@
-﻿"""
+"""
 P25执行器: 剪映工程构建
 把P24输出的指令序列转换成实际的剪映工程
 
@@ -10,39 +10,24 @@ import os
 import sys
 import json
 import uuid
+import logging
 from typing import Dict, Any, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # 添加jianying-editor路径
 try:
     from paths import PATHS
     JY_SKILL = PATHS.get("jianying_skill_root", "")
 except ImportError:
-    JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
+    _la = os.environ.get("LOCALAPPDATA", os.path.join(os.environ.get("USERPROFILE", r"C:\Users\Administrator"), "AppData", "Local"))
+    JY_SKILL = os.path.join(_la, "Doubao", "User Data", "Default", ".doubao", "agent_mode", "workspace", ".user_skills", "jianying-editor")
 if JY_SKILL:
     sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
 from jy_wrapper import JyProject
-# 通过适配层访问pyJianYingDraft（解耦直接依赖）
-_AI_VIDEO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _AI_VIDEO_ROOT not in sys.path:
-    sys.path.insert(0, _AI_VIDEO_ROOT)
-from adapters.jianying_adapter import (
-    MaskType, KeyframeProperty,
-    VideoSceneEffectType, FilterType, VideoCharacterEffectType,
-)
-draft = None  # 已迁移到适配层，保留变量名避免引用错误
-
-# 统一特效API（skill内部scripts目录，已包含jianying_effect_api.py）
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-if _SCRIPT_DIR not in sys.path:
-    sys.path.insert(0, _SCRIPT_DIR)
-try:
-    from jianying_effect_api import JianyingEffectAPI
-    _EFFECT_API = JianyingEffectAPI()
-    _EFFECT_API_AVAILABLE = True
-except ImportError:
-    _EFFECT_API = None
-    _EFFECT_API_AVAILABLE = False
+import pyJianYingDraft as draft
+from pyJianYingDraft.metadata.video_scene_effect import VideoSceneEffectType
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -58,52 +43,15 @@ except ImportError:
     _MASK_AVAILABLE = False
 
 
-# 特效名称动态解析（支持全部1097种场景特效 + 972种滤镜 + 240种角色特效）
-def _effect_title(meta) -> str:
-    """获取特效元数据的名称（兼容title/name两种属性）"""
-    return getattr(meta, 'title', None) or getattr(meta, 'name', '')
-
-
-def resolve_effect(effect_name: str):
-    """
-    动态解析特效名称为pyJianYingDraft枚举对象。
-    搜索顺序：场景特效 → 滤镜 → 角色特效 → 精确匹配 → 模糊匹配。
-
-    Args:
-        effect_name: 特效名称（中文或英文）
-
-    Returns:
-        枚举对象 或 None
-    """
-    if not effect_name:
-        return None
-
-    # 1. 精确匹配各类特效
-    for enum_cls in (VideoSceneEffectType, FilterType, VideoCharacterEffectType):
-        for name, member in enum_cls.__members__.items():
-            if _effect_title(member.value) == effect_name:
-                return member
-
-    # 2. 枚举名直接匹配（如"闪白"）
-    for enum_cls in (VideoSceneEffectType, FilterType, VideoCharacterEffectType):
-        try:
-            return getattr(enum_cls, effect_name)
-        except AttributeError:
-            continue
-
-    # 3. 模糊匹配（包含关键词）
-    effect_lower = effect_name.lower()
-    for enum_cls in (VideoSceneEffectType, FilterType, VideoCharacterEffectType):
-        for name, member in enum_cls.__members__.items():
-            title = _effect_title(member.value)
-            if effect_lower in title.lower():
-                return member
-
-    return None
-
-
-# 兼容旧代码的别名
-EFFECT_NAME_MAP = {}  # 已废弃，使用resolve_effect()动态解析
+# 特效名称映射（P24指令名 → VideoSceneEffectType枚举）
+EFFECT_NAME_MAP = {
+    "闪白": VideoSceneEffectType.闪白,
+    "flash_white": VideoSceneEffectType.闪白,
+    "闪白_II": VideoSceneEffectType.闪白_II,
+    "矩形闪白": VideoSceneEffectType.矩形闪白,
+    "震动": None,  # 震动用关键帧实现
+    "模糊": None,  # 模糊用滤镜实现
+}
 
 
 # 角色占位颜色
@@ -184,7 +132,7 @@ class JianyingExecutor:
 
     def __init__(self, work_dir: str = None):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_output"
         )
         self.asset_dir = os.path.join(self.work_dir, "assets")
         os.makedirs(self.asset_dir, exist_ok=True)
@@ -211,7 +159,7 @@ class JianyingExecutor:
             bool: 是否成功
         """
         if not _MASK_AVAILABLE:
-            print("  ⚠️  蒙版工具不可用，跳过蒙版")
+            logger.warning("  ⚠️  蒙版工具不可用，跳过蒙版")
             return False
 
         try:
@@ -219,7 +167,7 @@ class JianyingExecutor:
             # 注意：add_mask的center_x/y会被除以素材半宽，所以这里传原始比例值
             # 后续通过inject_mask_keyframes修正
             segment.add_mask(
-                mask_type=MaskType.圆形,
+                mask_type=draft.MaskType.圆形,
                 center_x=center_x,
                 center_y=center_y,
                 size=size,
@@ -227,7 +175,7 @@ class JianyingExecutor:
             )
             return True
         except Exception as e:
-            print(f"  ⚠️  添加蒙版失败: {e}")
+            logger.warning(f"  ⚠️  添加蒙版失败: {e}")
             return False
 
     def _apply_masks(self, mask_instructions: List[Dict]) -> int:
@@ -262,7 +210,7 @@ class JianyingExecutor:
 
             # 检查片段是否已有蒙版（一个片段只能有一个蒙版）
             if hasattr(seg, 'mask') and seg.mask is not None:
-                print(f"  ⚠️  {target} 已有蒙版，跳过重复添加")
+                logger.warning(f"  ⚠️  {target} 已有蒙版，跳过重复添加")
                 continue
 
             if mask_type == "circle":
@@ -275,22 +223,22 @@ class JianyingExecutor:
                 )
                 if success:
                     applied += 1
-                    print(f"  ✅ 圆形蒙版: {target}")
+                    logger.info(f"  ✅ 圆形蒙版: {target}")
 
             elif mask_type == "rect":
                 # 矩形蒙版
                 try:
                     seg.add_mask(
-                        mask_type=MaskType.矩形,
+                        mask_type=draft.MaskType.矩形,
                         center_x=params.get("center_x", 0),
                         center_y=params.get("center_y", 0),
                         size=params.get("size", 1.0),
                         feather=params.get("feather", 0) * 100,
                     )
                     applied += 1
-                    print(f"  ✅ 矩形蒙版: {target}")
+                    logger.info(f"  ✅ 矩形蒙版: {target}")
                 except Exception as e:
-                    print(f"  ⚠️  矩形蒙版失败: {e}")
+                    logger.warning(f"  ⚠️  矩形蒙版失败: {e}")
 
         return applied
 
@@ -323,16 +271,19 @@ class JianyingExecutor:
             # 没有指定target时，默认应用到所有角色
             if not target:
                 for char_seg in self.character_segments.values():
-                    effect_enum = resolve_effect(effect_type)
+                    effect_enum = EFFECT_NAME_MAP.get(effect_type)
                     if not effect_enum:
-                        continue
+                        try:
+                            effect_enum = getattr(VideoSceneEffectType, effect_type)
+                        except AttributeError:
+                            continue
                     try:
                         char_seg.add_effect(effect_enum)
                         applied += 1
                     except Exception as e:
-                        print(f"  ⚠️  特效失败: {e}")
+                        logger.warning(f"  ⚠️  特效失败: {e}")
                 if applied > 0:
-                    print(f"  ✅ 特效: {effect_type} → 所有角色")
+                    logger.info(f"  ✅ 特效: {effect_type} → 所有角色")
                 continue
 
             # 找到目标片段
@@ -343,30 +294,34 @@ class JianyingExecutor:
             elif target == "background" or target == "all":
                 # 对所有角色片段应用特效
                 for char_seg in self.character_segments.values():
-                    effect_enum = resolve_effect(effect_type)
+                    effect_enum = EFFECT_NAME_MAP.get(effect_type)
                     if effect_enum:
                         try:
                             char_seg.add_effect(effect_enum)
                             applied += 1
                         except Exception as e:
-                            print(f"  ⚠️  特效失败: {e}")
+                            logger.warning(f"  ⚠️  特效失败: {e}")
                 continue
 
             if not seg:
                 continue
 
-            # 映射特效类型（动态解析全部2309种特效/滤镜/角色特效）
-            effect_enum = resolve_effect(effect_type)
+            # 映射特效类型
+            effect_enum = EFFECT_NAME_MAP.get(effect_type)
             if not effect_enum:
-                print(f"  ⚠️  未知特效: {effect_type}")
-                continue
+                # 尝试直接用名称查找
+                try:
+                    effect_enum = getattr(VideoSceneEffectType, effect_type)
+                except AttributeError:
+                    logger.warning(f"  ⚠️  未知特效: {effect_type}")
+                    continue
 
             try:
                 seg.add_effect(effect_enum)
                 applied += 1
-                print(f"  ✅ 特效: {effect_type} → {target}")
+                logger.info(f"  ✅ 特效: {effect_type} → {target}")
             except Exception as e:
-                print(f"  ⚠️  特效失败: {e}")
+                logger.warning(f"  ⚠️  特效失败: {e}")
 
         return applied
 
@@ -384,7 +339,7 @@ class JianyingExecutor:
         Returns:
             int: 应用的片段数
         """
-        from adapters.jianying_adapter import KeyframeProperty as KP
+        from pyJianYingDraft import KeyframeProperty as KP
 
         applied = 0
         start_us = int(start_time * 1_000_000)
@@ -453,10 +408,10 @@ class JianyingExecutor:
 
                 applied += 1
             except Exception as e:
-                print(f"  ⚠️  关键帧特效失败({char_name}): {e}")
+                logger.warning(f"  ⚠️  关键帧特效失败({char_name}): {e}")
 
         if applied > 0:
-            print(f"  ✅ 关键帧特效: {effect_type} → {applied}个角色")
+            logger.info(f"  ✅ 关键帧特效: {effect_type} → {applied}个角色")
         return applied
 
     def _apply_audio(self, audio_files: List[Dict]) -> int:
@@ -482,7 +437,7 @@ class JianyingExecutor:
         for audio in audio_files:
             path = audio.get("path", "")
             if not path or not os.path.exists(path):
-                print(f"  ⚠️  音频文件不存在: {path}")
+                logger.warning(f"  ⚠️  音频文件不存在: {path}")
                 continue
 
             start_time = audio.get("start_time", 0)
@@ -555,9 +510,9 @@ class JianyingExecutor:
                     fade_info = f", fade_in={fade_in:.1f}s, fade_out={fade_out:.1f}s" if fade_in or fade_out else ""
                     duck_info = f", ducking={len(duck_keyframes)}帧" if duck_keyframes else ""
                     emotion_info = f", emotion={len(emotion_keyframes)}帧" if emotion_keyframes else ""
-                    print(f"  ✅ 音频: {os.path.basename(path)} → {track_name} ({start_time:.1f}s, {duration:.1f}s, vol={volume:.2f}{fade_info}{duck_info}{emotion_info}, {kf_count}关键帧)")
+                    logger.info(f"  ✅ 音频: {os.path.basename(path)} → {track_name} ({start_time:.1f}s, {duration:.1f}s, vol={volume:.2f}{fade_info}{duck_info}{emotion_info}, {kf_count}关键帧)")
             except Exception as e:
-                print(f"  ⚠️  音频添加失败: {e}")
+                logger.warning(f"  ⚠️  音频添加失败: {e}")
 
         return applied
 
@@ -768,17 +723,17 @@ class JianyingExecutor:
                 "keyframes_applied": 应用的关键帧数,
             }
         """
-        print(f"\n{'='*60}")
-        print(f"剪映执行器: {project_name}")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"剪映执行器: {project_name}")
+        logger.info(f"{'='*60}")
 
         try:
             # 1. 创建工程
-            print(f"\n[1/5] 创建工程: {project_name} ({width}x{height})")
+            logger.info(f"\n[1/5] 创建工程: {project_name} ({width}x{height})")
             self.project = JyProject(project_name, width=width, height=height, overwrite=True)
 
             # 2. 准备素材
-            print(f"[2/5] 准备素材...")
+            logger.info(f"[2/5] 准备素材...")
             characters = instruction_sequence.get("project", {}).get("characters", [])
             if not characters:
                 # 从关键帧指令中提取角色名
@@ -797,20 +752,20 @@ class JianyingExecutor:
                         asset_name = ar.get("name", "")
                         asset_type = ar.get("asset_type", "")
                         asset_map[f"{asset_type}_{asset_name}"] = ar["output_path"]
-                print(f"  📦 可用生成素材: {len(asset_map)}个")
+                logger.info(f"  📦 可用生成素材: {len(asset_map)}个")
 
             # 背景：优先使用生成的场景图，没有则用占位背景
             scene_assets = [v for k, v in asset_map.items() if k.startswith("scene_")]
             if scene_assets:
                 bg_path = scene_assets[0]
-                print(f"  🎨 使用生成场景图作为背景")
+                logger.info(f"  🎨 使用生成场景图作为背景")
             else:
                 bg_path = create_background_placeholder(self.asset_dir, width, height)
             if bg_path:
                 bg_seg = self.project.add_media_safe(
                     bg_path, start_time="0s", duration=f"{duration}s", track_name="Background"
                 )
-                print(f"  ✅ 背景: {os.path.basename(bg_path)}")
+                logger.info(f"  ✅ 背景: {os.path.basename(bg_path)}")
 
             # 角色占位素材
             # 角色默认站位（左/中/右分布，避免重合）
@@ -832,11 +787,11 @@ class JianyingExecutor:
                 # 优先使用ComfyUI生成的角色图，没有则用占位图
                 char_path = asset_map.get(f"character_{char_name}")
                 if char_path:
-                    print(f"  🎨 使用生成角色图: {char_name}")
+                    logger.info(f"  🎨 使用生成角色图: {char_name}")
                 else:
                     char_path = create_character_placeholder(char_name, self.asset_dir)
                     if char_path:
-                        print(f"  ⚪ 使用占位角色图: {char_name}")
+                        logger.info(f"  ⚪ 使用占位角色图: {char_name}")
                 if char_path:
                     seg = self.project.add_media_safe(
                         char_path, start_time="0s", duration=f"{duration}s",
@@ -844,17 +799,17 @@ class JianyingExecutor:
                     )
                     if seg:
                         # 默认大小0.3（头像大小），P24关键帧会覆盖
-                        seg.add_keyframe(KeyframeProperty.uniform_scale, 0, 0.3)
+                        seg.add_keyframe(draft.KeyframeProperty.uniform_scale, 0, 0.3)
                         # 默认站位
                         px, py = char_positions.get(char_name, (0.0, -0.3))
-                        seg.add_keyframe(KeyframeProperty.position_x, 0, px)
-                        seg.add_keyframe(KeyframeProperty.position_y, 0, py)
+                        seg.add_keyframe(draft.KeyframeProperty.position_x, 0, px)
+                        seg.add_keyframe(draft.KeyframeProperty.position_y, 0, py)
                         self.character_segments[char_name] = seg
                         self.char_base_positions[char_name] = (px, py)
-                        print(f"  ✅ 角色: {char_name} (位置x={px:.1f}, y={py:.1f}, scale=0.3)")
+                        logger.info(f"  ✅ 角色: {char_name} (位置x={px:.1f}, y={py:.1f}, scale=0.3)")
 
             # 3. 应用关键帧
-            print(f"[3/7] 应用关键帧...")
+            logger.info(f"[3/7] 应用关键帧...")
             keyframes = instruction_sequence.get("keyframe_instructions", [])
             kf_applied = 0
 
@@ -873,11 +828,11 @@ class JianyingExecutor:
 
                     # 映射属性名
                     prop_map = {
-                        "position_x": KeyframeProperty.position_x,
-                        "position_y": KeyframeProperty.position_y,
-                        "scale": KeyframeProperty.uniform_scale,
-                        "rotation": KeyframeProperty.rotation,
-                        "alpha": KeyframeProperty.alpha,
+                        "position_x": draft.KeyframeProperty.position_x,
+                        "position_y": draft.KeyframeProperty.position_y,
+                        "scale": draft.KeyframeProperty.uniform_scale,
+                        "rotation": draft.KeyframeProperty.rotation,
+                        "alpha": draft.KeyframeProperty.alpha,
                     }
                     prop = prop_map.get(prop_name)
                     if prop:
@@ -893,10 +848,10 @@ class JianyingExecutor:
                         seg.add_keyframe(prop, time_us, final_value)
                         kf_applied += 1
 
-            print(f"  ✅ 应用 {kf_applied} 条关键帧")
+            logger.info(f"  ✅ 应用 {kf_applied} 条关键帧")
 
             # 4. 添加文字（每条用独立轨道避免重叠）
-            print(f"[4/7] 添加文字...")
+            logger.info(f"[4/7] 添加文字...")
             texts = instruction_sequence.get("text_instructions", [])
             for i, text_item in enumerate(texts):
                 text = text_item.get("text", "")
@@ -909,31 +864,31 @@ class JianyingExecutor:
                         duration=f"{dur:.2f}s",
                         track_name=f"Subtitle_{i}",
                     )
-            print(f"  ✅ {len(texts)} 条文字")
+            logger.info(f"  ✅ {len(texts)} 条文字")
 
             # 5. 应用特效
-            print(f"[5/7] 应用特效...")
+            logger.info(f"[5/7] 应用特效...")
             effects = instruction_sequence.get("effect_instructions", [])
             effects_applied = self._apply_effects(effects)
-            print(f"  ✅ {effects_applied} 个特效")
+            logger.info(f"  ✅ {effects_applied} 个特效")
 
             # 6. 应用蒙版
-            print(f"[6/8] 应用蒙版...")
+            logger.info(f"[6/8] 应用蒙版...")
             masks = instruction_sequence.get("mask_instructions", [])
             masks_applied = self._apply_masks(masks)
-            print(f"  ✅ {masks_applied} 个蒙版")
+            logger.info(f"  ✅ {masks_applied} 个蒙版")
 
             # 7. 添加音频
-            print(f"[7/8] 添加音频...")
+            logger.info(f"[7/8] 添加音频...")
             if audio_files:
                 audio_applied = self._apply_audio(audio_files)
-                print(f"  ✅ {audio_applied} 条音频")
+                logger.info(f"  ✅ {audio_applied} 条音频")
             else:
                 audio_applied = 0
-                print(f"  ⏭️  无音频文件")
+                logger.info(f"  ⏭️  无音频文件")
 
             # 8. 保存工程（带蒙版关键帧注入）
-            print(f"[8/9] 保存工程...")
+            logger.info(f"[8/9] 保存工程...")
             if _MASK_AVAILABLE and masks_applied > 0:
                 result = save_with_mask_keyframes(self.project, canvas_h=height)
             else:
@@ -941,33 +896,33 @@ class JianyingExecutor:
             draft_path = result.get("draft_path", "")
 
             # 8.5 保存后自动修复draft_info.json和索引注册
-            print(f"[8.5/9] 修复draft_info...")
+            logger.info(f"[8.5/9] 修复draft_info...")
             fix_result = self._fix_draft_after_save(draft_path, project_name)
             if fix_result["fixed"]:
-                print(f"  ✅ 已修复: {'; '.join(fix_result['issues'])}")
+                logger.info(f"  ✅ 已修复: {'; '.join(fix_result['issues'])}")
             if fix_result["registered"]:
-                print(f"  ✅ 已注册到索引 (时长={fix_result['duration']/1e6:.1f}s, 大小={fix_result['size']/1e6:.1f}MB)")
+                logger.info(f"  ✅ 已注册到索引 (时长={fix_result['duration']/1e6:.1f}s, 大小={fix_result['size']/1e6:.1f}MB)")
             if fix_result["issues"] and not fix_result["fixed"]:
-                print(f"  ⚠️  {'; '.join(fix_result['issues'])}")
+                logger.warning(f"  ⚠️  {'; '.join(fix_result['issues'])}")
 
             # 9. 工程验证（检查所有素材/关键帧/音频是否正确应用）
-            print(f"[9/9] 工程验证...")
+            logger.info(f"[9/9] 工程验证...")
             verification = self._verify_project(draft_path, instruction_sequence, audio_files)
 
-            print(f"\n✅ 剪映工程构建完成!")
-            print(f"   工程名: {project_name}")
-            print(f"   草稿路径: {draft_path}")
-            print(f"   角色数: {len(self.character_segments)}")
-            print(f"   关键帧: {kf_applied}条")
-            print(f"   文字: {len(texts)}条")
-            print(f"   特效: {effects_applied}个")
-            print(f"   蒙版: {masks_applied}个")
-            print(f"   音频: {audio_applied}条")
+            logger.info(f"\n✅ 剪映工程构建完成!")
+            logger.info(f"   工程名: {project_name}")
+            logger.info(f"   草稿路径: {draft_path}")
+            logger.info(f"   角色数: {len(self.character_segments)}")
+            logger.info(f"   关键帧: {kf_applied}条")
+            logger.info(f"   文字: {len(texts)}条")
+            logger.info(f"   特效: {effects_applied}个")
+            logger.info(f"   蒙版: {masks_applied}个")
+            logger.info(f"   音频: {audio_applied}条")
             if verification:
-                print(f"   验证: {verification['passed']}/{verification['total']} 通过")
+                logger.info(f"   验证: {verification['passed']}/{verification['total']} 通过")
                 for check in verification.get("checks", []):
                     status = "✅" if check["passed"] else "❌"
-                    print(f"     {status} {check['name']}: {check['message']}")
+                    logger.info(f"     {status} {check['name']}: {check['message']}")
 
             return {
                 "status": "success",
@@ -984,7 +939,7 @@ class JianyingExecutor:
             }
 
         except Exception as e:
-            print(f"\n❌ 剪映工程构建失败: {e}")
+            logger.info(f"\n❌ 剪映工程构建失败: {e}")
             import traceback
             traceback.print_exc()
             return {
@@ -996,7 +951,13 @@ class JianyingExecutor:
 
 if __name__ == "__main__":
     # 测试：用导演引擎输出的指令序列构建剪映工程
-    instr_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\e2e_instruction_sequence.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_test")
+    instr_path = os.path.join(test_dir, "e2e_instruction_sequence.json")
 
     if os.path.exists(instr_path):
         with open(instr_path, "r", encoding="utf-8") as f:
@@ -1008,8 +969,8 @@ if __name__ == "__main__":
             project_name="导演引擎测试_剪映输出",
             duration=20,
         )
-        print(f"\n结果: {result['status']}")
+        logger.info(f"\n结果: {result['status']}")
         if result['status'] == 'success':
-            print(f"草稿路径: {result['draft_path']}")
+            logger.info(f"草稿路径: {result['draft_path']}")
     else:
-        print(f"❌ 指令序列文件不存在: {instr_path}")
+        logger.info(f"❌ 指令序列文件不存在: {instr_path}")

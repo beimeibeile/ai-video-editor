@@ -17,11 +17,15 @@
 - tone: 语气调性
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import json
 import time
-from typing import Dict, Any, List, Optional, Literal
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 
@@ -137,7 +141,7 @@ class ScriptRewriter:
             self.memory = RewriteMemory(memory_path=memory_path)
         except Exception as e:
             self.memory = None
-            print(f"  ⚠️  rewrite_memory加载失败: {e}")
+            logger.error(f"  ⚠️  rewrite_memory加载失败: {e}")
 
         # AnySearch灵感搜索器（P27-3）
         try:
@@ -147,7 +151,7 @@ class ScriptRewriter:
             )
         except Exception as e:
             self.inspiration_searcher = None
-            print(f"  ⚠️  anysearch_inspiration加载失败: {e}")
+            logger.error(f"  ⚠️  anysearch_inspiration加载失败: {e}")
 
         # 宿主LLM深度改写器（P27-4）
         try:
@@ -155,7 +159,7 @@ class ScriptRewriter:
             self.llm_rewriter = HostLLMRewriter()
         except Exception as e:
             self.llm_rewriter = None
-            print(f"  ⚠️  host_llm_rewriter加载失败: {e}")
+            logger.error(f"  ⚠️  host_llm_rewriter加载失败: {e}")
 
     def _load_modules(self):
         """懒加载各专业模块"""
@@ -165,14 +169,14 @@ class ScriptRewriter:
             self._modules["parser"] = ScriptParser()
         except Exception as e:
             self._modules["parser"] = None
-            print(f"  ⚠️  script_parser加载失败: {e}")
+            logger.error(f"  ⚠️  script_parser加载失败: {e}")
 
         try:
             from script_enhancer import ScriptEnhancer
             self._modules["enhancer"] = ScriptEnhancer(use_llm=self.use_llm)
         except Exception as e:
             self._modules["enhancer"] = None
-            print(f"  ⚠️  script_enhancer加载失败: {e}")
+            logger.error(f"  ⚠️  script_enhancer加载失败: {e}")
 
         # 创意生成引擎（capabilities包，相对import）
         try:
@@ -180,7 +184,7 @@ class ScriptRewriter:
             self._modules["engine"] = ScriptEngine()
         except Exception as e:
             self._modules["engine"] = None
-            print(f"  ⚠️  script_engine加载失败: {e}")
+            logger.error(f"  ⚠️  script_engine加载失败: {e}")
 
         # 质量增强引擎（capabilities包，相对import）
         try:
@@ -188,7 +192,7 @@ class ScriptRewriter:
             self._modules["quality"] = ScriptQualityEngine()
         except Exception as e:
             self._modules["quality"] = None
-            print(f"  ⚠️  script_quality_engine加载失败: {e}")
+            logger.error(f"  ⚠️  script_quality_engine加载失败: {e}")
 
         # 剧本适配器（capabilities包，相对import）
         try:
@@ -196,7 +200,7 @@ class ScriptRewriter:
             self._modules["adapter"] = ScriptAdapterEngine()
         except Exception as e:
             self._modules["adapter"] = None
-            print(f"  ⚠️  script_adapter加载失败: {e}")
+            logger.error(f"  ⚠️  script_adapter加载失败: {e}")
 
         # 结构化剧本内核（节拍流+质量门，P27-1）
         try:
@@ -208,7 +212,7 @@ class ScriptRewriter:
             }
         except Exception as e:
             self._modules["structured"] = None
-            print(f"  ⚠️  structured_script加载失败: {e}")
+            logger.error(f"  ⚠️  structured_script加载失败: {e}")
 
     @property
     def llm_available(self) -> bool:
@@ -244,19 +248,19 @@ class ScriptRewriter:
             raw_script=input_text,
         )
 
-        print(f"\n{'='*60}")
-        print(f"剧本改写加工启动")
-        print(f"  模式: {'创意生成' if mode == 'creative' else '改编改写'}")
-        print(f"  标题: {result.title}")
-        print(f"  风格: {constraints.style} | 时长: {constraints.duration}s | 平台: {constraints.platform}")
-        print(f"  LLM: {'可用' if self.llm_available else '不可用(规则模式)'}")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"剧本改写加工启动")
+        logger.info(f"  模式: {'创意生成' if mode == 'creative' else '改编改写'}")
+        logger.info(f"  标题: {result.title}")
+        logger.info(f"  风格: {constraints.style} | 时长: {constraints.duration}s | 平台: {constraints.platform}")
+        logger.info(f"  LLM: {'可用' if self.llm_available else '不可用(规则模式)'}")
+        logger.info(f"{'='*60}")
 
         # ===== 灵感搜索（P27-3 AnySearch）=====
         inspiration_report = None
         if self.inspiration_searcher and self.inspiration_searcher.available:
             try:
-                print(f"\n[灵感搜索] 获取同类剧本和热门梗参考...")
+                logger.info(f"\n[灵感搜索] 获取同类剧本和热门梗参考...")
                 inspiration_report = self.inspiration_searcher.get_inspiration(
                     theme=input_text[:50],
                     style=constraints.style,
@@ -266,7 +270,7 @@ class ScriptRewriter:
                 result.inspiration = inspiration_report.to_dict()
                 result.stages_completed.append("inspiration_search")
             except Exception as e:
-                print(f"  ⚠️  灵感搜索跳过: {e}")
+                logger.warning(f"  ⚠️  灵感搜索跳过: {e}")
 
         try:
             if mode == "creative":
@@ -302,19 +306,19 @@ class ScriptRewriter:
                     quality_gates=result.quality_gates,
                 )
                 result.record_id = record.record_id
-                print(f"  📝 已记录到记忆库: {record.record_id}")
+                logger.info(f"  📝 已记录到记忆库: {record.record_id}")
             except Exception as e:
-                print(f"  ⚠️  记忆记录失败: {e}")
+                logger.error(f"  ⚠️  记忆记录失败: {e}")
 
-        print(f"\n{'='*60}")
-        print(f"改写完成: {result.title}")
-        print(f"  完成阶段: {', '.join(result.stages_completed)}")
-        print(f"  处理时间: {result.processing_time:.2f}s")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"改写完成: {result.title}")
+        logger.info(f"  完成阶段: {', '.join(result.stages_completed)}")
+        logger.info(f"  处理时间: {result.processing_time:.2f}s")
         if result.quality_score > 0:
-            print(f"  质量评分: {result.quality_score}/10")
+            logger.info(f"  质量评分: {result.quality_score}/10")
         if result.errors:
-            print(f"  错误: {result.errors}")
-        print(f"{'='*60}\n")
+            logger.error(f"  错误: {result.errors}")
+        logger.info(f"{'='*60}\n")
 
         return result
 
@@ -337,11 +341,11 @@ class ScriptRewriter:
                 if trending:
                     hot_topics = [t.title for t in trending[:2]]
                     enhanced_idea = f"{idea}（参考热点: {', '.join(hot_topics)}）"
-                    print(f"  💡 灵感注入: {hot_topics}")
+                    logger.info(f"  💡 灵感注入: {hot_topics}")
             except Exception:
                 pass
         # 阶段1: 基础剧本生成
-        print(f"\n[阶段1] 创意生成 → 基础剧本")
+        logger.info(f"\n[阶段1] 创意生成 → 基础剧本")
         engine = self._modules.get("engine")
         if engine:
             try:
@@ -353,29 +357,29 @@ class ScriptRewriter:
                 )
                 result.base_script = self._to_serializable(base)
                 result.stages_completed.append("creative_generate")
-                print(f"  ✅ 基础剧本生成完成")
+                logger.info(f"  ✅ 基础剧本生成完成")
             except Exception as e:
                 result.errors.append(f"创意生成失败: {e}")
-                print(f"  ❌ 创意生成失败: {e}")
+                logger.error(f"  ❌ 创意生成失败: {e}")
         else:
             # 降级：直接用P23解析器解析创意描述
-            print(f"  ⚠️  script_engine不可用，降级为P23解析")
+            logger.info(f"  ⚠️  script_engine不可用，降级为P23解析")
             self._fallback_parse(idea, constraints, result)
 
         # 阶段2: 质量增强
-        print(f"\n[阶段2] 质量增强")
+        logger.info(f"\n[阶段2] 质量增强")
         self._apply_quality_enhancement(constraints, result)
 
         # 阶段3: 场景→镜头适配
-        print(f"\n[阶段3] 场景→镜头适配")
+        logger.info(f"\n[阶段3] 场景→镜头适配")
         self._apply_adaptation(result)
 
         # 阶段4: 深度语义增强
-        print(f"\n[阶段4] 深度语义增强")
+        logger.info(f"\n[阶段4] 深度语义增强")
         self._apply_deep_enhancement(idea, result)
 
         # 阶段5: 输出标准化
-        print(f"\n[阶段5] 输出标准化")
+        logger.info(f"\n[阶段5] 输出标准化")
         self._standardize_output(result)
 
     def _process_adapt(
@@ -390,7 +394,7 @@ class ScriptRewriter:
         原始剧本 → (灵感搜索) → parser解析 → quality_engine增强 → adapter适配 → enhancer深度增强 → 标准分镜
         """
         # 阶段1: 原始剧本解析
-        print(f"\n[阶段1] 原始剧本解析")
+        logger.info(f"\n[阶段1] 原始剧本解析")
         parser = self._modules.get("parser")
         if parser:
             try:
@@ -402,35 +406,35 @@ class ScriptRewriter:
                 )
                 result.base_script = parsed
                 result.stages_completed.append("adapt_parse")
-                print(f"  ✅ 剧本解析完成: {len(parsed.get('scenes', []))}个场景, {len(parsed.get('characters', []))}个角色")
+                logger.info(f"  ✅ 剧本解析完成: {len(parsed.get('scenes', []))}个场景, {len(parsed.get('characters', []))}个角色")
             except Exception as e:
                 result.errors.append(f"剧本解析失败: {e}")
-                print(f"  ❌ 剧本解析失败: {e}")
+                logger.error(f"  ❌ 剧本解析失败: {e}")
         else:
             result.errors.append("P23解析器不可用")
-            print(f"  ❌ P23解析器不可用")
+            logger.info(f"  ❌ P23解析器不可用")
 
         # 阶段2: 质量增强
-        print(f"\n[阶段2] 质量增强")
+        logger.info(f"\n[阶段2] 质量增强")
         self._apply_quality_enhancement(constraints, result)
 
         # 阶段3: 场景→镜头适配
-        print(f"\n[阶段3] 场景→镜头适配")
+        logger.info(f"\n[阶段3] 场景→镜头适配")
         self._apply_adaptation(result)
 
         # 阶段4: 深度语义增强
-        print(f"\n[阶段4] 深度语义增强")
+        logger.info(f"\n[阶段4] 深度语义增强")
         self._apply_deep_enhancement(raw_script, result)
 
         # 阶段5: 输出标准化
-        print(f"\n[阶段5] 输出标准化")
+        logger.info(f"\n[阶段5] 输出标准化")
         self._standardize_output(result)
 
     def _apply_quality_enhancement(self, constraints: RewriteConstraints, result: RewriteResult):
         """应用质量增强（钩子/情绪曲线/角色弧光/冲突/节拍/节奏）"""
         quality = self._modules.get("quality")
         if not quality or not result.base_script:
-            print(f"  ⚠️  质量增强跳过（模块不可用或无基础剧本）")
+            logger.warning(f"  ⚠️  质量增强跳过（模块不可用或无基础剧本）")
             return
 
         try:
@@ -443,31 +447,31 @@ class ScriptRewriter:
             )
             result.quality_enhanced = self._to_serializable(enhanced)
             result.stages_completed.append("quality_enhance")
-            print(f"  ✅ 质量增强完成")
+            logger.info(f"  ✅ 质量增强完成")
         except Exception as e:
             result.errors.append(f"质量增强失败: {e}")
-            print(f"  ⚠️  质量增强失败（降级跳过）: {e}")
+            logger.error(f"  ⚠️  质量增强失败（降级跳过）: {e}")
 
     def _apply_adaptation(self, result: RewriteResult):
         """应用场景→镜头适配"""
         # 如果base_script已经是结构化格式（有scenes和shots），直接使用，跳过adapter
         base = result.base_script if isinstance(result.base_script, dict) else {}
         if base.get("scenes") and isinstance(base["scenes"][0], dict) and base["scenes"][0].get("shots"):
-            print(f"  ✅ base_script已是结构化分镜格式，跳过adapter解析")
+            logger.warning(f"  ✅ base_script已是结构化分镜格式，跳过adapter解析")
             result.adapted = base
             result.stages_completed.append("adaptation")
             return
 
         adapter = self._modules.get("adapter")
         if not adapter:
-            print(f"  ⚠️  适配器不可用，跳过")
+            logger.warning(f"  ⚠️  适配器不可用，跳过")
             return
 
         try:
             # 从base_script提取场景文本
             scenes_text = self._extract_scenes_text(result.base_script)
             if not scenes_text:
-                print(f"  ⚠️  无场景文本可适配，跳过")
+                logger.warning(f"  ⚠️  无场景文本可适配，跳过")
                 return
 
             adapted = adapter.parse_and_adapt(
@@ -476,16 +480,16 @@ class ScriptRewriter:
             )
             result.adapted = self._to_serializable(adapted)
             result.stages_completed.append("adaptation")
-            print(f"  ✅ 场景适配完成")
+            logger.info(f"  ✅ 场景适配完成")
         except Exception as e:
             result.errors.append(f"场景适配失败: {e}")
-            print(f"  ⚠️  场景适配失败（降级跳过）: {e}")
+            logger.error(f"  ⚠️  场景适配失败（降级跳过）: {e}")
 
     def _apply_deep_enhancement(self, raw_text: str, result: RewriteResult):
         """应用深度语义增强（P23+）+ 宿主LLM深度改写（P27-4）"""
         enhancer = self._modules.get("enhancer")
         if not enhancer:
-            print(f"  ⚠️  深度增强器不可用，跳过")
+            logger.warning(f"  ⚠️  深度增强器不可用，跳过")
             return
 
         try:
@@ -501,19 +505,19 @@ class ScriptRewriter:
             )
             result.final_script = enhanced
             result.stages_completed.append("deep_enhance")
-            print(f"  ✅ 深度语义增强完成")
+            logger.info(f"  ✅ 深度语义增强完成")
         except Exception as e:
             result.errors.append(f"深度增强失败: {e}")
-            print(f"  ⚠️  深度增强失败（降级跳过）: {e}")
+            logger.error(f"  ⚠️  深度增强失败（降级跳过）: {e}")
 
         # ===== 宿主LLM深度改写（P27-4）=====
         if self.llm_rewriter and self.llm_rewriter.available and result.final_script:
             try:
-                print(f"\n  [P27-4] 宿主LLM深度改写...")
+                logger.info(f"\n  [P27-4] 宿主LLM深度改写...")
                 # 从constraints获取风格和时长
                 style = result.constraints.get("style", "") if result.constraints else ""
                 duration = result.constraints.get("duration", 0) if result.constraints else 0
-                print(f"    风格: {style}, 时长: {duration}s")
+                logger.info(f"    风格: {style}, 时长: {duration}s")
 
                 llm_result = self.llm_rewriter.deep_rewrite(
                     script=result.final_script,
@@ -528,11 +532,11 @@ class ScriptRewriter:
                     result.final_script = llm_result.rewritten_script
                     result.llm_rewrite = llm_result.to_dict()
                     result.stages_completed.append("llm_deep_rewrite")
-                    print(f"  ✅ 宿主LLM深度改写完成 ({len(llm_result.suggestions)}条建议)")
+                    logger.info(f"  ✅ 宿主LLM深度改写完成 ({len(llm_result.suggestions)}条建议)")
                 else:
-                    print(f"  ⚠️  宿主LLM深度改写跳过: {llm_result.error}")
+                    logger.error(f"  ⚠️  宿主LLM深度改写跳过: {llm_result.error}")
             except Exception as e:
-                print(f"  ⚠️  宿主LLM深度改写失败（降级）: {e}")
+                logger.error(f"  ⚠️  宿主LLM深度改写失败（降级）: {e}")
 
     def _standardize_output(self, result: RewriteResult):
         """标准化输出为P24翻译器可接受的格式，并跑质量门"""
@@ -579,13 +583,13 @@ class ScriptRewriter:
 
         if llm_json_parsed:
             # LLM已返回JSON并解析成功，直接使用，跳过P23重新解析
-            print(f"  ✅ LLM JSON已解析: {len(final.get('scenes', []))}个场景, {len(final.get('characters', []))}个角色")
+            logger.info(f"  ✅ LLM JSON已解析: {len(final.get('scenes', []))}个场景, {len(final.get('characters', []))}个角色")
         elif llm_text and len(llm_text) > 50:
             # 降级模式：LLM返回文本，用P23解析器重新解析
             parser = self._modules.get("parser")
             if parser:
                 try:
-                    print(f"  🔄 检测到LLM改写文本(非JSON)，用P23解析器重新解析...")
+                    logger.info(f"  🔄 检测到LLM改写文本(非JSON)，用P23解析器重新解析...")
                     re_parsed = parser.parse(
                         script_text=llm_text,
                         title=result.title,
@@ -601,10 +605,10 @@ class ScriptRewriter:
                         # 角色数：如果解析结果有角色，用解析结果；否则保留原角色
                         if re_chars and len(re_chars) >= original_char_count:
                             final["characters"] = re_chars
-                            print(f"  ✅ 重新解析完成: {len(re_scenes)}个场景, {len(re_chars)}个角色")
+                            logger.info(f"  ✅ 重新解析完成: {len(re_scenes)}个场景, {len(re_chars)}个角色")
                         else:
                             # 角色数异常，保留原角色，但用解析的场景
-                            print(f"  ⚠️  解析角色数({len(re_chars)})少于原始({original_char_count})，保留原角色")
+                            logger.info(f"  ⚠️  解析角色数({len(re_chars)})少于原始({original_char_count})，保留原角色")
                             # 从解析的场景中提取角色补充
                             for scene in re_scenes:
                                 for shot in scene.get("shots", []):
@@ -618,9 +622,9 @@ class ScriptRewriter:
                                             "emotion_default": "平静",
                                         })
                     else:
-                        print(f"  ⚠️  解析场景数为0，保留原始结构({original_scene_count}个场景)")
+                        logger.info(f"  ⚠️  解析场景数为0，保留原始结构({original_scene_count}个场景)")
                 except Exception as e:
-                    print(f"  ⚠️  LLM改写文本解析失败，保留原始结构: {e}")
+                    logger.error(f"  ⚠️  LLM改写文本解析失败，保留原始结构: {e}")
 
         # ===== 角色提取：从shots中提取角色信息 =====
         if not final.get("characters"):
@@ -664,7 +668,7 @@ class ScriptRewriter:
                         })
             if char_list:
                 final["characters"] = char_list
-                print(f"  📋 从shots中提取到 {len(char_list)} 个角色: {[c['name'] for c in char_list]}")
+                logger.info(f"  📋 从shots中提取到 {len(char_list)} 个角色: {[c['name'] for c in char_list]}")
 
         # ===== 时长归一化：按目标时长调整shots时长 =====
         target_dur = result.constraints.get("duration", 30)
@@ -687,7 +691,7 @@ class ScriptRewriter:
                     scene["start_time"] = round(scene_start, 2)
                     scene["duration"] = round(current_time - scene_start, 2)
                 final["total_duration"] = round(current_time, 2)
-                print(f"  ⏱️  时长归一化: {total_dur:.1f}s → {current_time:.1f}s (目标{target_dur}s)")
+                logger.info(f"  ⏱️  时长归一化: {total_dur:.1f}s → {current_time:.1f}s (目标{target_dur}s)")
 
         # ===== 质量门检查（P27-1 结构化剧本内核）=====
         structured = self._modules.get("structured")
@@ -715,9 +719,9 @@ class ScriptRewriter:
                             for scene in ss.scenes:
                                 for beat in scene.beats:
                                     beat.duration_sec = max(0.5, beat.duration_sec * scale)
-                            print(f"  ⏱️  质量门时长校正: {current_total:.1f}s → {ss.total_duration_sec:.1f}s")
+                            logger.info(f"  ⏱️  质量门时长校正: {current_total:.1f}s → {ss.total_duration_sec:.1f}s")
                     except Exception as e:
-                        print(f"  ⚠️  时长校正失败: {e}")
+                        logger.error(f"  ⚠️  时长校正失败: {e}")
                 gates = structured["quality_gates"](ss)
                 result.quality_gates = [g.to_dict() for g in gates]
                 passed = sum(1 for g in gates if g.passed)
@@ -730,16 +734,16 @@ class ScriptRewriter:
                     "details": result.quality_gates,
                 }
 
-                print(f"  📋 质量门: {passed}/{len(gates)} 通过 (评分: {result.quality_score}/10)")
+                logger.info(f"  📋 质量门: {passed}/{len(gates)} 通过 (评分: {result.quality_score}/10)")
                 for g in gates:
                     if not g.passed:
-                        print(f"     ❌ {g.gate_id} {g.name}: {g.message}")
+                        logger.info(f"     ❌ {g.gate_id} {g.name}: {g.message}")
             except Exception as e:
-                print(f"  ⚠️  质量门检查跳过: {e}")
+                logger.warning(f"  ⚠️  质量门检查跳过: {e}")
 
         result.final_script = final
         result.stages_completed.append("standardize")
-        print(f"  ✅ 输出标准化完成: {len(final.get('scenes', []))}个场景, {len(final.get('characters', []))}个角色")
+        logger.info(f"  ✅ 输出标准化完成: {len(final.get('scenes', []))}个场景, {len(final.get('characters', []))}个角色")
 
     def _final_to_text(self, final: Dict) -> str:
         """将final剧本转换为自然语言文本供结构化解析"""
@@ -780,7 +784,7 @@ class ScriptRewriter:
                 )
                 result.base_script = parsed
                 result.stages_completed.append("fallback_parse")
-                print(f"  ✅ 降级解析完成")
+                logger.info(f"  ✅ 降级解析完成")
             except Exception as e:
                 result.errors.append(f"降级解析失败: {e}")
 
@@ -939,12 +943,12 @@ def adapt_rewrite(
 # ==================== 测试 ====================
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("剧本改写加工统一入口 - 测试")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("剧本改写加工统一入口 - 测试")
+    logger.info("=" * 60)
 
     # 测试1：创意生成
-    print("\n\n【测试1】创意生成模式")
+    logger.info("\n\n【测试1】创意生成模式")
     result1 = creative_generate(
         idea="一个程序员深夜加班，突然发现代码自己在写自己",
         style="suspense",
@@ -953,11 +957,11 @@ if __name__ == "__main__":
         genre="vlog",
         title="代码觉醒",
     )
-    print(f"\n结果: {len(result1.final_script.get('scenes', []))}个场景")
-    print(f"阶段: {result1.stages_completed}")
+    logger.info(f"\n结果: {len(result1.final_script.get('scenes', []))}个场景")
+    logger.info(f"阶段: {result1.stages_completed}")
 
     # 测试2：改编改写
-    print("\n\n【测试2】改编改写模式")
+    logger.info("\n\n【测试2】改编改写模式")
     raw = """
     场景1：办公室，深夜。小张坐在电脑前，屏幕上代码飞速滚动。
     小张：这bug怎么改不完啊...
@@ -972,9 +976,9 @@ if __name__ == "__main__":
         platform="douyin",
         title="代码觉醒_改编",
     )
-    print(f"\n结果: {len(result2.final_script.get('scenes', []))}个场景")
-    print(f"阶段: {result2.stages_completed}")
+    logger.info(f"\n结果: {len(result2.final_script.get('scenes', []))}个场景")
+    logger.info(f"阶段: {result2.stages_completed}")
 
-    print("\n\n" + "=" * 60)
-    print("测试完成")
-    print("=" * 60)
+    logger.info("\n\n" + "=" * 60)
+    logger.info("测试完成")
+    logger.info("=" * 60)

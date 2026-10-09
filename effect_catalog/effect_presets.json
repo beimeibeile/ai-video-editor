@@ -1,0 +1,265 @@
+{
+  "version": "1.0",
+  "description": "剪映特效组合预设库 — 基于真实视频分析的高频特效组合",
+  "presets": {
+    "ootd_fashion": {
+      "name": "时尚OOTD穿搭",
+      "description": "基于15秒时尚穿搭短视频分析，故障+光效+运镜+分屏组合",
+      "video_type": "fashion",
+      "duration_range": [10, 30],
+      "scene_effects": [
+        {"name": "故障", "start": 0, "duration": 0.3, "params": []},
+        {"name": "色差", "start": 2.5, "duration": 0.2, "params": []},
+        {"name": "闪白", "start": 5.0, "duration": 0.15, "params": []},
+        {"name": "光晕", "start": 7.5, "duration": 1.0, "params": []},
+        {"name": "震动", "start": 10.0, "duration": 0.3, "params": []}
+      ],
+      "filters": [
+        {"name": "电影感", "start": 0, "duration": 5, "intensity": 70},
+        {"name": "清新", "start": 5, "duration": 5, "intensity": 60},
+        {"name": "复古", "start": 10, "duration": 5, "intensity": 50}
+      ],
+      "transitions": [
+        {"name": "叠化", "position": "between_segments", "duration": 0.5},
+        {"name": "翻页", "position": "highlight", "duration": 0.8}
+      ],
+      "segment_animations": {
+        "intro": "动感放大",
+        "outro": "缩小",
+        "group": null
+      },
+      "text_animations": {
+        "intro": "卡拉OK",
+        "outro": "向上溶解",
+        "loop": "发光模糊多行"
+      },
+      "audio_effects": [
+        {"name": "回音", "params": [50]}
+      ]
+    },
+    "vlog_daily": {
+      "name": "Vlog日常记录",
+      "description": "温暖治愈风格，柔光+淡入淡出+慢节奏",
+      "video_type": "vlog",
+      "duration_range": [30, 120],
+      "scene_effects": [
+        {"name": "光晕", "start": 0, "duration": 2.0, "params": []},
+        {"name": "闪白", "start": 15.0, "duration": 0.2, "params": []}
+      ],
+      "filters": [
+        {"name": "清新", "start": 0, "duration": 999, "intensity": 50}
+      ],
+      "transitions": [
+        {"name": "叠化", "position": "between_segments", "duration": 0.8}
+      ],
+      "segment_animations": {
+        "intro": "渐显",
+        "outro": "渐隐",
+        "group": null
+      },
+      "text_animations": {
+        "intro": "打字机",
+        "outro": "渐隐",
+        "loop": null
+      },
+      "audio_effects": []
+    },
+    "product_showcase": {
+      "name": "产品展示",
+      "description": "科技感产品展示，3D运镜+光效+卡点",
+      "video_type": "product",
+      "duration_range": [15, 45],
+      "scene_effects": [
+        {"name": "色差", "start": 0, "duration": 0.3, "params": []},
+        {"name": "光晕", "start": 1.0, "duration": 1.5, "params": []},
+        {"name": "闪白", "start": 3.0, "duration": 0.15, "params": []},
+        {"name": "故障", "start": 6.0, "duration": 0.2, "params": []}
+      ],
+      "filters": [
+        {"name": "电影感", "start": 0, "duration": 999, "intensity": 65}
+      ],
+      "transitions": [
+        {"name": "中心旋转", "position": "between_segments", "duration": 0.6},
+        {"name": "叠化", "position": "slow", "duration": 1.0}
+      ],
+      "segment_animations": {
+        "intro": "放大",
+        "outro": "缩小",
+        "group": null
+      },
+      "text_animations": {
+        "intro": "冲屏位移",
+        "outro": "向右擦除",
+        "loop": null
+      },
+      "audio_effects": [
+        {"name": "合成器", "params": [30]}
+      ]
+    },
+    "food_delicacy": {
+      "name": "美食诱惑",
+      "description": "暖色调+光晕+慢放大，突出食欲感",
+      "video_type": "food",
+      "duration_range": [15, 60],
+      "scene_effects": [
+        {"name": "光晕", "start": 0, "duration": 2.0, "params": []},
+        {"name": "闪白", "start": 5.0, "duration": 0.2, "params": []}
+      ],
+      "filters": [
+        {"name": "暖色调", "start": 0, "duration": 999, "intensity": 70}
+      ],
+      "transitions": [
+        {"name": "叠化", "position": "between_segments", "duration": 0.6}
+      ],
+      "segment_animations": {
+        "intro": "轻微放大",
+        "outro": "渐隐",
+        "group": null
+      },
+      "text_animations": {
+        "intro": "手写云朵",
+        "outro": "渐隐",
+        "loop": null
+      },
+      "audio_effects": []
+    },
+    "travel_vlog": {
+      "name": "旅行Vlog",
+      "description": "清新明亮+运镜转场+文字排版",
+      "video_type": "travel",
+      "duration_range": [30, 120],
+      "scene_effects": [
+        {"name": "光晕", "start": 0, "duration": 1.5, "params": []},
+        {"name": "闪白", "start": 10.0, "duration": 0.2, "params": []}
+      ],
+      "filters": [
+        {"name": "清新", "start": 0, "duration": 999, "intensity": 55}
+      ],
+      "transitions": [
+        {"name": "上移", "position": "between_segments", "duration": 0.5},
+        {"name": "叠化", "position": "slow", "duration": 1.0}
+      ],
+      "segment_animations": {
+        "intro": "向上滑动",
+        "outro": "向下滑动",
+        "group": null
+      },
+      "text_animations": {
+        "intro": "向上擦除",
+        "outro": "向下擦除",
+        "loop": "上弧"
+      },
+      "audio_effects": []
+    },
+    "tech_digital": {
+      "name": "科技数码",
+      "description": "故障风+色差+扫描线，科技感拉满",
+      "video_type": "tech",
+      "duration_range": [10, 30],
+      "scene_effects": [
+        {"name": "故障", "start": 0, "duration": 0.5, "params": []},
+        {"name": "色差", "start": 1.0, "duration": 0.3, "params": []},
+        {"name": "闪白", "start": 2.5, "duration": 0.1, "params": []},
+        {"name": "震动", "start": 4.0, "duration": 0.3, "params": []},
+        {"name": "故障", "start": 6.0, "duration": 0.4, "params": []}
+      ],
+      "filters": [
+        {"name": "冷色调", "start": 0, "duration": 999, "intensity": 60}
+      ],
+      "transitions": [
+        {"name": "3D空间", "position": "between_segments", "duration": 0.6},
+        {"name": "中心旋转", "position": "highlight", "duration": 0.8}
+      ],
+      "segment_animations": {
+        "intro": "旋转",
+        "outro": "缩小",
+        "group": "叠叠乐"
+      },
+      "text_animations": {
+        "intro": "变色输入",
+        "outro": "向右擦除",
+        "loop": "VHS"
+      },
+      "audio_effects": [
+        {"name": "合成器", "params": [40]},
+        {"name": "回音", "params": [30]}
+      ]
+    },
+    "beat_quickcut": {
+      "name": "快闪卡点",
+      "description": "高频闪白+震动+缩放卡点，节奏强烈",
+      "video_type": "beat",
+      "duration_range": [10, 20],
+      "scene_effects": [
+        {"name": "闪白", "start": 0, "duration": 0.1, "params": []},
+        {"name": "震动", "start": 0.5, "duration": 0.2, "params": []},
+        {"name": "闪白", "start": 1.0, "duration": 0.1, "params": []},
+        {"name": "色差", "start": 1.5, "duration": 0.15, "params": []},
+        {"name": "闪白", "start": 2.0, "duration": 0.1, "params": []},
+        {"name": "故障", "start": 2.5, "duration": 0.2, "params": []},
+        {"name": "闪白", "start": 3.0, "duration": 0.1, "params": []}
+      ],
+      "filters": [
+        {"name": "高对比", "start": 0, "duration": 999, "intensity": 80}
+      ],
+      "transitions": [
+        {"name": "中心旋转", "position": "between_segments", "duration": 0.3}
+      ],
+      "segment_animations": {
+        "intro": "动感放大",
+        "outro": "动感缩小",
+        "group": null
+      },
+      "text_animations": {
+        "intro": "冲屏位移",
+        "outro": "弹出",
+        "loop": null
+      },
+      "audio_effects": []
+    }
+  },
+  "emotion_presets": {
+    "激昂": {
+      "effects": ["闪白", "震动", "色差"],
+      "filter": "高对比",
+      "transition": "中心旋转",
+      "animation_intro": "动感放大",
+      "animation_outro": "缩小"
+    },
+    "舒缓": {
+      "effects": ["光晕"],
+      "filter": "清新",
+      "transition": "叠化",
+      "animation_intro": "渐显",
+      "animation_outro": "渐隐"
+    },
+    "紧张": {
+      "effects": ["故障", "震动", "闪白"],
+      "filter": "冷色调",
+      "transition": "3D空间",
+      "animation_intro": "旋转",
+      "animation_outro": "缩小"
+    },
+    "温馨": {
+      "effects": ["光晕"],
+      "filter": "暖色调",
+      "transition": "叠化",
+      "animation_intro": "轻微放大",
+      "animation_outro": "渐隐"
+    },
+    "高潮": {
+      "effects": ["闪白", "故障", "色差", "震动"],
+      "filter": "高饱和",
+      "transition": "中心旋转",
+      "animation_intro": "放大",
+      "animation_outro": "缩小"
+    },
+    "收束": {
+      "effects": [],
+      "filter": "低饱和",
+      "transition": "叠化",
+      "animation_intro": "渐显",
+      "animation_outro": "渐隐"
+    }
+  }
+}

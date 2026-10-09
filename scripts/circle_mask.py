@@ -20,22 +20,23 @@
 - KFTypeMaskPostionX/Y：蒙版位置（注意Postion拼写错误）
 - KFTypeMaskFeather：羽化
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import json
 import uuid
-from typing import Optional, List, Tuple, Dict, Any
+from typing import List, Dict, Any
 
 SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 sys.path.insert(0, os.path.join(SKILL, "scripts", "vendor"))
 
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
-from adapters.jianying_adapter import MaskType
+import pyJianYingDraft as draft
+from pyJianYingDraft.metadata.mask_meta import MaskType
 
 
 def add_circle_mask(
@@ -71,7 +72,7 @@ def add_circle_mask(
         )
         return True
     except Exception as e:
-        print(f"  ❌ 添加圆形蒙版失败: {e}")
+        logger.error(f"  ❌ 添加圆形蒙版失败: {e}")
         return False
 
 
@@ -179,7 +180,7 @@ def add_mask_shake_keyframes(
 
         return True
     except Exception as e:
-        print(f"  ❌ 蒙版震动关键帧失败: {e}")
+        logger.error(f"  ❌ 蒙版震动关键帧失败: {e}")
         return False
 
 
@@ -246,16 +247,16 @@ def apply_semantic_actions(
 
 
 def main():
-    print("=" * 60)
-    print("  圆形头像框蒙版工具 v1.0 (P22-2)")
-    print("=" * 60)
-    print("\n功能:")
-    print("  add_circle_mask(segment, center_x, center_y, size, feather)")
-    print("  add_avatar_frame_mask(project, segment, avatar_x, avatar_y, radius)")
-    print("  add_mask_shake_keyframes(project, segment, start_us, duration_us, intensity)")
-    print("  apply_semantic_actions(project, segment, name, actions)")
-    print("\n头像框默认位置: x=-0.653, y=+0.561, radius=0.22")
-    print("注意: 蒙版位置y轴方向需验证（可能与剪映坐标相反）")
+    logger.info("=" * 60)
+    logger.info("  圆形头像框蒙版工具 v1.0 (P22-2)")
+    logger.info("=" * 60)
+    logger.info("\n功能:")
+    logger.info("  add_circle_mask(segment, center_x, center_y, size, feather)")
+    logger.info("  add_avatar_frame_mask(project, segment, avatar_x, avatar_y, radius)")
+    logger.info("  add_mask_shake_keyframes(project, segment, start_us, duration_us, intensity)")
+    logger.info("  apply_semantic_actions(project, segment, name, actions)")
+    logger.info("\n头像框默认位置: x=-0.653, y=+0.561, radius=0.22")
+    logger.warning("注意: 蒙版位置y轴方向需验证（可能与剪映坐标相反）")
 
 
 if __name__ == "__main__":

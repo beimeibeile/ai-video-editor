@@ -14,7 +14,7 @@
 使用方法：
     from template_cleaner import clean_template_draft
     result = clean_template_draft(r"D:\\JianyingProDrafts\\草稿名", backup=True)
-    print(result)
+    logger.info(result)
 
 注意：
 1. 清洗前会自动备份原草稿
@@ -22,11 +22,15 @@
 3. 如果清洗后草稿无法打开，从备份恢复
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
 import shutil
 import time
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 
 
 # 需要清洗的文件列表
@@ -107,7 +111,7 @@ def clean_template_draft(
             backup_path = f"{draft_path}_backup_{timestamp}"
             shutil.copytree(draft_path, backup_path)
             result["backup_path"] = backup_path
-            print(f"  ✅ 已备份: {backup_path}")
+            logger.info(f"  ✅ 已备份: {backup_path}")
         except Exception as e:
             result["errors"].append(f"备份失败: {e}")
             result["warnings"].append("备份失败，继续清洗可能导致数据丢失")
@@ -126,13 +130,13 @@ def clean_template_draft(
             if filename == "draft.extra" and remove_extra:
                 os.remove(filepath)
                 result["cleaned_files"].append(f"{filename} (已删除)")
-                print(f"  ✅ 已删除: {filename}")
+                logger.info(f"  ✅ 已删除: {filename}")
 
             # template.tmp / template-2.tmp：直接删除
             elif filename in ["template.tmp", "template-2.tmp"] and remove_template_tmp:
                 os.remove(filepath)
                 result["cleaned_files"].append(f"{filename} (已删除)")
-                print(f"  ✅ 已删除: {filename}")
+                logger.info(f"  ✅ 已删除: {filename}")
 
             # JSON文件：重置为默认值
             elif filename in DEFAULT_JSON_CONTENT:
@@ -140,14 +144,14 @@ def clean_template_draft(
                 with open(filepath, "w", encoding="utf-8") as f:
                     json.dump(default_content, f, ensure_ascii=False, indent=2)
                 result["cleaned_files"].append(f"{filename} (已重置)")
-                print(f"  ✅ 已重置: {filename}")
+                logger.info(f"  ✅ 已重置: {filename}")
 
             else:
                 result["skipped_files"].append(filename)
 
         except Exception as e:
             result["errors"].append(f"清洗 {filename} 失败: {e}")
-            print(f"  ❌ 清洗失败: {filename} - {e}")
+            logger.error(f"  ❌ 清洗失败: {filename} - {e}")
 
     # 3. 检查 draft_content.json 是否加密
     try:
@@ -159,7 +163,7 @@ def clean_template_draft(
                 "高版本剪映创建的草稿默认加密，5.9可能无法打开。"
                 "建议用5.9剪映打开后另存为新草稿。"
             )
-            print(f"  ⚠️  draft_content.json 为加密格式")
+            logger.info(f"  ⚠️  draft_content.json 为加密格式")
     except Exception:
         pass
 
@@ -172,14 +176,14 @@ def clean_template_draft(
         "如果发布仍受限，可能标记在 draft_content.json 加密内容中，需进一步研究",
     ]
 
-    print(f"\n{'='*60}")
-    print(f"模板清洗完成: {'成功' if result['success'] else '部分失败'}")
-    print(f"  清洗文件: {len(result['cleaned_files'])}个")
-    print(f"  跳过文件: {len(result['skipped_files'])}个")
-    print(f"  错误: {len(result['errors'])}个")
+    logger.info(f"\n{'='*60}")
+    logger.error(f"模板清洗完成: {'成功' if result['success'] else '部分失败'}")
+    logger.info(f"  清洗文件: {len(result['cleaned_files'])}个")
+    logger.warning(f"  跳过文件: {len(result['skipped_files'])}个")
+    logger.error(f"  错误: {len(result['errors'])}个")
     if result["warnings"]:
-        print(f"  警告: {len(result['warnings'])}个")
-    print(f"{'='*60}")
+        logger.warning(f"  警告: {len(result['warnings'])}个")
+    logger.info(f"{'='*60}")
 
     return result
 
@@ -200,7 +204,7 @@ def clean_all_template_drafts(
     """
     results = []
     if not os.path.isdir(drafts_root):
-        print(f"❌ 草稿根目录不存在: {drafts_root}")
+        logger.info(f"❌ 草稿根目录不存在: {drafts_root}")
         return results
 
     draft_dirs = [
@@ -210,7 +214,7 @@ def clean_all_template_drafts(
         and not d.endswith("_backup_")
     ]
 
-    print(f"发现 {len(draft_dirs)} 个草稿目录")
+    logger.info(f"发现 {len(draft_dirs)} 个草稿目录")
 
     for draft_name in draft_dirs:
         draft_path = os.path.join(drafts_root, draft_name)
@@ -220,11 +224,11 @@ def clean_all_template_drafts(
             for f in TEMPLATE_MARKER_FILES
         )
         if has_marker:
-            print(f"\n--- 清洗: {draft_name} ---")
+            logger.info(f"\n--- 清洗: {draft_name} ---")
             result = clean_template_draft(draft_path, backup=backup)
             results.append(result)
         else:
-            print(f"  跳过（无模板标记）: {draft_name}")
+            logger.warning(f"  跳过（无模板标记）: {draft_name}")
 
     return results
 
@@ -244,27 +248,27 @@ def restore_from_backup(backup_path: str, target_path: str) -> bool:
         if os.path.exists(target_path):
             shutil.rmtree(target_path)
         shutil.copytree(backup_path, target_path)
-        print(f"  ✅ 已从备份恢复: {target_path}")
+        logger.info(f"  ✅ 已从备份恢复: {target_path}")
         return True
     except Exception as e:
-        print(f"  ❌ 恢复失败: {e}")
+        logger.error(f"  ❌ 恢复失败: {e}")
         return False
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("剪映模板解锁草稿清洗工具")
-    print("=" * 60)
-    print("\n使用方法:")
-    print("  # 清洗单个草稿")
-    print("  from template_cleaner import clean_template_draft")
-    print("  result = clean_template_draft(r'D:\\\\JianyingProDrafts\\\\草稿名')")
-    print("")
-    print("  # 批量清洗")
-    print("  from template_cleaner import clean_all_template_drafts")
-    print("  results = clean_all_template_drafts(r'D:\\\\JianyingProDrafts')")
-    print("")
-    print("  # 从备份恢复")
-    print("  from template_cleaner import restore_from_backup")
-    print("  restore_from_backup('草稿_backup_20260101_120000', '草稿')")
-    print("")
+    logger.info("=" * 60)
+    logger.info("剪映模板解锁草稿清洗工具")
+    logger.info("=" * 60)
+    logger.info("\n使用方法:")
+    logger.info("  # 清洗单个草稿")
+    logger.info("  from template_cleaner import clean_template_draft")
+    logger.info("  result = clean_template_draft(r'D:\\\\JianyingProDrafts\\\\草稿名')")
+    logger.info("")
+    logger.info("  # 批量清洗")
+    logger.info("  from template_cleaner import clean_all_template_drafts")
+    logger.info("  results = clean_all_template_drafts(r'D:\\\\JianyingProDrafts')")
+    logger.info("")
+    logger.info("  # 从备份恢复")
+    logger.info("  from template_cleaner import restore_from_backup")
+    logger.info("  restore_from_backup('草稿_backup_20260101_120000', '草稿')")
+    logger.info("")

@@ -13,6 +13,10 @@
 4. 情绪曲线：从动作强度/颜色/音乐推断情绪变化
 5. 视觉隐喻：从构图/蒙版/空间关系推断隐喻
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import json
 import sys
@@ -349,9 +353,9 @@ def main():
     parser.add_argument("-o", "--output", help="输出目录")
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("  角色语义理解引擎 v1.0 (P22-1)")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("  角色语义理解引擎 v1.0 (P22-1)")
+    logger.info("=" * 60)
 
     analyzer = CharacterSemanticAnalyzer(
         prototype_card_path=args.prototype,
@@ -365,14 +369,14 @@ def main():
 
     json_path = os.path.join(output_dir, "semantic_card.json")
     card.save(json_path)
-    print(f"\n✅ 语义卡已保存: {json_path}")
+    logger.info(f"\n✅ 语义卡已保存: {json_path}")
 
     md_path = os.path.join(output_dir, "semantic_summary.md")
     with open(md_path, 'w', encoding='utf-8') as f:
         f.write(card.summary())
-    print(f"✅ 摘要已保存: {md_path}")
+    logger.info(f"✅ 摘要已保存: {md_path}")
 
-    print("\n" + card.summary())
+    logger.info("\n" + card.summary())
 
 
 if __name__ == "__main__":

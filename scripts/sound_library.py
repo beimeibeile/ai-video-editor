@@ -1,4 +1,4 @@
-﻿"""
+"""
 音效库管理模块
 SQLite存储音效元数据，支持标签检索、评级管理、复用缓存
 
@@ -9,10 +9,14 @@ SQLite存储音效元数据，支持标签检索、评级管理、复用缓存
 - 调用时按评级降序返回，同级按使用次数降序
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sqlite3
 import json
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 from datetime import datetime
 
 
@@ -22,7 +26,7 @@ class SoundLibrary:
     def __init__(self, db_path: str = None):
         if db_path is None:
             db_path = os.path.join(
-                os.path.expanduser("~"), "Videos", "ai-video-editor-output", "ai-video-editor-runtime", "data", "sound_library.db"
+                r"D:\DobaoWork_Project\Ai_Video_Editor", "ai-video-editor-runtime", "data", "sound_library.db"
             )
         self.db_path = db_path
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -224,7 +228,7 @@ class SoundLibrary:
 
 if __name__ == "__main__":
     lib = SoundLibrary()
-    print("音效库统计:", json.dumps(lib.get_stats(), ensure_ascii=False, indent=2))
-    print("\n所有音效:")
+    logger.info("音效库统计:", json.dumps(lib.get_stats(), ensure_ascii=False, indent=2))
+    logger.info("\n所有音效:")
     for s in lib.list_all():
-        print(f"  [{s['rating']}] {s['name']} ({s['source']}) - {s['duration']:.1f}s - 使用{s['usage_count']}次")
+        logger.info(f"  [{s['rating']}] {s['name']} ({s['source']}) - {s['duration']:.1f}s - 使用{s['usage_count']}次")

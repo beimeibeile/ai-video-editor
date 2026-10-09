@@ -26,10 +26,14 @@
 2. 调用add_blend_keyframe添加混合模式关键帧
 3. 保存工程
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import json
 import uuid
-from typing import Optional, List, Dict, Any, Literal
+from typing import List, Dict, Any
 
 # 混合模式映射（名称 -> 剪映内部值）
 BLEND_MODES = {
@@ -131,7 +135,7 @@ def set_blend_mode(
                     json.dump(data, f, ensure_ascii=False, indent=2)
 
         except Exception as e:
-            print(f"  ❌ 设置混合模式失败 ({filepath}): {e}")
+            logger.error(f"  ❌ 设置混合模式失败 ({filepath}): {e}")
             return False
 
     return modified
@@ -241,7 +245,7 @@ def add_blend_flash(
 
         return True
     except Exception as e:
-        print(f"  ❌ 添加混合模式闪白失败: {e}")
+        logger.error(f"  ❌ 添加混合模式闪白失败: {e}")
         return False
 
 
@@ -281,17 +285,17 @@ def apply_impact_effects(
 
 
 def main():
-    print("=" * 60)
-    print("  混合模式工具 v1.0 (P22-3)")
-    print("=" * 60)
-    print("\n支持的混合模式:")
+    logger.info("=" * 60)
+    logger.info("  混合模式工具 v1.0 (P22-3)")
+    logger.info("=" * 60)
+    logger.info("\n支持的混合模式:")
     for cn, en in BLEND_MODE_CN.items():
-        print(f"  {cn} ({en}) = {BLEND_MODES[en]}")
-    print("\n使用方法:")
-    print("  set_blend_mode(draft_path, segment_id, '滤色', 0.8)")
-    print("  add_blend_flash(draft_path, segment_id, start_us, duration_us, 'screen')")
-    print("  apply_impact_effects(draft_path, {角色: 片段ID}, [9.5, 11.8, 14.9])")
-    print("\n注意: 混合模式关键帧(KFTypeBlendMode)需验证剪映是否支持")
+        logger.info(f"  {cn} ({en}) = {BLEND_MODES[en]}")
+    logger.info("\n使用方法:")
+    logger.info("  set_blend_mode(draft_path, segment_id, '滤色', 0.8)")
+    logger.info("  add_blend_flash(draft_path, segment_id, start_us, duration_us, 'screen')")
+    logger.info("  apply_impact_effects(draft_path, {角色: 片段ID}, [9.5, 11.8, 14.9])")
+    logger.warning("\n注意: 混合模式关键帧(KFTypeBlendMode)需验证剪映是否支持")
 
 
 if __name__ == "__main__":

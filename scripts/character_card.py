@@ -13,18 +13,19 @@
 - 文字轨道叠加角色名
 - 关键帧控制入场动画
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import uuid
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Tuple, Optional, Dict, Any
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from PIL import Image, ImageDraw
@@ -87,7 +88,7 @@ def create_border_frame(
         img.save(output_path)
         return output_path
     except Exception as e:
-        print(f"创建边框失败: {e}")
+        logger.error(f"创建边框失败: {e}")
         return None
 
 
@@ -140,7 +141,7 @@ def create_flash_warning(
         img.save(output_path)
         return output_path
     except Exception as e:
-        print(f"创建爆闪标识失败: {e}")
+        logger.error(f"创建爆闪标识失败: {e}")
         return None
 
 
@@ -245,12 +246,12 @@ def add_character_card(
         )
         if border_seg:
             # 入场动画：缩放从0.8→1.0
-            border_seg.add_keyframe(KeyframeProperty.scale_x, start_us, 0.8, **Keyframe.EASE_OUT)
-            border_seg.add_keyframe(KeyframeProperty.scale_x, start_us + 300000, 1.0, **Keyframe.EASE_OUT)
-            border_seg.add_keyframe(KeyframeProperty.scale_y, start_us, 0.8, **Keyframe.EASE_OUT)
-            border_seg.add_keyframe(KeyframeProperty.scale_y, start_us + 300000, 1.0, **Keyframe.EASE_OUT)
-            border_seg.add_keyframe(KeyframeProperty.alpha, start_us, 0.0, **Keyframe.EASE_OUT)
-            border_seg.add_keyframe(KeyframeProperty.alpha, start_us + 300000, 1.0, **Keyframe.EASE_OUT)
+            border_seg.add_keyframe(draft.KeyframeProperty.scale_x, start_us, 0.8, **draft.Keyframe.EASE_OUT)
+            border_seg.add_keyframe(draft.KeyframeProperty.scale_x, start_us + 300000, 1.0, **draft.Keyframe.EASE_OUT)
+            border_seg.add_keyframe(draft.KeyframeProperty.scale_y, start_us, 0.8, **draft.Keyframe.EASE_OUT)
+            border_seg.add_keyframe(draft.KeyframeProperty.scale_y, start_us + 300000, 1.0, **draft.Keyframe.EASE_OUT)
+            border_seg.add_keyframe(draft.KeyframeProperty.alpha, start_us, 0.0, **draft.Keyframe.EASE_OUT)
+            border_seg.add_keyframe(draft.KeyframeProperty.alpha, start_us + 300000, 1.0, **draft.Keyframe.EASE_OUT)
 
     # 3. 添加角色名文字
     text_seg = project.add_text_simple(
@@ -258,14 +259,14 @@ def add_character_card(
         start_time=f"{start_time + 0.2:.2f}s",
         duration=f"{duration - 0.2}s",
         track_name=f"CardName_{int(start_time*1000)}",
-        style=TextStyle(size=cfg["text_size"], color=cfg["text_color"], bold=True),
-        border=TextBorder(color=(0, 0, 0), width=40),
+        style=draft.TextStyle(size=cfg["text_size"], color=cfg["text_color"], bold=True),
+        border=draft.TextBorder(color=(0, 0, 0), width=40),
     )
     if text_seg:
         text_us = int((start_time + 0.2) * 1e6)
-        text_seg.add_keyframe(KeyframeProperty.position_y, text_us, cfg["text_position_y"], **Keyframe.EASE_OUT)
-        text_seg.add_keyframe(KeyframeProperty.alpha, text_us, 0.0, **Keyframe.EASE_OUT)
-        text_seg.add_keyframe(KeyframeProperty.alpha, text_us + 300000, 1.0, **Keyframe.EASE_OUT)
+        text_seg.add_keyframe(draft.KeyframeProperty.position_y, text_us, cfg["text_position_y"], **draft.Keyframe.EASE_OUT)
+        text_seg.add_keyframe(draft.KeyframeProperty.alpha, text_us, 0.0, **draft.Keyframe.EASE_OUT)
+        text_seg.add_keyframe(draft.KeyframeProperty.alpha, text_us + 300000, 1.0, **draft.Keyframe.EASE_OUT)
 
     # 4. 爆闪预警（可选）
     flash_seg = None
@@ -280,13 +281,13 @@ def add_character_card(
                 track_name=f"CardFlash_{int(start_time*1000)}",
             )
             if flash_seg:
-                flash_seg.add_keyframe(KeyframeProperty.position_y, start_us, -0.7, **Keyframe.EASE_OUT)
+                flash_seg.add_keyframe(draft.KeyframeProperty.position_y, start_us, -0.7, **draft.Keyframe.EASE_OUT)
                 # 闪烁效果：alpha 0→1→0→1
-                flash_seg.add_keyframe(KeyframeProperty.alpha, start_us, 0.0, **Keyframe.EASE_OUT)
-                flash_seg.add_keyframe(KeyframeProperty.alpha, start_us + 100000, 1.0, **Keyframe.EASE_OUT)
-                flash_seg.add_keyframe(KeyframeProperty.alpha, start_us + 300000, 0.0, **Keyframe.EASE_OUT)
-                flash_seg.add_keyframe(KeyframeProperty.alpha, start_us + 500000, 1.0, **Keyframe.EASE_OUT)
-                flash_seg.add_keyframe(KeyframeProperty.alpha, start_us + 700000, 0.0, **Keyframe.EASE_OUT)
+                flash_seg.add_keyframe(draft.KeyframeProperty.alpha, start_us, 0.0, **draft.Keyframe.EASE_OUT)
+                flash_seg.add_keyframe(draft.KeyframeProperty.alpha, start_us + 100000, 1.0, **draft.Keyframe.EASE_OUT)
+                flash_seg.add_keyframe(draft.KeyframeProperty.alpha, start_us + 300000, 0.0, **draft.Keyframe.EASE_OUT)
+                flash_seg.add_keyframe(draft.KeyframeProperty.alpha, start_us + 500000, 1.0, **draft.Keyframe.EASE_OUT)
+                flash_seg.add_keyframe(draft.KeyframeProperty.alpha, start_us + 700000, 0.0, **draft.Keyframe.EASE_OUT)
 
     return {
         "status": "success",
@@ -311,7 +312,7 @@ def create_character_card_demo(
     )
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"创建工程: {project_name}")
+    logger.info(f"创建工程: {project_name}")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 黑色背景
@@ -365,7 +366,7 @@ def create_character_card_demo(
             start_time=start, duration=3.5,
             style=style, output_dir=output_dir,
         )
-        print(f"  [{i+1}] {name} ({style})")
+        logger.info(f"  [{i+1}] {name} ({style})")
 
     result = project.save()
     return {
@@ -376,14 +377,14 @@ def create_character_card_demo(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("人物介绍卡片特效模块（狂飙风格）")
-    print("=" * 60)
-    print(f"\nPillow: {'可用' if _PIL_AVAILABLE else '不可用'}")
-    print("\n核心函数:")
-    print("  add_character_card(project, character_name, ...)")
-    print("  create_character_card_demo()")
-    print("\n预设样式:")
+    logger.info("=" * 60)
+    logger.info("人物介绍卡片特效模块（狂飙风格）")
+    logger.info("=" * 60)
+    logger.info(f"\nPillow: {'可用' if _PIL_AVAILABLE else '不可用'}")
+    logger.info("\n核心函数:")
+    logger.info("  add_character_card(project, character_name, ...)")
+    logger.info("  create_character_card_demo()")
+    logger.info("\n预设样式:")
     for name in CARD_STYLES:
         s = CARD_STYLES[name]
-        print(f"  {name}: 边框{s['border_color']}, 爆闪={'有' if s['flash_warning'] else '无'}")
+        logger.warning(f"  {name}: 边框{s['border_color']}, 爆闪={'有' if s['flash_warning'] else '无'}")

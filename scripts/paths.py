@@ -4,26 +4,30 @@
 支持环境变量覆盖
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 from typing import Dict, Any
 
 
-# ============ 项目根目录（基于skill位置，支持独立运行） ============
+# ============ 项目根目录 ============
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-_SKILL_ROOT = os.path.dirname(_THIS_DIR)
+_RUNTIME_DIR = os.path.dirname(_THIS_DIR)
 PROJECT_ROOT = os.environ.get(
     "AVE_PROJECT_ROOT",
-    _SKILL_ROOT  # 默认使用skill根目录，实现独立运行
+    r"D:\DobaoWork_Project\Ai_Video_Editor"
 )
 
 # ============ Skill目录 ============
 SKILL_ROOT = os.environ.get(
     "AVE_SKILL_ROOT",
-    os.path.dirname(_SKILL_ROOT)  # skill的父目录（.user_skills）
+    r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills"
 )
 
 SKILLS = {
-    "ai_video_editor": _SKILL_ROOT,
+    "ai_video_editor": os.path.join(SKILL_ROOT, "ai-video-editor"),
     "jianying_editor": os.path.join(SKILL_ROOT, "jianying-editor"),
     "comfyui_controls": os.path.join(SKILL_ROOT, "comfyui-controls-skill"),
     "blender_controls": os.path.join(SKILL_ROOT, "blender-controls-skill"),
@@ -31,13 +35,13 @@ SKILLS = {
     "anysearch": os.path.join(SKILL_ROOT, "anysearch-skill"),
 }
 
-# ============ Runtime目录（skill内部scripts即runtime） ============
+# ============ Runtime目录 ============
 RUNTIME_ROOT = os.environ.get(
     "AVE_RUNTIME_ROOT",
-    _SKILL_ROOT
+    os.path.join(PROJECT_ROOT, "ai-video-editor-runtime")
 )
-RUNTIME_SCRIPTS = _THIS_DIR  # skill内部scripts目录
-RUNTIME_CAPABILITIES = os.path.join(_SKILL_ROOT, "capabilities")
+RUNTIME_SCRIPTS = os.path.join(RUNTIME_ROOT, "scripts")
+RUNTIME_CAPABILITIES = os.path.join(RUNTIME_ROOT, "capabilities")
 
 # ============ 剪映相关 ============
 JIANYING_DRAFTS_ROOT = os.environ.get(
@@ -60,8 +64,8 @@ COMFYUI_API = f"{COMFYUI_URL}/api"
 # ============ 项目子目录 ============
 MATERIAL_DIR = os.path.join(PROJECT_ROOT, "material")
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "out")
-EFFECT_CATALOG = os.path.join(_SKILL_ROOT, "effect_catalog", "effect_catalog.json")
-EFFECT_PRESETS = os.path.join(_SKILL_ROOT, "effect_catalog", "effect_presets.json")
+EFFECT_CATALOG = os.path.join(PROJECT_ROOT, "effect_catalog", "effect_catalog.json")
+EFFECT_PRESETS = os.path.join(PROJECT_ROOT, "effect_catalog", "effect_presets.json")
 USER_DIRECTORY = os.path.join(PROJECT_ROOT, "User Directory")
 DOCS_DIR = os.path.join(PROJECT_ROOT, "docs")
 KNOWLEDGE_BASE = os.path.join(PROJECT_ROOT, "knowledge_base")
@@ -129,9 +133,9 @@ def setup_sys_path():
 
 
 if __name__ == "__main__":
-    print("=== 路径配置验证 ===")
+    logger.info("=== 路径配置验证 ===")
     results = verify_paths()
     for name, exists in results.items():
         status = "OK" if exists else "MISSING"
-        print(f"  [{status}] {name}")
-    print(f"\n总计: {sum(results.values())}/{len(results)} 路径存在")
+        logger.info(f"  [{status}] {name}")
+    logger.info(f"\n总计: {sum(results.values())}/{len(results)} 路径存在")

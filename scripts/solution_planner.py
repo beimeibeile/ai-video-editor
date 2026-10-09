@@ -12,13 +12,17 @@
     from solution_planner import SolutionPlanner
     planner = SolutionPlanner()
     plan = planner.plan(prototype_card)
-    print(plan["recommendation"])
+    logger.info(plan["recommendation"])
     plan.save("方案.json")
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from dataclasses import dataclass, field, asdict
 
 
@@ -325,14 +329,14 @@ class SolutionPlanner:
         """
         proto = self._load_prototype(prototype)
 
-        print(f"\n{'='*60}")
-        print(f"  方案决策器")
-        print(f"{'='*60}")
-        print(f"  原型: {os.path.basename(proto.get('source_file', 'unknown'))}")
-        print(f"  时长: {proto.get('duration', 0):.1f}s | 镜头: {proto.get('total_shots', 0)} | 密度: {proto.get('shot_density')}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"  方案决策器")
+        logger.info(f"{'='*60}")
+        logger.info(f"  原型: {os.path.basename(proto.get('source_file', 'unknown'))}")
+        logger.info(f"  时长: {proto.get('duration', 0):.1f}s | 镜头: {proto.get('total_shots', 0)} | 密度: {proto.get('shot_density')}")
 
         # 评估各方案
-        print("\n[1/3] 评估技术方案...")
+        logger.info("\n[1/3] 评估技术方案...")
         options = [
             self._evaluate_2d_sprite(proto),
             self._evaluate_3d_render(proto),
@@ -343,14 +347,14 @@ class SolutionPlanner:
         options.sort(key=lambda x: x.score, reverse=True)
 
         for opt in options:
-            print(f"  {opt.name}: {opt.score:.0f}分")
+            logger.info(f"  {opt.name}: {opt.score:.0f}分")
 
         # 选择最佳方案
         best = options[0]
         recommendation = best.name
         confidence = best.score
 
-        print(f"\n[2/3] 推荐方案: {recommendation} ({confidence:.0f}分)")
+        logger.info(f"\n[2/3] 推荐方案: {recommendation} ({confidence:.0f}分)")
 
         # 关键决策
         key_decisions = []
@@ -370,7 +374,7 @@ class SolutionPlanner:
         all_risks = list(set(all_risks))[:8]
 
         # 构建实施计划
-        print("[3/3] 构建实施计划...")
+        logger.info("[3/3] 构建实施计划...")
         phases = self._build_phases(recommendation, proto)
 
         plan = ImplementationPlan(
@@ -396,9 +400,9 @@ class SolutionPlanner:
             md_path = os.path.join(output_dir, "solution_summary.md")
             with open(md_path, "w", encoding="utf-8") as f:
                 f.write(plan.summary())
-            print(f"\n✅ 方案已保存: {json_path}")
+            logger.info(f"\n✅ 方案已保存: {json_path}")
 
-        print(plan.summary())
+        logger.info(plan.summary())
         return plan
 
 

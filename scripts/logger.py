@@ -111,4 +111,4 @@ if __name__ == "__main__":
     logger.info("普通信息")
     logger.warning("警告信息")
     logger.error("错误信息")
-    print("日志模块测试完成")
+    logger.info("日志模块测试完成")

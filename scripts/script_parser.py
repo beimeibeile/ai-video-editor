@@ -13,10 +13,14 @@ P23: 剧本结构化解析器（Script Parser）
 输出标准：scene_schema.json（见director_engine_architecture.md）
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import json
 import re
 import os
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field, asdict
 
 
@@ -848,7 +852,7 @@ class ScriptParser:
                 scene.start = first.start
                 scene.duration = round(last.start + last.duration - first.start, 1)
 
-        print(f"  ⏱️  时长归一化: {total:.1f}s → {sum(new_durations):.1f}s (目标{target}s, 缩放{scale:.2f})")
+        logger.info(f"  ⏱️  时长归一化: {total:.1f}s → {sum(new_durations):.1f}s (目标{target}s, 缩放{scale:.2f})")
 
     def _infer_location_from_content(self, sentence: str) -> str:
         """
@@ -990,31 +994,31 @@ class ScriptParser:
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
-        print(f"✅ 分镜JSON已保存: {output_path}")
+        logger.info(f"✅ 分镜JSON已保存: {output_path}")
         return output_path
 
     def print_summary(self):
         """打印解析摘要"""
         result = self._to_json()
-        print(f"\n{'='*60}")
-        print(f"剧本解析摘要")
-        print(f"{'='*60}")
-        print(f"项目: {result['project']['title']}")
-        print(f"时长: {result['project']['duration']}秒")
-        print(f"风格: {result['project']['style']}")
-        print(f"\n角色 ({len(result['characters'])}):")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"剧本解析摘要")
+        logger.info(f"{'='*60}")
+        logger.info(f"项目: {result['project']['title']}")
+        logger.info(f"时长: {result['project']['duration']}秒")
+        logger.info(f"风格: {result['project']['style']}")
+        logger.info(f"\n角色 ({len(result['characters'])}):")
         for c in result['characters']:
-            print(f"  - {c['name']}: {c['description']}")
-        print(f"\n场景 ({len(result['scenes'])}):")
+            logger.info(f"  - {c['name']}: {c['description']}")
+        logger.info(f"\n场景 ({len(result['scenes'])}):")
         for s in result['scenes']:
             print(f"  {s['id']}: {s['location']} ({s['start']}s-{s['start']+s['duration']}s) "
                   f"[{s['atmosphere']}] {len(s['shots'])}镜头")
             for sh in s['shots']:
                 chars = ", ".join([f"{ca['character_id']}:{ca['action']}({ca['emotion']})"
                                    for ca in sh['characters']])
-                print(f"    {sh['id']}: {sh['duration']}s | {chars} | SFX:{sh['sfx']}")
-        print(f"\n音效点: {len(result['audio_mix']['sfx_timeline'])}个")
-        print(f"{'='*60}\n")
+                logger.info(f"    {sh['id']}: {sh['duration']}s | {chars} | SFX:{sh['sfx']}")
+        logger.info(f"\n音效点: {len(result['audio_mix']['sfx_timeline'])}个")
+        logger.info(f"{'='*60}\n")
 
 
 if __name__ == "__main__":
@@ -1037,5 +1041,12 @@ if __name__ == "__main__":
     parser.print_summary()
 
     # 保存
-    out = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\parsed_script.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_test")
+    os.makedirs(test_dir, exist_ok=True)
+    out = os.path.join(test_dir, "parsed_script.json")
     parser.save_json(out)

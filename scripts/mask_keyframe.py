@@ -17,11 +17,14 @@
 注意: 剪映官方拼写错误 Postion(少一个i), 不是 Position
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
 import uuid
 import shutil
-from typing import Optional, List, Tuple, Dict, Any, Literal
 
 # 蒙版关键帧属性类型映射（注意Postion拼写）
 # KFTypeMaskSizeX=剪映面板"长"=人眼视角宽(水平)，全屏=canvas_w/canvas_h
@@ -69,7 +72,7 @@ def apply_mask_keyframe(
     """
     property_type = MASK_KF_TYPES.get(property_name)
     if not property_type:
-        print(f"❌ 不支持的蒙版属性: {property_name}，可用: {list(MASK_KF_TYPES.keys())}")
+        logger.info(f"❌ 不支持的蒙版属性: {property_name}，可用: {list(MASK_KF_TYPES.keys())}")
         return False
 
     cp = CURVE_PRESETS.get(curve, CURVE_PRESETS["EASE_OUT"])
@@ -243,7 +246,7 @@ def inject_mask_keyframes_to_draft(draft_path: str, patches: list, canvas_h: int
         if os.path.exists(info_file):
             shutil.copy2(info_file, content_file)
         else:
-            print(f"❌ 草稿文件不存在: {draft_path}")
+            logger.info(f"❌ 草稿文件不存在: {draft_path}")
             return False
 
     try:
@@ -335,10 +338,10 @@ def inject_mask_keyframes_to_draft(draft_path: str, patches: list, canvas_h: int
             with open(info_file, "w", encoding="utf-8") as f:
                 json.dump(info_data, f, ensure_ascii=False, indent=2)
 
-        print(f"  ✅ 已注入 {injected} 个蒙版关键帧")
+        logger.info(f"  ✅ 已注入 {injected} 个蒙版关键帧")
         return True
     except Exception as e:
-        print(f"❌ 注入蒙版关键帧失败: {e}")
+        logger.error(f"❌ 注入蒙版关键帧失败: {e}")
         return False
 
 
@@ -367,15 +370,15 @@ def save_with_mask_keyframes(project, canvas_h: int = 1920) -> dict:
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("蒙版关键帧工具模块 v3")
-    print("=" * 60)
-    print("\n支持的蒙版关键帧属性:")
+    logger.info("=" * 60)
+    logger.info("蒙版关键帧工具模块 v3")
+    logger.info("=" * 60)
+    logger.info("\n支持的蒙版关键帧属性:")
     for name, kf_type in MASK_KF_TYPES.items():
-        print(f"  {name}: {kf_type}")
-    print("\n注意: 位置属性剪映拼写为 Postion(非Position)")
-    print("\n使用方法:")
-    print("  apply_mask_keyframe(project, segment, 'size_y', 0, 0.05)")
-    print("  apply_mask_keyframe(project, segment, 'size_y', 3000000, 0.56)")
-    print("  apply_mask_expand(project, segment, 0, 500000, direction='left')")
-    print("  save_with_mask_keyframes(project)  # 保存并自动注入")
+        logger.info(f"  {name}: {kf_type}")
+    logger.warning("\n注意: 位置属性剪映拼写为 Postion(非Position)")
+    logger.info("\n使用方法:")
+    logger.info("  apply_mask_keyframe(project, segment, 'size_y', 0, 0.05)")
+    logger.info("  apply_mask_keyframe(project, segment, 'size_y', 3000000, 0.56)")
+    logger.info("  apply_mask_expand(project, segment, 0, 500000, direction='left')")
+    logger.info("  save_with_mask_keyframes(project)  # 保存并自动注入")

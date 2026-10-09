@@ -10,10 +10,14 @@
 使用方法：
     python quick_qc.py "D:\\JianyingProDrafts\\...\\工程名"
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import json
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Optional, Tuple
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -31,7 +35,7 @@ def load_draft(draft_path: str) -> Optional[Dict]:
         if os.path.exists(info_file):
             content_file = info_file
         else:
-            print(f"❌ 找不到工程文件: {draft_path}")
+            logger.info(f"❌ 找不到工程文件: {draft_path}")
             return None
 
     with open(content_file, "r", encoding="utf-8") as f:
@@ -184,7 +188,7 @@ def render_preview(
         # 标注轨道名
         try:
             font = ImageFont.truetype("arial.ttf", 14)
-        except:
+        except Exception:
             font = ImageFont.load_default()
         draw.text((px - size//2, py - size//2 - 18), seg["track"][:8], fill=(255,255,255,200), font=font)
 
@@ -250,19 +254,19 @@ def quick_qc(draft_path: str, output_dir: str = None) -> Dict:
     Returns:
         质检结果字典
     """
-    print("=" * 60)
-    print(f"快速质检: {os.path.basename(draft_path)}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info(f"快速质检: {os.path.basename(draft_path)}")
+    logger.info("=" * 60)
 
     data = load_draft(draft_path)
     if not data:
         return {"status": "failed", "reason": "无法加载工程"}
 
     canvas_w, canvas_h = get_canvas_size(data)
-    print(f"画布: {canvas_w}x{canvas_h}")
+    logger.info(f"画布: {canvas_w}x{canvas_h}")
 
     segments = extract_segments(data)
-    print(f"片段数: {len(segments)}")
+    logger.info(f"片段数: {len(segments)}")
 
     # 收集所有关键帧时间点
     all_times = set([0])
@@ -271,7 +275,7 @@ def quick_qc(draft_path: str, output_dir: str = None) -> Dict:
             for kf in kfs:
                 all_times.add(kf["time"])
     all_times = sorted(all_times)[:8]  # 最多8个时间点
-    print(f"预览时间点: {[f'{t/1e6:.1f}s' for t in all_times]}")
+    logger.info(f"预览时间点: {[f'{t/1e6:.1f}s' for t in all_times]}")
 
     # 生成预览图
     if output_dir is None:
@@ -288,14 +292,14 @@ def quick_qc(draft_path: str, output_dir: str = None) -> Dict:
     # 质检
     issues = quality_check(segments, canvas_w, canvas_h)
 
-    print(f"\n{'='*60}")
-    print(f"质检结果: {len(issues)} 个问题")
-    print(f"{'='*60}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"质检结果: {len(issues)} 个问题")
+    logger.info(f"{'='*60}")
     for issue in issues:
-        print(f"  {issue}")
+        logger.info(f"  {issue}")
 
     if not issues:
-        print("  ✅ 未发现明显问题")
+        logger.info("  ✅ 未发现明显问题")
 
     return {
         "status": "success",
@@ -314,4 +318,4 @@ if __name__ == "__main__":
         draft_path = r"D:\JianyingProDrafts\JianyingPro Drafts\坐标验证"
 
     result = quick_qc(draft_path)
-    print(f"\n预览图: {result.get('preview_dir', 'N/A')}")
+    logger.info(f"\n预览图: {result.get('preview_dir', 'N/A')}")

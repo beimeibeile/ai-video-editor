@@ -10,10 +10,14 @@ Blender扩展特效库
 5. create_energy_ring - 能量环扩散特效
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import math
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple
 
 # 导入BlenderRunner
 _cap_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "capabilities")
@@ -81,7 +85,7 @@ def create_particle_background(
     """
     runner = BlenderRunner()
     if not runner.is_available():
-        print("❌ Blender不可用")
+        logger.info("❌ Blender不可用")
         return None
 
     config = PARTICLE_PRESETS.get(preset, PARTICLE_PRESETS["stars"]).copy()
@@ -111,7 +115,7 @@ def create_particle_background(
         camera_location=(0, 0, 8),
     )
 
-    print(f"🎨 粒子背景: {preset} ({config['count']}粒子, {duration}s)")
+    logger.info(f"🎨 粒子背景: {preset} ({config['count']}粒子, {duration}s)")
     return runner.create_and_render(scene, output_dir)
 
 
@@ -144,7 +148,7 @@ def create_text_intro(
     """
     runner = BlenderRunner()
     if not runner.is_available():
-        print("❌ Blender不可用")
+        logger.info("❌ Blender不可用")
         return None
 
     fps = 30
@@ -230,11 +234,11 @@ def create_text_intro(
 
     blend_path = os.path.join(output_dir, "scene.blend")
     if not os.path.exists(blend_path):
-        print(f"❌ 场景创建失败")
-        print(result.stderr[-500:] if result.stderr else "")
+        logger.error(f"❌ 场景创建失败")
+        logger.info(result.stderr[-500:] if result.stderr else "")
         return None
 
-    print(f"🎬 文字入场: {style}风格 - {text}")
+    logger.info(f"🎬 文字入场: {style}风格 - {text}")
     return runner.render(blend_path, output_dir, fps)
 
 
@@ -342,7 +346,7 @@ mask_obj.keyframe_insert(data_path='scale', frame={frames})
 
     transition_script += f"""
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(r'{output_dir}', 'scene.blend'))
-print('✅ 转场场景已创建: {style}')
+logger.info('✅ 转场场景已创建: {style}')
 """
 
     script_content = script_content.replace(
@@ -362,10 +366,10 @@ print('✅ 转场场景已创建: {style}')
 
     blend_path = os.path.join(output_dir, "scene.blend")
     if not os.path.exists(blend_path):
-        print(f"❌ 转场创建失败: {style}")
+        logger.error(f"❌ 转场创建失败: {style}")
         return None
 
-    print(f"🔄 转场: {style} ({duration}s)")
+    logger.info(f"🔄 转场: {style} ({duration}s)")
     return runner.render(blend_path, output_dir, fps)
 
 
@@ -431,7 +435,7 @@ light_obj.location = (15, 0, 0)
 light_obj.keyframe_insert(data_path='location', frame={frames})
 
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(r'{output_dir}', 'scene.blend'))
-print('✅ 光线扫描已创建')
+logger.info('✅ 光线扫描已创建')
 """
     script_content = script_content.replace(
         "bpy.ops.wm.save_as_mainfile(filepath=blend_path)",
@@ -449,23 +453,23 @@ print('✅ 光线扫描已创建')
     blend_path = os.path.join(output_dir, "scene.blend")
     if not os.path.exists(blend_path):
         return None
-    print(f"💡 光线扫描: {duration}s")
+    logger.info(f"💡 光线扫描: {duration}s")
     return runner.render(blend_path, output_dir, fps)
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("Blender扩展特效库")
-    print("=" * 60)
-    print("\n可用特效:")
-    print("  1. create_particle_background - 粒子背景")
-    print("     预设: stars / snow / bokeh / fireworks / neon")
-    print("  2. create_text_intro - 3D文字入场动画")
-    print("     风格: zoom / slide / fade / rotate")
-    print("  3. create_transition - 转场遮罩")
-    print("     风格: fade / slide_left / slide_right / zoom_in / zoom_out")
-    print("  4. create_light_sweep - 光线扫描")
-    print("\n粒子预设:")
+    logger.info("=" * 60)
+    logger.info("Blender扩展特效库")
+    logger.info("=" * 60)
+    logger.info("\n可用特效:")
+    logger.info("  1. create_particle_background - 粒子背景")
+    logger.info("     预设: stars / snow / bokeh / fireworks / neon")
+    logger.info("  2. create_text_intro - 3D文字入场动画")
+    logger.info("     风格: zoom / slide / fade / rotate")
+    logger.info("  3. create_transition - 转场遮罩")
+    logger.info("     风格: fade / slide_left / slide_right / zoom_in / zoom_out")
+    logger.info("  4. create_light_sweep - 光线扫描")
+    logger.info("\n粒子预设:")
     for name in PARTICLE_PRESETS:
         cfg = PARTICLE_PRESETS[name]
-        print(f"  {name}: {cfg['count']}粒子, {cfg['particle_size']}大小")
+        logger.info(f"  {name}: {cfg['count']}粒子, {cfg['particle_size']}大小")

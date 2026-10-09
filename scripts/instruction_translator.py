@@ -14,8 +14,10 @@ P24: 指令翻译器（Instruction Translator）
 
 import json
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from dataclasses import dataclass, field, asdict
+import logging
+logger = logging.getLogger(__name__)
 
 
 # ============ 情绪→TTS参数映射（voice_style与tts_executor的EMOTION_INSTRUCT_MAP对齐） ============
@@ -839,50 +841,57 @@ class InstructionTranslator:
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
-        print(f"✅ 指令序列已保存: {output_path}")
+        logger.info(f"✅ 指令序列已保存: {output_path}")
         return output_path
 
     def print_summary(self):
         """打印翻译摘要"""
         if not self.sequence:
-            print("❌ 未翻译")
+            logger.info("❌ 未翻译")
             return
 
-        print(f"\n{'='*60}")
-        print(f"指令翻译摘要")
-        print(f"{'='*60}")
-        print(f"项目: {self.sequence.project.get('title', '未命名')}")
-        print(f"\nTTS配音指令: {len(self.sequence.tts_instructions)}条")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"指令翻译摘要")
+        logger.info(f"{'='*60}")
+        logger.info(f"项目: {self.sequence.project.get('title', '未命名')}")
+        logger.info(f"\nTTS配音指令: {len(self.sequence.tts_instructions)}条")
         for t in self.sequence.tts_instructions:
-            print(f"  [{t.start_time:.1f}s] {t.character}({t.voice_style}): \"{t.text[:20]}\"")
-        print(f"\n关键帧指令: {len(self.sequence.keyframe_instructions)}条")
+            logger.info(f"  [{t.start_time:.1f}s] {t.character}({t.voice_style}): \"{t.text[:20]}\"")
+        logger.info(f"\n关键帧指令: {len(self.sequence.keyframe_instructions)}条")
         for k in self.sequence.keyframe_instructions[:5]:
-            print(f"  [{k.time:.1f}s] {k.track}.{k.property} = {k.value}")
+            logger.info(f"  [{k.time:.1f}s] {k.track}.{k.property} = {k.value}")
         if len(self.sequence.keyframe_instructions) > 5:
-            print(f"  ... 还有{len(self.sequence.keyframe_instructions)-5}条")
-        print(f"\n特效指令: {len(self.sequence.effect_instructions)}条")
+            logger.info(f"  ... 还有{len(self.sequence.keyframe_instructions)-5}条")
+        logger.info(f"\n特效指令: {len(self.sequence.effect_instructions)}条")
         for e in self.sequence.effect_instructions:
-            print(f"  [{e.start_time:.1f}s] {e.type} ({e.duration}s)")
-        print(f"\n音轨指令: {len(self.sequence.audio_instructions)}条")
+            logger.info(f"  [{e.start_time:.1f}s] {e.type} ({e.duration}s)")
+        logger.info(f"\n音轨指令: {len(self.sequence.audio_instructions)}条")
         for a in self.sequence.audio_instructions[:5]:
-            print(f"  [{a.start_time:.1f}s] {a.type}: {a.name} (vol={a.volume})")
+            logger.info(f"  [{a.start_time:.1f}s] {a.type}: {a.name} (vol={a.volume})")
         if len(self.sequence.audio_instructions) > 5:
-            print(f"  ... 还有{len(self.sequence.audio_instructions)-5}条")
-        print(f"\n音效指令: {len(self.sequence.sfx_instructions)}条")
+            logger.info(f"  ... 还有{len(self.sequence.audio_instructions)-5}条")
+        logger.info(f"\n音效指令: {len(self.sequence.sfx_instructions)}条")
         for s in self.sequence.sfx_instructions:
-            print(f"  [{s.start_time:.1f}s] {s.type} (情绪={s.emotion}, {s.duration}s, vol={s.volume})")
-        print(f"\n文字指令: {len(self.sequence.text_instructions)}条")
+            logger.info(f"  [{s.start_time:.1f}s] {s.type} (情绪={s.emotion}, {s.duration}s, vol={s.volume})")
+        logger.info(f"\n文字指令: {len(self.sequence.text_instructions)}条")
         for t in self.sequence.text_instructions:
-            print(f"  [{t.start_time:.1f}s] {t.style}: \"{t.text[:20]}\"")
-        print(f"\n蒙版指令: {len(self.sequence.mask_instructions)}条")
+            logger.info(f"  [{t.start_time:.1f}s] {t.style}: \"{t.text[:20]}\"")
+        logger.info(f"\n蒙版指令: {len(self.sequence.mask_instructions)}条")
         for m in self.sequence.mask_instructions:
-            print(f"  [{m.start_time:.1f}s] {m.type} → {m.target}")
-        print(f"{'='*60}\n")
+            logger.info(f"  [{m.start_time:.1f}s] {m.type} → {m.target}")
+        logger.info(f"{'='*60}\n")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # 测试：用P23解析的豆包被打分镜做翻译
-    parsed_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\parsed_script.json"
+    try:
+        from paths import PATHS
+        test_dir = PATHS.get("test_dir", "")
+    except ImportError:
+        _up = os.environ.get("USERPROFILE", r"C:\Users\Administrator")
+        test_dir = os.path.join(r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_test")
+    parsed_path = os.path.join(test_dir, "parsed_script.json")
 
     if os.path.exists(parsed_path):
         with open(parsed_path, "r", encoding="utf-8") as f:
@@ -892,8 +901,8 @@ if __name__ == "__main__":
         sequence = translator.translate(parsed_script)
         translator.print_summary()
 
-        out_path = r"D:\DobaoWork_Project\Ai_Video_Editor\director_engine_test\instruction_sequence.json"
+        out_path = os.path.join(test_dir, "instruction_sequence.json")
         translator.save_json(out_path)
     else:
-        print(f"❌ 分镜文件不存在: {parsed_path}")
-        print("请先运行 script_parser.py 生成分镜JSON")
+        logger.info(f"❌ 分镜文件不存在: {parsed_path}")
+        logger.info("请先运行 script_parser.py 生成分镜JSON")

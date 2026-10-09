@@ -8,6 +8,10 @@
 3. 运行本工具扫描草稿目录，自动提取混合模式映射表
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
 import glob
@@ -77,11 +81,11 @@ def scan_all_drafts(drafts_root: str = None) -> Dict[str, Dict[str, Any]]:
         roots_to_scan = [drafts_root]
 
     if not roots_to_scan:
-        print(f"❌ 没有找到草稿目录")
+        logger.info(f"❌ 没有找到草稿目录")
         return {}
 
     for root in roots_to_scan:
-        print(f"扫描草稿目录: {root}")
+        logger.info(f"扫描草稿目录: {root}")
         draft_dirs = [d for d in glob.glob(os.path.join(root, "*")) if os.path.isdir(d)]
 
         for draft_dir in draft_dirs:
@@ -95,10 +99,10 @@ def scan_all_drafts(drafts_root: str = None) -> Dict[str, Dict[str, Any]]:
                         "path": mode["path"],
                         "source_draft": mode["draft"],
                     }
-                    print(f"  ✅ 发现混合模式: {name} (effect_id={mode['effect_id']})")
-                print(f"  ✅ 发现混合模式: {name} (effect_id={mode['effect_id']})")
+                    logger.info(f"  ✅ 发现混合模式: {name} (effect_id={mode['effect_id']})")
+                logger.info(f"  ✅ 发现混合模式: {name} (effect_id={mode['effect_id']})")
 
-    print(f"\n共发现 {len(all_modes)} 种混合模式")
+    logger.info(f"\n共发现 {len(all_modes)} 种混合模式")
     return all_modes
 
 
@@ -117,7 +121,7 @@ def update_mix_mode_module(mapping: Dict[str, Dict[str, Any]], module_path: str 
         )
 
     if not os.path.exists(module_path):
-        print(f"❌ mix_mode.py不存在: {module_path}")
+        logger.info(f"❌ mix_mode.py不存在: {module_path}")
         return
 
     # 中文名→英文key映射
@@ -162,7 +166,7 @@ def update_mix_mode_module(mapping: Dict[str, Dict[str, Any]], module_path: str 
     with open(module_path, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print(f"✅ 已更新mix_mode.py，共{len(mapping)}种混合模式")
+    logger.info(f"✅ 已更新mix_mode.py，共{len(mapping)}种混合模式")
 
 
 def export_mapping_json(mapping: Dict[str, Dict[str, Any]], output_path: str):
@@ -175,13 +179,13 @@ def export_mapping_json(mapping: Dict[str, Dict[str, Any]], output_path: str):
     """
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False, indent=2)
-    print(f"✅ 映射表已导出: {output_path}")
+    logger.info(f"✅ 映射表已导出: {output_path}")
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("混合模式扫描工具")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("混合模式扫描工具")
+    logger.info("=" * 60)
 
     # 扫描所有草稿
     mapping = scan_all_drafts()
@@ -195,5 +199,5 @@ if __name__ == "__main__":
         # 更新mix_mode.py
         update_mix_mode_module(mapping)
     else:
-        print("\n⚠️  未发现混合模式")
-        print("请在剪映中设置混合模式后保存草稿，再运行本工具")
+        logger.info("\n⚠️  未发现混合模式")
+        logger.info("请在剪映中设置混合模式后保存草稿，再运行本工具")

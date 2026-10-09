@@ -12,18 +12,19 @@
 - handheld: 手持晃动（微颤）
 - dolly_zoom: 滑动变焦（希区柯克变焦）
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import sys
 import os
 
 JY_SKILL = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(JY_SKILL, "scripts"))
 
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
-from adapters.jianying_adapter import KeyframeProperty as KP
-from adapters.jianying_adapter import Keyframe
+import pyJianYingDraft as draft
+from pyJianYingDraft import KeyframeProperty as KP
+from pyJianYingDraft import Keyframe
 
 
 # 缓动曲线预设
@@ -206,11 +207,11 @@ def apply_storyboard_camera_move(segment, camera_move: str, duration_us: int,
 
 
 if __name__ == "__main__":
-    print("剪映运镜预设库已加载")
-    print("可用运镜类型:")
+    logger.info("剪映运镜预设库已加载")
+    logger.info("可用运镜类型:")
     moves = ["zoom_in", "zoom_out", "pan_left", "pan_right", "tilt_up", "tilt_down",
              "rotate_cw", "rotate_ccw", "pulse", "push_pan", "handheld", "dolly_zoom",
              "fade_in", "fade_out"]
     for m in moves:
-        print(f"  - {m}")
-    print("\n可用调色风格: cinematic/warm/cool/vintage/noir")
+        logger.info(f"  - {m}")
+    logger.info("\n可用调色风格: cinematic/warm/cool/vintage/noir")

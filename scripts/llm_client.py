@@ -1,4 +1,4 @@
-﻿"""
+"""
 P23增强: LLM客户端封装 v2.0
 支持多种LLM后端，优先级：宿主LLM > 云端API > 本地Ollama > Mock
 
@@ -9,9 +9,13 @@ P23增强: LLM客户端封装 v2.0
     result = client.chat_json("分析剧本", system_prompt="...")  # 返回JSON
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 
 class LLMClient:
@@ -87,7 +91,7 @@ class LLMClient:
         """自动检测可用的LLM后端（按优先级：宿主 > 云端 > 本地 > Mock）"""
         # 1. 宿主LLM（最高优先级）
         if self._detect_host_llm():
-            print(f"  ✅ 检测到宿主LLM: {self.model}")
+            logger.info(f"  ✅ 检测到宿主LLM: {self.model}")
             return
 
         # 2. 云端API - OpenAI
@@ -97,7 +101,7 @@ class LLMClient:
             self.base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
             self.model = os.environ.get("OPENAI_MODEL", "gpt-4o")
             self._available = True
-            print(f"  ✅ 检测到OpenAI API: {self.model}")
+            logger.info(f"  ✅ 检测到OpenAI API: {self.model}")
             return
 
         # 3. 云端API - 豆包/火山方舟
@@ -107,7 +111,7 @@ class LLMClient:
             self.base_url = os.environ.get("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
             self.model = os.environ.get("ARK_MODEL", "doubao-pro-32k")
             self._available = True
-            print(f"  ✅ 检测到火山方舟API: {self.model}")
+            logger.info(f"  ✅ 检测到火山方舟API: {self.model}")
             return
 
         # 4. 本地Ollama
@@ -116,12 +120,12 @@ class LLMClient:
             self.base_url = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
             self.model = os.environ.get("OLLAMA_MODEL", "llama3")
             self._available = True
-            print(f"  ✅ 检测到本地Ollama: {self.model}")
+            logger.info(f"  ✅ 检测到本地Ollama: {self.model}")
             return
 
         # 5. 检查配置文件
         config_path = os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "llm_config.json"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "llm_config.json"
         )
         if os.path.exists(config_path):
             try:
@@ -134,10 +138,10 @@ class LLMClient:
                 # Ollama/local/host不需要api_key
                 self._available = bool(self.api_key) or self.provider in ("ollama", "local", "host", "mock")
                 if self._available:
-                    print(f"  ✅ 从配置文件加载: {self.provider}/{self.model}")
+                    logger.info(f"  ✅ 从配置文件加载: {self.provider}/{self.model}")
                     return
             except Exception as e:
-                print(f"  ⚠️  配置文件读取失败: {e}")
+                logger.error(f"  ⚠️  配置文件读取失败: {e}")
 
         # 6. 尝试检测本地Ollama服务（即使没有环境变量）
         if self._check_ollama_service():
@@ -145,13 +149,13 @@ class LLMClient:
             self.base_url = "http://localhost:11434"
             self.model = self._get_ollama_default_model()
             self._available = True
-            print(f"  ✅ 检测到本地Ollama服务: {self.model}")
+            logger.info(f"  ✅ 检测到本地Ollama服务: {self.model}")
             return
 
         # 7. 降级到Mock
         self.provider = "mock"
         self._available = True  # Mock始终可用
-        print(f"  ⚠️  未检测到真实LLM，使用Mock模式（框架测试用）")
+        logger.info(f"  ⚠️  未检测到真实LLM，使用Mock模式（框架测试用）")
 
     def _check_ollama_service(self) -> bool:
         """检查本地Ollama服务是否运行"""
@@ -321,7 +325,7 @@ class LLMClient:
                     return data["message"]["content"]
 
         except Exception as e:
-            print(f"  ⚠️  LLM请求失败 ({self.provider}): {e}")
+            logger.error(f"  ⚠️  LLM请求失败 ({self.provider}): {e}")
             # 自动降级到下一个优先级
             return self._try_fallback(message, system_prompt, temperature, max_tokens)
 
@@ -339,7 +343,7 @@ class LLMClient:
                     # 检查是否真的可用（非mock）
                     result = temp_client.chat(message, system_prompt, temperature, max_tokens)
                     if result:
-                        print(f"  ✅ 降级到 {fallback_provider} 成功")
+                        logger.info(f"  ✅ 降级到 {fallback_provider} 成功")
                         return result
                 elif fallback_provider == "mock":
                     # Mock始终可用
@@ -390,8 +394,8 @@ class LLMClient:
 
             return json.loads(cleaned)
         except json.JSONDecodeError as e:
-            print(f"  ⚠️  JSON解析失败: {e}")
-            print(f"  原始响应: {response[:200]}")
+            logger.error(f"  ⚠️  JSON解析失败: {e}")
+            logger.info(f"  原始响应: {response[:200]}")
             return None
 
     def get_status(self) -> Dict[str, Any]:
@@ -410,26 +414,26 @@ if __name__ == "__main__":
     # 测试
     client = LLMClient()
     status = client.get_status()
-    print("=" * 60)
-    print("LLM客户端状态 v2.0")
-    print("=" * 60)
-    print(f"  当前提供商: {status['provider']}")
-    print(f"  模型: {status['model']}")
-    print(f"  API密钥已配置: {status['api_key_configured']}")
-    print(f"  可用: {status['available']}")
-    print(f"  优先级链: {' > '.join(status['priority_chain'])}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("LLM客户端状态 v2.0")
+    logger.info("=" * 60)
+    logger.info(f"  当前提供商: {status['provider']}")
+    logger.info(f"  模型: {status['model']}")
+    logger.info(f"  API密钥已配置: {status['api_key_configured']}")
+    logger.info(f"  可用: {status['available']}")
+    logger.info(f"  优先级链: {' > '.join(status['priority_chain'])}")
+    logger.info("=" * 60)
 
     if client.is_available:
-        print("\n测试聊天...")
+        logger.info("\n测试聊天...")
         response = client.chat("你好，请用一句话介绍你自己")
-        print(f"回复: {response}")
+        logger.info(f"回复: {response}")
     else:
-        print("\n⚠️  未配置LLM API")
-        print("配置方式（按优先级）：")
-        print("  1. 宿主LLM: 设置 HOST_LLM_AVAILABLE=1")
-        print("  2. OpenAI: 设置 OPENAI_API_KEY")
-        print("  3. 火山方舟: 设置 DOUBAO_API_KEY 或 ARK_API_KEY")
-        print("  4. 本地Ollama: 设置 OLLAMA_HOST 或启动Ollama服务")
-        print("  5. 配置文件: llm_config.json")
-        print("  6. Mock模式（自动降级，框架测试用）")
+        logger.info("\n⚠️  未配置LLM API")
+        logger.info("配置方式（按优先级）：")
+        logger.info("  1. 宿主LLM: 设置 HOST_LLM_AVAILABLE=1")
+        logger.info("  2. OpenAI: 设置 OPENAI_API_KEY")
+        logger.info("  3. 火山方舟: 设置 DOUBAO_API_KEY 或 ARK_API_KEY")
+        logger.info("  4. 本地Ollama: 设置 OLLAMA_HOST 或启动Ollama服务")
+        logger.info("  5. 配置文件: llm_config.json")
+        logger.info("  6. Mock模式（自动降级，框架测试用）")

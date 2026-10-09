@@ -20,18 +20,19 @@
     )
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from PIL import Image
@@ -55,7 +56,7 @@ def create_color_block(color: Tuple[int, int, int], width: int, height: int,
         输出路径或None
     """
     if not _PIL_AVAILABLE:
-        print("❌ Pillow未安装，无法创建背景块")
+        logger.info("❌ Pillow未安装，无法创建背景块")
         return None
 
     try:
@@ -63,7 +64,7 @@ def create_color_block(color: Tuple[int, int, int], width: int, height: int,
         img.save(output_path)
         return output_path
     except Exception as e:
-        print(f"❌ 创建背景块失败: {e}")
+        logger.error(f"❌ 创建背景块失败: {e}")
         return None
 
 
@@ -111,7 +112,7 @@ def create_text_bg_slide(
     os.makedirs(output_dir, exist_ok=True)
 
     # 1. 创建背景块图片
-    print(f"\n[1/4] 创建背景块: {bg_color}")
+    logger.info(f"\n[1/4] 创建背景块: {bg_color}")
     bg_w = int(width * bg_width_ratio)
     bg_h = int(height * bg_height_ratio)
     bg_path = os.path.join(output_dir, f"bg_{uuid.uuid4().hex[:8]}.png")
@@ -120,11 +121,11 @@ def create_text_bg_slide(
         return {"status": "failed", "reason": "背景块创建失败"}
 
     # 2. 创建工程
-    print(f"[2/4] 创建工程: {project_name} ({width}x{height})")
+    logger.info(f"[2/4] 创建工程: {project_name} ({width}x{height})")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 3. 添加背景块并设置滑入动画
-    print(f"[3/4] 添加背景块滑入动画 ({direction})")
+    logger.info(f"[3/4] 添加背景块滑入动画 ({direction})")
     bg_seg = project.add_media_safe(
         bg_path,
         start_time="0s",
@@ -138,48 +139,48 @@ def create_text_bg_slide(
     slide_us = int(slide_duration * 1e6)
     if direction == "left":
         # 从左滑入：位置X从-1.5→0
-        bg_seg.add_keyframe(KeyframeProperty.position_x, 0, -1.5, **Keyframe.EASE_OUT)
-        bg_seg.add_keyframe(KeyframeProperty.position_x, slide_us, 0.0, **Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, 0, -1.5, **draft.Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, slide_us, 0.0, **draft.Keyframe.EASE_OUT)
     elif direction == "right":
         # 从右滑入：位置X从1.5→0
-        bg_seg.add_keyframe(KeyframeProperty.position_x, 0, 1.5, **Keyframe.EASE_OUT)
-        bg_seg.add_keyframe(KeyframeProperty.position_x, slide_us, 0.0, **Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, 0, 1.5, **draft.Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, slide_us, 0.0, **draft.Keyframe.EASE_OUT)
     elif direction == "top":
         # 从上滑入：位置Y从-1.5→0
-        bg_seg.add_keyframe(KeyframeProperty.position_y, 0, -1.5, **Keyframe.EASE_OUT)
-        bg_seg.add_keyframe(KeyframeProperty.position_y, slide_us, 0.0, **Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_y, 0, -1.5, **draft.Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_y, slide_us, 0.0, **draft.Keyframe.EASE_OUT)
     elif direction == "bottom":
         # 从下滑入：位置Y从1.5→0
-        bg_seg.add_keyframe(KeyframeProperty.position_y, 0, 1.5, **Keyframe.EASE_OUT)
-        bg_seg.add_keyframe(KeyframeProperty.position_y, slide_us, 0.0, **Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_y, 0, 1.5, **draft.Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_y, slide_us, 0.0, **draft.Keyframe.EASE_OUT)
 
     # 4. 添加文字
-    print(f"[4/4] 添加文字: {text}")
+    logger.info(f"[4/4] 添加文字: {text}")
     text_seg = project.add_text_simple(
         text,
         start_time=f"{slide_duration * 0.3:.2f}s",  # 文字延迟出现
         duration=f"{duration - slide_duration * 0.3:.2f}s",
         track_name="Text",
-        style=TextStyle(size=font_size, color=(text_color[0]/255, text_color[1]/255, text_color[2]/255)),
+        style=draft.TextStyle(size=font_size, color=(text_color[0]/255, text_color[1]/255, text_color[2]/255)),
     )
 
     # 文字淡入动画
     if text_seg:
         text_start_us = int(slide_duration * 0.3 * 1e6)
         text_fade_us = int(0.3 * 1e6)
-        text_seg.add_keyframe(KeyframeProperty.alpha, text_start_us, 0.0, **Keyframe.EASE_OUT)
-        text_seg.add_keyframe(KeyframeProperty.alpha, text_start_us + text_fade_us, 1.0, **Keyframe.EASE_OUT)
+        text_seg.add_keyframe(draft.KeyframeProperty.alpha, text_start_us, 0.0, **draft.Keyframe.EASE_OUT)
+        text_seg.add_keyframe(draft.KeyframeProperty.alpha, text_start_us + text_fade_us, 1.0, **draft.Keyframe.EASE_OUT)
 
     # 5. 保存工程
     result = project.save()
     draft_path = result.get("draft_path", "")
 
-    print(f"\n✅ 文字背景块滑入特效创建完成")
-    print(f"   工程: {project_name}")
-    print(f"   背景块: {bg_w}x{bg_h} {bg_color}")
-    print(f"   文字: {text} ({font_size}px {text_color})")
-    print(f"   滑入方向: {direction} ({slide_duration}s)")
-    print(f"   草稿路径: {draft_path}")
+    logger.info(f"\n✅ 文字背景块滑入特效创建完成")
+    logger.info(f"   工程: {project_name}")
+    logger.info(f"   背景块: {bg_w}x{bg_h} {bg_color}")
+    logger.info(f"   文字: {text} ({font_size}px {text_color})")
+    logger.info(f"   滑入方向: {direction} ({slide_duration}s)")
+    logger.info(f"   草稿路径: {draft_path}")
 
     return {
         "status": "success",
@@ -246,11 +247,11 @@ def add_text_bg_slide_to_project(
     slide_us = int(slide_duration * 1e6)
     start_us = int(start_time * 1e6)
     if direction == "left":
-        bg_seg.add_keyframe(KeyframeProperty.position_x, start_us, -1.5, **Keyframe.EASE_OUT)
-        bg_seg.add_keyframe(KeyframeProperty.position_x, start_us + slide_us, 0.0, **Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, start_us, -1.5, **draft.Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, start_us + slide_us, 0.0, **draft.Keyframe.EASE_OUT)
     elif direction == "right":
-        bg_seg.add_keyframe(KeyframeProperty.position_x, start_us, 1.5, **Keyframe.EASE_OUT)
-        bg_seg.add_keyframe(KeyframeProperty.position_x, start_us + slide_us, 0.0, **Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, start_us, 1.5, **draft.Keyframe.EASE_OUT)
+        bg_seg.add_keyframe(draft.KeyframeProperty.position_x, start_us + slide_us, 0.0, **draft.Keyframe.EASE_OUT)
 
     # 添加文字
     text_start = start_time + slide_duration * 0.3
@@ -259,7 +260,7 @@ def add_text_bg_slide_to_project(
         start_time=f"{text_start:.2f}s",
         duration=f"{duration - slide_duration * 0.3:.2f}s",
         track_name="Text",
-        style=TextStyle(size=font_size, color=(text_color[0]/255, text_color[1]/255, text_color[2]/255)),
+        style=draft.TextStyle(size=font_size, color=(text_color[0]/255, text_color[1]/255, text_color[2]/255)),
     )
 
     return {
@@ -271,16 +272,16 @@ def add_text_bg_slide_to_project(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("文字背景块滑入特效")
-    print("=" * 60)
-    print("\n使用方法:")
-    print("  create_text_bg_slide(")
-    print("    project_name='测试',")
-    print("    text='ATTENTION',")
-    print("    bg_color=(180, 0, 0),")
-    print("    direction='left',")
-    print("    duration=2.0")
-    print("  )")
-    print(f"\nPillow: {'✅' if _PIL_AVAILABLE else '❌'}")
-    print("滑入方向: left / right / top / bottom")
+    logger.info("=" * 60)
+    logger.info("文字背景块滑入特效")
+    logger.info("=" * 60)
+    logger.info("\n使用方法:")
+    logger.info("  create_text_bg_slide(")
+    logger.info("    project_name='测试',")
+    logger.info("    text='ATTENTION',")
+    logger.info("    bg_color=(180, 0, 0),")
+    logger.info("    direction='left',")
+    logger.info("    duration=2.0")
+    logger.info("  )")
+    logger.info(f"\nPillow: {'✅' if _PIL_AVAILABLE else '❌'}")
+    logger.info("滑入方向: left / right / top / bottom")

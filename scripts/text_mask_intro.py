@@ -15,18 +15,19 @@
 - 动画：蒙版从0展开到全屏，文字逐渐显现
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple
 
 skill_root = r"C:\Users\Administrator\AppData\Local\DoubaoWork\User Data\Default\.doubaowork\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from mask_keyframe import apply_mask_keyframe, save_with_mask_keyframes, apply_mask_expand
@@ -62,7 +63,7 @@ def create_text_mask_image(text: str, width: int = 1080, height: int = 1920,
         图片路径或None
     """
     if not _PIL_AVAILABLE:
-        print("❌ Pillow未安装")
+        logger.info("❌ Pillow未安装")
         return None
 
     if output_path is None:
@@ -163,14 +164,14 @@ def create_text_mask_intro(
         output_dir = os.path.join(os.path.dirname(__file__), "text_mask_intro_assets")
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"\n{'='*60}")
-    print(f"文字蒙版开场特效")
-    print(f"{'='*60}")
-    print(f"文字: {text}")
-    print(f"时长: {duration}s, 展开方向: {expand_direction}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"文字蒙版开场特效")
+    logger.info(f"{'='*60}")
+    logger.info(f"文字: {text}")
+    logger.info(f"时长: {duration}s, 展开方向: {expand_direction}")
 
     # 1. 创建素材
-    print(f"\n[1/4] 创建素材")
+    logger.info(f"\n[1/4] 创建素材")
 
     # 文字蒙版图片（文字白色，背景透明）
     mask_img_path = create_text_mask_image(
@@ -178,14 +179,14 @@ def create_text_mask_intro(
         font_size=font_size, text_color=text_color,
         output_path=os.path.join(output_dir, f"text_mask_{uuid.uuid4().hex[:8]}.png")
     )
-    print(f"  文字蒙版: {mask_img_path}")
+    logger.info(f"  文字蒙版: {mask_img_path}")
 
     # 纯色遮罩
     solid_img_path = create_solid_color_image(
         color=mask_color, width=width, height=height,
         output_path=os.path.join(output_dir, f"solid_{uuid.uuid4().hex[:8]}.png")
     )
-    print(f"  纯色遮罩: {solid_img_path}")
+    logger.info(f"  纯色遮罩: {solid_img_path}")
 
     # 背景
     if background_path is None or not os.path.exists(background_path):
@@ -193,14 +194,14 @@ def create_text_mask_intro(
             color=(30, 30, 40), width=width, height=height,
             output_path=os.path.join(output_dir, f"bg_{uuid.uuid4().hex[:8]}.png")
         )
-        print(f"  背景(默认深色): {background_path}")
+        logger.info(f"  背景(默认深色): {background_path}")
 
     # 2. 创建工程
-    print(f"\n[2/4] 创建工程: {project_name} ({width}x{height})")
+    logger.info(f"\n[2/4] 创建工程: {project_name} ({width}x{height})")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 3. 添加三层素材
-    print(f"[3/4] 添加三层轨道")
+    logger.info(f"[3/4] 添加三层轨道")
 
     # 底层：背景
     bg_seg = project.add_media_safe(
@@ -209,7 +210,7 @@ def create_text_mask_intro(
         duration=f"{duration}s",
         track_name="Track_BG",
     )
-    print(f"  ✅ 底层背景")
+    logger.info(f"  ✅ 底层背景")
 
     # 中层：纯色遮罩
     mask_seg = project.add_media_safe(
@@ -218,7 +219,7 @@ def create_text_mask_intro(
         duration=f"{duration}s",
         track_name="Track_Mask",
     )
-    print(f"  ✅ 中层纯色遮罩")
+    logger.info(f"  ✅ 中层纯色遮罩")
 
     # 顶层：文字蒙版图片
     text_seg = project.add_media_safe(
@@ -227,10 +228,10 @@ def create_text_mask_intro(
         duration=f"{duration}s",
         track_name="Track_Text",
     )
-    print(f"  ✅ 顶层文字蒙版")
+    logger.info(f"  ✅ 顶层文字蒙版")
 
     # 4. 设置蒙版展开动画
-    print(f"[4/4] 设置蒙版展开动画 ({expand_direction})")
+    logger.info(f"[4/4] 设置蒙版展开动画 ({expand_direction})")
 
     if _MASK_KF_AVAILABLE and text_seg:
         # 展开动画占总时长的60%
@@ -244,20 +245,20 @@ def create_text_mask_intro(
             canvas_h=height,
             curve="EASE_OUT",
         )
-        print(f"  ✅ 蒙版展开动画: {expand_duration:.1f}s")
+        logger.info(f"  ✅ 蒙版展开动画: {expand_duration:.1f}s")
 
         # 保存并注入蒙版关键帧
         result = save_with_mask_keyframes(project, canvas_h=height)
     else:
         result = project.save()
-        print(f"  ⚠️ 蒙版关键帧工具不可用，使用普通保存")
+        logger.info(f"  ⚠️ 蒙版关键帧工具不可用，使用普通保存")
 
     draft_path = result.get("draft_path", "")
 
-    print(f"\n✅ 文字蒙版开场创建完成!")
-    print(f"   工程: {project_name}")
-    print(f"   草稿: {draft_path}")
-    print(f"   三层结构: 背景 + 纯色遮罩 + 文字蒙版(展开动画)")
+    logger.info(f"\n✅ 文字蒙版开场创建完成!")
+    logger.info(f"   工程: {project_name}")
+    logger.info(f"   草稿: {draft_path}")
+    logger.info(f"   三层结构: 背景 + 纯色遮罩 + 文字蒙版(展开动画)")
 
     return {
         "status": "success",
@@ -388,23 +389,23 @@ PRESETS = {
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("文字蒙版开场特效 v1")
-    print("=" * 60)
-    print(f"\n蒙版关键帧工具: {'✅' if _MASK_KF_AVAILABLE else '❌'}")
-    print(f"Pillow: {'✅' if _PIL_AVAILABLE else '❌'}")
-    print("\n核心函数:")
-    print("  create_text_mask_intro(project_name, text, ...) - 创建文字蒙版开场工程")
-    print("  add_text_mask_to_project(project, text, ...) - 在已有工程中添加")
-    print("  create_text_mask_image(text, ...) - 创建文字蒙版图片")
-    print("\n预设样式:")
+    logger.info("=" * 60)
+    logger.info("文字蒙版开场特效 v1")
+    logger.info("=" * 60)
+    logger.info(f"\n蒙版关键帧工具: {'✅' if _MASK_KF_AVAILABLE else '❌'}")
+    logger.info(f"Pillow: {'✅' if _PIL_AVAILABLE else '❌'}")
+    logger.info("\n核心函数:")
+    logger.info("  create_text_mask_intro(project_name, text, ...) - 创建文字蒙版开场工程")
+    logger.info("  add_text_mask_to_project(project, text, ...) - 在已有工程中添加")
+    logger.info("  create_text_mask_image(text, ...) - 创建文字蒙版图片")
+    logger.info("\n预设样式:")
     for key, preset in PRESETS.items():
-        print(f"  {key}: {preset['name']}")
-    print("\n展开方向: left/right/top/bottom/center/horizontal/vertical")
+        logger.info(f"  {key}: {preset['name']}")
+    logger.info("\n展开方向: left/right/top/bottom/center/horizontal/vertical")
 
     # 测试创建
     if _MASK_KF_AVAILABLE and _PIL_AVAILABLE:
-        print(f"\n--- 测试: 创建电影黑场风格 ---")
+        logger.info(f"\n--- 测试: 创建电影黑场风格 ---")
         result = create_text_mask_intro(
             project_name="TextMaskIntro_Test",
             text="测试标题",
@@ -412,4 +413,4 @@ if __name__ == "__main__":
             expand_direction="left",
             **{k: v for k, v in PRESETS["cinematic_black"].items() if k in ["mask_color", "text_color", "font_size"]},
         )
-        print(f"结果: {result['status']}, 草稿: {result['draft_path']}")
+        logger.info(f"结果: {result['status']}, 草稿: {result['draft_path']}")

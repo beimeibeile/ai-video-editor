@@ -5,6 +5,10 @@ Stable Audio 3 独立推理脚本
 用法:
     python stable_audio_runner.py --prompt "雨声" --duration 3 --output output.wav
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import argparse
 import os
 import sys
@@ -31,51 +35,51 @@ def generate_audio(prompt: str, duration: float = 3.0, output_path: str = "outpu
     if model_path is None:
         model_path = r"D:\Ai\ComfyUI-aki-v3.2\ComfyUI\models\checkpoints\stable-audio-3-small-sfx.safetensors"
 
-    print(f"加载模型: {model_path}")
-    print(f"提示词: {prompt}")
-    print(f"时长: {duration}s")
+    logger.info(f"加载模型: {model_path}")
+    logger.info(f"提示词: {prompt}")
+    logger.info(f"时长: {duration}s")
 
     # 检查模型路径
     if not os.path.exists(model_path):
-        print(f"❌ 模型文件不存在: {model_path}")
-        print("  请下载Stable Audio 3模型到指定路径")
+        logger.info(f"❌ 模型文件不存在: {model_path}")
+        logger.info("  请下载Stable Audio 3模型到指定路径")
         return None
 
     # 检查diffusers版本
     try:
         import diffusers
         version = getattr(diffusers, "__version__", "unknown")
-        print(f"diffusers版本: {version}")
+        logger.info(f"diffusers版本: {version}")
     except ImportError:
-        print("❌ diffusers未安装，请运行: pip install diffusers")
+        logger.info("❌ diffusers未安装，请运行: pip install diffusers")
         return None
 
     # 加载模型
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"设备: {device}")
+    logger.info(f"设备: {device}")
 
     try:
         if os.path.isdir(model_path):
             # 检查是否为diffusers格式
             model_index = os.path.join(model_path, "model_index.json")
             if not os.path.exists(model_index):
-                print(f"❌ 模型目录不是diffusers格式（缺少model_index.json）: {model_path}")
-                print("  当前模型为Stability原始格式，需转换为diffusers格式")
-                print("  降级方案：使用层1(TTS拟声词)或层2(ffmpeg合成)")
+                logger.info(f"❌ 模型目录不是diffusers格式（缺少model_index.json）: {model_path}")
+                logger.info("  当前模型为Stability原始格式，需转换为diffusers格式")
+                logger.info("  降级方案：使用层1(TTS拟声词)或层2(ffmpeg合成)")
                 return None
             pipe = StableAudio3Pipeline.from_pretrained(
                 model_path, torch_dtype=torch.float16
             )
         else:
             # 单个safetensors文件 - StableAudio3Pipeline不支持from_single_file
-            print(f"❌ StableAudio3Pipeline不支持from_single_file加载单个safetensors")
-            print(f"  模型文件: {model_path}")
-            print("  需要diffusers格式的完整模型目录（含model_index.json）")
-            print("  降级方案：使用层1(TTS拟声词)或层2(ffmpeg合成)")
+            logger.info(f"❌ StableAudio3Pipeline不支持from_single_file加载单个safetensors")
+            logger.info(f"  模型文件: {model_path}")
+            logger.info("  需要diffusers格式的完整模型目录（含model_index.json）")
+            logger.info("  降级方案：使用层1(TTS拟声词)或层2(ffmpeg合成)")
             return None
         pipe = pipe.to(device)
 
-        print("模型加载完成，开始生成...")
+        logger.info("模型加载完成，开始生成...")
 
         # 生成音频
         with torch.no_grad():
@@ -98,15 +102,15 @@ def generate_audio(prompt: str, duration: float = 3.0, output_path: str = "outpu
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         sf.write(output_path, audio_np, sample_rate)
 
-        print(f"✅ 音频已保存: {output_path}")
-        print(f"   采样率: {sample_rate} Hz")
-        print(f"   时长: {len(audio_np) / sample_rate:.1f}s")
-        print(f"   声道: {audio_np.shape[1] if audio_np.ndim > 1 else 1}")
+        logger.info(f"✅ 音频已保存: {output_path}")
+        logger.info(f"   采样率: {sample_rate} Hz")
+        logger.info(f"   时长: {len(audio_np) / sample_rate:.1f}s")
+        logger.info(f"   声道: {audio_np.shape[1] if audio_np.ndim > 1 else 1}")
 
         return output_path
 
     except Exception as e:
-        print(f"❌ 生成失败: {e}")
+        logger.error(f"❌ 生成失败: {e}")
         import traceback
         traceback.print_exc()
         return None

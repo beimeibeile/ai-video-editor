@@ -1,4 +1,4 @@
-﻿"""
+"""
 导演引擎统一入口（Director Engine）
 系统核心：读懂人类剧本 → 翻译成机器指令 → 指挥调度执行
 
@@ -10,13 +10,13 @@
         title="豆包被打",
         duration=20,
     )
-    print(result["instruction_sequence_path"])
-    print(result["execution_report_path"])
+    logger.info(result["instruction_sequence_path"])
+    logger.info(result["execution_report_path"])
 """
 
 import os
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from script_parser import ScriptParser
 from instruction_translator import InstructionTranslator
@@ -24,6 +24,8 @@ from central_orchestrator import CentralOrchestrator
 from script_enhancer import ScriptEnhancer
 from script_rewriter import ScriptRewriter, RewriteConstraints
 from structured_script import health_check as script_health_check
+import logging
+logger = logging.getLogger(__name__)
 
 
 class DirectorEngine:
@@ -36,7 +38,7 @@ class DirectorEngine:
 
     def __init__(self, work_dir: str = None, use_llm: bool = True):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_output"
         )
         os.makedirs(self.work_dir, exist_ok=True)
 
@@ -90,15 +92,15 @@ class DirectorEngine:
         out_dir = output_dir or self.work_dir
         os.makedirs(out_dir, exist_ok=True)
 
-        print(f"\n{'='*60}")
-        print(f"导演引擎启动: {title}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"导演引擎启动: {title}")
         if rewrite_mode:
-            print(f"  改写模式: {'创意生成' if rewrite_mode == 'creative' else '改编改写'}")
-        print(f"{'='*60}")
+            logger.info(f"  改写模式: {'创意生成' if rewrite_mode == 'creative' else '改编改写'}")
+        logger.info(f"{'='*60}")
 
         # ===== 剧本改写加工（可选前置步骤）=====
         if rewrite_mode:
-            print(f"\n[P22+] 剧本改写加工...")
+            logger.info(f"\n[P22+] 剧本改写加工...")
             constraints = rewrite_constraints or RewriteConstraints(
                 style=style,
                 duration=duration,
@@ -114,7 +116,7 @@ class DirectorEngine:
             # 保存改写结果
             rewrite_path = os.path.join(out_dir, f"{title}_rewrite.json")
             rewrite_result.save(rewrite_path)
-            print(f"  改写结果: {rewrite_path}")
+            logger.info(f"  改写结果: {rewrite_path}")
 
             # 用改写后的final_script直接进入P24翻译（改写内部已包含P23解析+增强）
             enhanced = rewrite_result.final_script
@@ -131,7 +133,7 @@ class DirectorEngine:
                 json.dump(enhanced, f, ensure_ascii=False, indent=2)
         else:
             # ===== P23: 剧本解析 =====
-            print(f"\n[P23] 剧本结构化解析...")
+            logger.info(f"\n[P23] 剧本结构化解析...")
             parsed = self.parser.parse(
                 script_text=script,
                 title=title,
@@ -144,37 +146,37 @@ class DirectorEngine:
             parsed_path = os.path.join(out_dir, f"{title}_parsed.json")
             with open(parsed_path, "w", encoding="utf-8") as f:
                 json.dump(parsed, f, ensure_ascii=False, indent=2)
-            print(f"  分镜JSON: {parsed_path}")
+            logger.info(f"  分镜JSON: {parsed_path}")
 
             # ===== P23+: 深度语义增强 =====
-            print(f"\n[P23+] 深度语义增强...")
+            logger.info(f"\n[P23+] 深度语义增强...")
             enhanced = self.enhancer.enhance(parsed, raw_script=script)
             self.last_enhanced = enhanced
 
             enhanced_path = os.path.join(out_dir, f"{title}_enhanced.json")
             with open(enhanced_path, "w", encoding="utf-8") as f:
                 json.dump(enhanced, f, ensure_ascii=False, indent=2)
-            print(f"  增强JSON: {enhanced_path}")
+            logger.info(f"  增强JSON: {enhanced_path}")
             if enhanced.get("structure"):
-                print(f"  剧情结构: {enhanced['structure'].get('summary', '')}")
+                logger.info(f"  剧情结构: {enhanced['structure'].get('summary', '')}")
 
         # ===== 质量门检查 =====
-        print(f"\n[质量门] 剧本质量检查...")
+        logger.info(f"\n[质量门] 剧本质量检查...")
         quality_text = script
         if rewrite_mode and self.last_rewrite_result:
             quality_text = getattr(self.last_rewrite_result, 'final_script_text', None) or script
         try:
             quality_report = script_health_check(quality_text, title=title, target_duration=duration)
-            print(f"  质量门: {quality_report['passed']}/{quality_report['total']} 通过")
+            logger.info(f"  质量门: {quality_report['passed']}/{quality_report['total']} 通过")
             for gate in quality_report['quality_gates']:
                 status = "✅" if gate['passed'] else "❌"
-                print(f"    {status} {gate['name']}: {gate['message']}")
+                logger.info(f"    {status} {gate['name']}: {gate['message']}")
         except Exception as e:
-            print(f"  ⚠️  质量门检查异常: {e}")
+            logger.info(f"  ⚠️  质量门检查异常: {e}")
             quality_report = None
 
         # ===== P24: 指令翻译 =====
-        print(f"\n[P24] 指令翻译...")
+        logger.info(f"\n[P24] 指令翻译...")
         sequence = self.translator.translate(enhanced)
         self.last_sequence = sequence
         self.translator.print_summary()
@@ -183,7 +185,7 @@ class DirectorEngine:
         self.translator.save_json(instr_path)
 
         # ===== P25: 中央调度 =====
-        print(f"\n[P25] 中央调度({'模拟执行' if dry_run else '实际执行'})...")
+        logger.info(f"\n[P25] 中央调度({'模拟执行' if dry_run else '实际执行'})...")
         deep_analysis = enhanced.get("deep_analysis") if enhanced else None
         self.orchestrator.build_tasks_from_instructions(self.translator.to_json(), deep_analysis=deep_analysis)
         report = self.orchestrator.execute(dry_run=dry_run)
@@ -231,23 +233,23 @@ class DirectorEngine:
             "quality_report": quality_report,
         }
 
-        print(f"\n{'='*60}")
-        print(f"导演引擎完成: {title}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"导演引擎完成: {title}")
         if rewrite_mode:
-            print(f"  改写模式: {rewrite_mode}")
-            print(f"  改写阶段: {', '.join(result['stats']['rewrite_stages'])}")
-        print(f"  角色: {result['stats']['characters']}个")
-        print(f"  场景: {result['stats']['scenes']}个")
-        print(f"  TTS指令: {result['stats']['tts_instructions']}条")
-        print(f"  关键帧指令: {result['stats']['keyframe_instructions']}条")
-        print(f"  音轨指令: {result['stats']['audio_instructions']}条")
-        print(f"  音效指令: {result['stats']['sfx_instructions']}条")
-        print(f"  调度任务: {result['stats']['total_tasks']}个")
+            logger.info(f"  改写模式: {rewrite_mode}")
+            logger.info(f"  改写阶段: {', '.join(result['stats']['rewrite_stages'])}")
+        logger.info(f"  角色: {result['stats']['characters']}个")
+        logger.info(f"  场景: {result['stats']['scenes']}个")
+        logger.info(f"  TTS指令: {result['stats']['tts_instructions']}条")
+        logger.info(f"  关键帧指令: {result['stats']['keyframe_instructions']}条")
+        logger.info(f"  音轨指令: {result['stats']['audio_instructions']}条")
+        logger.info(f"  音效指令: {result['stats']['sfx_instructions']}条")
+        logger.info(f"  调度任务: {result['stats']['total_tasks']}个")
         if quality_report:
-            print(f"  质量门: {quality_report['passed']}/{quality_report['total']} 通过")
-        print(f"  LLM增强: {'是' if result['stats']['llm_enhanced'] else '否（规则增强）'}")
-        print(f"  输出目录: {out_dir}")
-        print(f"{'='*60}\n")
+            logger.info(f"  质量门: {quality_report['passed']}/{quality_report['total']} 通过")
+        logger.info(f"  LLM增强: {'是' if result['stats']['llm_enhanced'] else '否（规则增强）'}")
+        logger.info(f"  输出目录: {out_dir}")
+        logger.info(f"{'='*60}\n")
 
         return result
 
@@ -274,6 +276,7 @@ class DirectorEngine:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # 演示：一键生成
     engine = DirectorEngine()
 
@@ -293,7 +296,7 @@ if __name__ == "__main__":
         dry_run=True,
     )
 
-    print(f"\n✅ 演示完成")
-    print(f"   分镜JSON: {result['parsed_script_path']}")
-    print(f"   指令序列: {result['instruction_sequence_path']}")
-    print(f"   执行报告: {result['execution_report_path']}")
+    logger.info(f"\n✅ 演示完成")
+    logger.info(f"   分镜JSON: {result['parsed_script_path']}")
+    logger.info(f"   指令序列: {result['instruction_sequence_path']}")
+    logger.info(f"   执行报告: {result['execution_report_path']}")

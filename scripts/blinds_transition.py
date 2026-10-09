@@ -12,18 +12,19 @@
 - jianying-editor（JyProject）
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Dict, Any
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from mask_keyframe import apply_mask_keyframe, save_with_mask_keyframes, MASK_KF_TYPES
@@ -66,19 +67,19 @@ def create_blinds_transition(
     if not _MASK_KF_AVAILABLE:
         return {"status": "failed", "reason": "mask_keyframe模块不可用"}
 
-    print(f"\n{'='*60}")
-    print(f"百叶窗分屏展开特效")
-    print(f"{'='*60}")
-    print(f"图片: {image_path}")
-    print(f"条纹数: {num_strips}, 总时长: {duration}s, 延迟: {stagger}s")
-    print(f"方向: {direction}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"百叶窗分屏展开特效")
+    logger.info(f"{'='*60}")
+    logger.info(f"图片: {image_path}")
+    logger.info(f"条纹数: {num_strips}, 总时长: {duration}s, 延迟: {stagger}s")
+    logger.info(f"方向: {direction}")
 
     # 1. 创建工程
-    print(f"\n[1/4] 创建工程: {project_name} ({width}x{height})")
+    logger.info(f"\n[1/4] 创建工程: {project_name} ({width}x{height})")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 2. 添加N份图片到不同轨道
-    print(f"[2/4] 添加 {num_strips} 条条纹到独立轨道")
+    logger.info(f"[2/4] 添加 {num_strips} 条条纹到独立轨道")
     segments = []
     strip_height = 1.0 / num_strips  # 每条条纹的高度比例
 
@@ -92,15 +93,15 @@ def create_blinds_transition(
         )
         if seg:
             segments.append(seg)
-            print(f"  ✅ 条纹 {i+1}/{num_strips} -> 轨道 {track_name}")
+            logger.info(f"  ✅ 条纹 {i+1}/{num_strips} -> 轨道 {track_name}")
         else:
-            print(f"  ❌ 条纹 {i+1} 添加失败")
+            logger.error(f"  ❌ 条纹 {i+1} 添加失败")
 
     if not segments:
         return {"status": "failed", "reason": "图片添加失败"}
 
     # 3. 为每条条纹设置蒙版位置和展开动画
-    print(f"[3/4] 设置蒙版裁剪和展开动画")
+    logger.info(f"[3/4] 设置蒙版裁剪和展开动画")
     for i, seg in enumerate(segments):
         # 计算条纹的垂直位置（position_y）
         # position_y: -1=顶部, 0=中心, 1=底部
@@ -163,21 +164,21 @@ def create_blinds_transition(
             apply_mask_keyframe(project, seg, "position_x", start_us, 0.0, "Line")
             apply_mask_keyframe(project, seg, "position_x", end_us, 0.0, "Line")
 
-        print(f"  ✅ 条纹 {i+1}: 位置Y={strip_center_y:.3f}, 方向={strip_dir}, 延迟={strip_start:.2f}s")
+        logger.info(f"  ✅ 条纹 {i+1}: 位置Y={strip_center_y:.3f}, 方向={strip_dir}, 延迟={strip_start:.2f}s")
 
     # 4. 保存工程并注入蒙版关键帧
-    print(f"[4/4] 保存工程并注入蒙版关键帧")
+    logger.info(f"[4/4] 保存工程并注入蒙版关键帧")
     result = save_with_mask_keyframes(project, canvas_h=height)
     draft_path = result.get("draft_path", "")
 
     total_duration = duration + stagger * num_strips
 
-    print(f"\n✅ 百叶窗分屏展开特效创建完成!")
-    print(f"   工程: {project_name}")
-    print(f"   草稿: {draft_path}")
-    print(f"   条纹数: {num_strips}")
-    print(f"   总时长: {total_duration:.2f}s")
-    print(f"   蒙版关键帧: {result.get('mask_keyframes_injected', 0)}个")
+    logger.info(f"\n✅ 百叶窗分屏展开特效创建完成!")
+    logger.info(f"   工程: {project_name}")
+    logger.info(f"   草稿: {draft_path}")
+    logger.info(f"   条纹数: {num_strips}")
+    logger.info(f"   总时长: {total_duration:.2f}s")
+    logger.info(f"   蒙版关键帧: {result.get('mask_keyframes_injected', 0)}个")
 
     return {
         "status": "success",
@@ -274,24 +275,24 @@ def add_blinds_to_project(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("百叶窗分屏展开特效模块")
-    print("=" * 60)
-    print(f"\n蒙版关键帧工具: {'✅ 可用' if _MASK_KF_AVAILABLE else '❌ 不可用'}")
-    print("\n核心函数:")
-    print("  create_blinds_transition(project_name, image_path, ...) - 创建独立工程")
-    print("  add_blinds_to_project(project, image_path, ...) - 添加到已有工程")
-    print("\n参数说明:")
-    print("  num_strips: 条纹数量（建议4-8）")
-    print("  duration: 展开时长（秒）")
-    print("  stagger: 每条延迟间隔（秒）")
-    print("  direction: alternate/left/right/center")
-    print("\n使用示例:")
-    print("  create_blinds_transition(")
-    print("    project_name='百叶窗测试',")
-    print("    image_path='photo.jpg',")
-    print("    num_strips=6,")
-    print("    duration=2.0,")
-    print("    stagger=0.15,")
-    print("    direction='alternate'")
-    print("  )")
+    logger.info("=" * 60)
+    logger.info("百叶窗分屏展开特效模块")
+    logger.info("=" * 60)
+    logger.info(f"\n蒙版关键帧工具: {'✅ 可用' if _MASK_KF_AVAILABLE else '❌ 不可用'}")
+    logger.info("\n核心函数:")
+    logger.info("  create_blinds_transition(project_name, image_path, ...) - 创建独立工程")
+    logger.info("  add_blinds_to_project(project, image_path, ...) - 添加到已有工程")
+    logger.info("\n参数说明:")
+    logger.info("  num_strips: 条纹数量（建议4-8）")
+    logger.info("  duration: 展开时长（秒）")
+    logger.info("  stagger: 每条延迟间隔（秒）")
+    logger.info("  direction: alternate/left/right/center")
+    logger.info("\n使用示例:")
+    logger.info("  create_blinds_transition(")
+    logger.info("    project_name='百叶窗测试',")
+    logger.info("    image_path='photo.jpg',")
+    logger.info("    num_strips=6,")
+    logger.info("    duration=2.0,")
+    logger.info("    stagger=0.15,")
+    logger.info("    direction='alternate'")
+    logger.info("  )")

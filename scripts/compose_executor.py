@@ -7,15 +7,19 @@ import os
 import sys
 import json
 import subprocess
-from typing import Dict, Any, List, Optional
+import logging
+from typing import Dict, Any, List
+
+logger = logging.getLogger(__name__)
 
 
-# skill内部scripts目录（已包含所有依赖模块）
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-if _SCRIPT_DIR not in sys.path:
-    sys.path.insert(0, _SCRIPT_DIR)
+RUNTIME_DIR = r"D:\DobaoWork_Project\Ai_Video_Editor\ai-video-editor-runtime\scripts"
+sys.path.insert(0, RUNTIME_DIR)
 
-FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
+try:
+    from paths import FFPROBE
+except ImportError:
+    FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
 
 
 def get_audio_duration(audio_path: str) -> float:
@@ -37,7 +41,7 @@ def get_audio_duration(audio_path: str) -> float:
 class ComposeExecutor:
     def __init__(self, work_dir: str = None):
         self.work_dir = work_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_output"
         )
         self.tts_dir = os.path.join(self.work_dir, "tts")
         self.audio_dir = os.path.join(self.work_dir, "audio")
@@ -149,16 +153,16 @@ class ComposeExecutor:
         Returns:
             合成结果
         """
-        print(f"\n{'='*60}")
-        print(f"最终合成执行器: {project_name}")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"最终合成执行器: {project_name}")
+        logger.info(f"{'='*60}")
 
         try:
             from jianying_executor import JianyingExecutor
             from audio_mixer import AudioMixer
 
             # 1. 收集所有音频文件
-            print(f"\n[1/4] 收集音频文件...")
+            logger.info(f"\n[1/4] 收集音频文件...")
             all_audio = []
             tts_files = self.collect_tts_files(tts_results)
             audio_files = self.collect_audio_files(audio_results)
@@ -180,14 +184,14 @@ class ComposeExecutor:
                     text_instrs = instruction_sequence.get("text_instructions", [])
                     if i < len(text_instrs):
                         text_instrs[i]["duration"] = actual_dur
-                print(f"  ✅ TTS时间轴已同步，实际时长已ffprobe探测，文字duration已同步 ({len(tts_files)}条)")
+                logger.info(f"  ✅ TTS时间轴已同步，实际时长已ffprobe探测，文字duration已同步 ({len(tts_files)}条)")
             elif tts_instructions:
-                print(f"  ⚠️  TTS文件数({len(tts_files)})与指令数({len(tts_instructions)})不匹配，使用默认时间轴")
+                logger.info(f"  ⚠️  TTS文件数({len(tts_files)})与指令数({len(tts_instructions)})不匹配，使用默认时间轴")
 
             all_audio.extend(tts_files)
             all_audio.extend(audio_files)
             all_audio.extend(sfx_files)
-            print(f"  ✅ TTS: {len(tts_files)}条, 音频: {len(audio_files)}条, 音效: {len(sfx_files)}条, 总计: {len(all_audio)}条")
+            logger.info(f"  ✅ TTS: {len(tts_files)}条, 音频: {len(audio_files)}条, 音效: {len(sfx_files)}条, 总计: {len(all_audio)}条")
 
             # 计算实际总时长（覆盖所有音频和文字的结束时间）
             max_end = duration
@@ -200,11 +204,11 @@ class ComposeExecutor:
                 if end > max_end:
                     max_end = end
             if max_end > duration:
-                print(f"  📐 实际总时长: {max_end:.1f}s (原参数: {duration:.1f}s)")
+                logger.info(f"  📐 实际总时长: {max_end:.1f}s (原参数: {duration:.1f}s)")
                 duration = max_end
 
             # 2. 多音轨混音（音量平衡+淡入淡出+ducking）
-            print(f"\n[2/4] 多音轨混音...")
+            logger.info(f"\n[2/4] 多音轨混音...")
             mixer = AudioMixer(ducking_enabled=True, normalize_enabled=True)
 
             # 构建TTS片段列表（用于ducking）
@@ -224,12 +228,12 @@ class ComposeExecutor:
 
             # 生成混音报告
             mix_report = mixer.generate_mix_report(mixed_audio)
-            print(f"  ✅ 混音完成: {mix_report['by_type']}")
-            print(f"  🎚️  Ducking应用: {mix_report['ducking_applied']}个音频")
-            print(f"  📊 音量范围: {mix_report['volume_range']['min']:.2f} - {mix_report['volume_range']['max']:.2f}")
+            logger.info(f"  ✅ 混音完成: {mix_report['by_type']}")
+            logger.info(f"  🎚️  Ducking应用: {mix_report['ducking_applied']}个音频")
+            logger.info(f"  📊 音量范围: {mix_report['volume_range']['min']:.2f} - {mix_report['volume_range']['max']:.2f}")
 
             # 3. 调用剪映执行器构建工程（包含混音后的音频和生成的素材）
-            print(f"\n[3/4] 构建剪映工程（含混音音频）...")
+            logger.info(f"\n[3/4] 构建剪映工程（含混音音频）...")
             executor = JianyingExecutor(work_dir=self.work_dir)
             result = executor.execute(
                 instruction_sequence=instruction_sequence,
@@ -242,14 +246,14 @@ class ComposeExecutor:
             )
 
             # 4. 汇总结果
-            print(f"\n[4/4] 合成完成")
-            print(f"  ✅ 工程: {result.get('project_name')}")
-            print(f"  ✅ 草稿: {result.get('draft_path')}")
-            print(f"  ✅ 角色: {len(result.get('characters', []))}个")
-            print(f"  ✅ 关键帧: {result.get('keyframes_applied', 0)}条")
-            print(f"  ✅ 文字: {result.get('texts_added', 0)}条")
-            print(f"  ✅ 特效: {result.get('effects_applied', 0)}个")
-            print(f"  ✅ 音频: {result.get('audio_added', 0)}条")
+            logger.info(f"\n[4/4] 合成完成")
+            logger.info(f"  ✅ 工程: {result.get('project_name')}")
+            logger.info(f"  ✅ 草稿: {result.get('draft_path')}")
+            logger.info(f"  ✅ 角色: {len(result.get('characters', []))}个")
+            logger.info(f"  ✅ 关键帧: {result.get('keyframes_applied', 0)}条")
+            logger.info(f"  ✅ 文字: {result.get('texts_added', 0)}条")
+            logger.info(f"  ✅ 特效: {result.get('effects_applied', 0)}个")
+            logger.info(f"  ✅ 音频: {result.get('audio_added', 0)}条")
 
             return {
                 "status": "success",
@@ -267,7 +271,7 @@ class ComposeExecutor:
             }
 
         except Exception as e:
-            print(f"\n❌ 最终合成失败: {e}")
+            logger.info(f"\n❌ 最终合成失败: {e}")
             import traceback
             traceback.print_exc()
             return {"status": "failed", "error": str(e)}
@@ -275,5 +279,5 @@ class ComposeExecutor:
 
 if __name__ == "__main__":
     executor = ComposeExecutor()
-    print("最终合成执行器已加载")
-    print(f"工作目录: {executor.work_dir}")
+    logger.info("最终合成执行器已加载")
+    logger.info(f"工作目录: {executor.work_dir}")

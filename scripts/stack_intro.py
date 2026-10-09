@@ -18,18 +18,19 @@
 - ffmpeg (可选，用于图片预处理)
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 
 def create_stack_intro(
@@ -74,7 +75,7 @@ def create_stack_intro(
     positions = _calculate_positions(n, width, height, layout)
 
     # 创建工程
-    print(f"\n[1/3] 创建工程: {project_name} ({width}x{height})")
+    logger.info(f"\n[1/3] 创建工程: {project_name} ({width}x{height})")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 添加黑色背景
@@ -86,11 +87,11 @@ def create_stack_intro(
     )
 
     # 添加每张图片
-    print(f"[2/3] 添加 {n} 张图片（{layout}布局）")
+    logger.info(f"[2/3] 添加 {n} 张图片（{layout}布局）")
     segments = []
     for i, img_path in enumerate(images):
         if not os.path.exists(img_path):
-            print(f"  ⚠️  图片不存在: {img_path}")
+            logger.info(f"  ⚠️  图片不存在: {img_path}")
             continue
 
         start_time = i * stagger
@@ -104,10 +105,10 @@ def create_stack_intro(
         )
         if seg:
             segments.append((i, seg))
-            print(f"  ✅ 图片{i}: {os.path.basename(img_path)}")
+            logger.info(f"  ✅ 图片{i}: {os.path.basename(img_path)}")
 
     # 保存工程
-    print(f"[3/3] 保存工程")
+    logger.info(f"[3/3] 保存工程")
     result = project.save()
     draft_path = result.get("draft_path", "")
 
@@ -219,7 +220,7 @@ def _inject_stack_keyframes(
     if not os.path.exists(content_file):
         content_file = os.path.join(draft_path, "draft_info.json")
     if not os.path.exists(content_file):
-        print(f"❌ 草稿文件不存在: {draft_path}")
+        logger.info(f"❌ 草稿文件不存在: {draft_path}")
         return
 
     try:
@@ -293,9 +294,9 @@ def _inject_stack_keyframes(
             with open(info_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"  ✅ 已注入 {injected} 个图片的堆叠入场关键帧")
+        logger.info(f"  ✅ 已注入 {injected} 个图片的堆叠入场关键帧")
     except Exception as e:
-        print(f"❌ 注入关键帧失败: {e}")
+        logger.error(f"❌ 注入关键帧失败: {e}")
 
 
 def _add_keyframe(seg: dict, property_type: str, keyframes: List[Tuple[int, float]]):
@@ -395,16 +396,16 @@ LAYOUT_PRESETS = {
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("多层图片堆叠入场特效")
-    print("=" * 60)
-    print("\n可用布局:")
+    logger.info("=" * 60)
+    logger.info("多层图片堆叠入场特效")
+    logger.info("=" * 60)
+    logger.info("\n可用布局:")
     for name, cfg in LAYOUT_PRESETS.items():
-        print(f"  {name}: {cfg['name']} - {cfg['desc']}")
-    print("\n使用方法:")
-    print("  create_stack_intro(")
-    print("    project_name='测试',")
-    print("    images=['img1.jpg', 'img2.jpg', 'img3.jpg'],")
-    print("    layout='grid',")
-    print("    duration=5.0")
-    print("  )")
+        logger.info(f"  {name}: {cfg['name']} - {cfg['desc']}")
+    logger.info("\n使用方法:")
+    logger.info("  create_stack_intro(")
+    logger.info("    project_name='测试',")
+    logger.info("    images=['img1.jpg', 'img2.jpg', 'img3.jpg'],")
+    logger.info("    layout='grid',")
+    logger.info("    duration=5.0")
+    logger.info("  )")

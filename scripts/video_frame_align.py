@@ -7,10 +7,14 @@
     aligned = align_video_to_frames("input.mp4", "output.mp4", fps=30)
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import subprocess
 import json
-from typing import Optional, Tuple
+from typing import Optional
 
 FFMPEG_PATH = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
 FFPROBE_PATH = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
@@ -43,7 +47,7 @@ def get_video_info(video_path: str) -> dict:
             "codec": stream.get("codec_name", ""),
         }
     except Exception as e:
-        print(f"获取视频信息失败: {e}")
+        logger.error(f"获取视频信息失败: {e}")
         return {}
 
 
@@ -66,7 +70,7 @@ def align_video_to_frames(
         输出路径或None
     """
     if not os.path.exists(video_path):
-        print(f"视频不存在: {video_path}")
+        logger.info(f"视频不存在: {video_path}")
         return None
 
     info = get_video_info(video_path)
@@ -106,13 +110,13 @@ def align_video_to_frames(
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
             new_info = get_video_info(output_path)
-            print(f"  对齐: {src_duration:.3f}s -> {new_info.get('duration', 0):.3f}s ({target_frames}帧@{fps}fps)")
+            logger.info(f"  对齐: {src_duration:.3f}s -> {new_info.get('duration', 0):.3f}s ({target_frames}帧@{fps}fps)")
             return output_path
         else:
-            print(f"  对齐失败: {result.stderr[-200:] if result.stderr else 'unknown'}")
+            logger.error(f"  对齐失败: {result.stderr[-200:] if result.stderr else 'unknown'}")
             return None
     except Exception as e:
-        print(f"  对齐异常: {e}")
+        logger.info(f"  对齐异常: {e}")
         return None
 
 
@@ -153,13 +157,13 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         video = sys.argv[1]
         info = get_video_info(video)
-        print(f"视频: {video}")
-        print(f"  时长: {info.get('duration', 0):.3f}s")
-        print(f"  帧率: {info.get('fps', 0):.1f}fps")
-        print(f"  分辨率: {info.get('width', 0)}x{info.get('height', 0)}")
+        logger.info(f"视频: {video}")
+        logger.info(f"  时长: {info.get('duration', 0):.3f}s")
+        logger.info(f"  帧率: {info.get('fps', 0):.1f}fps")
+        logger.info(f"  分辨率: {info.get('width', 0)}x{info.get('height', 0)}")
         if info:
             frame_dur = 1.0 / 30
             frames = int(info["duration"] / frame_dur)
-            print(f"  30fps帧数: {frames} (对齐后时长: {frames * frame_dur:.3f}s)")
+            logger.info(f"  30fps帧数: {frames} (对齐后时长: {frames * frame_dur:.3f}s)")
     else:
-        print("用法: python video_frame_align.py <video_path>")
+        logger.info("用法: python video_frame_align.py <video_path>")

@@ -1,10 +1,12 @@
-﻿"""
+"""
 P25执行器: 文字排版
 支持多种文字样式和动画，生成文字素材或定义剪映文字参数
 """
 
 import os
 from typing import Dict, Any, List, Optional
+import logging
+logger = logging.getLogger(__name__)
 
 
 # 文字样式预设
@@ -49,7 +51,7 @@ ANIMATION_MAP = {
 class TextExecutor:
     def __init__(self, output_dir: str = None):
         self.output_dir = output_dir or os.path.join(
-            os.path.expanduser("~"), "Videos", "ai-video-editor-output", "director_engine_output", "text"
+            r"D:\DobaoWork_Project\Ai_Video_Editor", "director_engine_output", "text"
         )
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -91,7 +93,7 @@ class TextExecutor:
         try:
             from PIL import Image, ImageDraw, ImageFont
         except ImportError:
-            print("  ⚠️  PIL不可用，跳过文字素材生成")
+            logger.info("  ⚠️  PIL不可用，跳过文字素材生成")
             return None
 
         if output_file is None:
@@ -114,7 +116,7 @@ class TextExecutor:
         font_color = self._hex_to_rgba(style.get("font_color", "#FFFFFF"))
         try:
             font = ImageFont.truetype("msyh.ttc", font_size)
-        except:
+        except Exception:
             font = ImageFont.load_default()
 
         # 居中绘制
@@ -126,7 +128,7 @@ class TextExecutor:
         draw.text((x, y), text, fill=font_color, font=font)
 
         img.save(output_file, "PNG")
-        print(f"  ✅ 文字素材: {style_name} - {text[:20]}")
+        logger.info(f"  ✅ 文字素材: {style_name} - {text[:20]}")
         return output_file
 
     def _hex_to_rgba(self, hex_color: str) -> tuple:
@@ -136,9 +138,9 @@ class TextExecutor:
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4, 6))
 
     def execute(self, text_instructions: List[Dict]) -> Dict[str, Any]:
-        print(f"\n{'='*60}")
-        print(f"文字执行器: {len(text_instructions)}条指令")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"文字执行器: {len(text_instructions)}条指令")
+        logger.info(f"{'='*60}")
         results = []
         for i, instr in enumerate(text_instructions):
             text = instr.get("text", "")
@@ -156,14 +158,14 @@ class TextExecutor:
                 })
             else:
                 params = self.generate_text_params(text, style, start_time, duration)
-                print(f"  ✅ 文字参数: {style} - {text[:20]}")
+                logger.info(f"  ✅ 文字参数: {style} - {text[:20]}")
                 results.append({
                     "text": text, "style": style, "type": "params",
                     "params": params, "success": True
                 })
 
         success_count = sum(1 for r in results if r["success"])
-        print(f"\n  完成: {success_count}成功 / {len(results)-success_count}失败")
+        logger.info(f"\n  完成: {success_count}成功 / {len(results)-success_count}失败")
         return {
             "status": "success" if success_count == len(results) else "partial",
             "total": len(results), "success": success_count,
@@ -173,6 +175,7 @@ class TextExecutor:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     executor = TextExecutor()
     test = [
         {"text": "大家好，我是豆包！", "style": "normal", "start_time": 0, "duration": 3},
@@ -180,4 +183,4 @@ if __name__ == "__main__":
         {"text": "别跑！", "style": "artistic", "start_time": 5, "duration": 2},
     ]
     result = executor.execute(test)
-    print(f"结果: {result['status']}")
+    logger.info(f"结果: {result['status']}")

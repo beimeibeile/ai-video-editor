@@ -11,10 +11,13 @@
 2. 将effect id添加到片段的extra_material_refs中
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import json
 import uuid
-from typing import Optional
 
 
 # 混合模式映射表（从剪映5.9资源目录逆向）
@@ -110,7 +113,7 @@ def apply_mix_mode(project, segment, mode: str = "multiply", intensity: float = 
     """
     mode_config = MIX_MODES.get(mode)
     if not mode_config or not mode_config["effect_id"]:
-        print(f"❌ 混合模式 '{mode}' 尚未逆向，可用: {[k for k,v in MIX_MODES.items() if v['effect_id']]}")
+        logger.info(f"❌ 混合模式 '{mode}' 尚未逆向，可用: {[k for k,v in MIX_MODES.items() if v['effect_id']]}")
         return False
 
     # 生成effect id
@@ -161,7 +164,7 @@ def apply_mix_mode(project, segment, mode: str = "multiply", intensity: float = 
         "effect": mix_effect,
     })
 
-    print(f"  ✅ 混合模式: {mode_config['name']} (强度{intensity})")
+    logger.info(f"  ✅ 混合模式: {mode_config['name']} (强度{intensity})")
     return True
 
 
@@ -184,7 +187,7 @@ def inject_mix_modes_to_draft(draft_path: str, patches: list) -> bool:
         # 尝试draft_info.json
         content_file = os.path.join(draft_path, "draft_info.json")
     if not os.path.exists(content_file):
-        print(f"❌ 草稿文件不存在: {draft_path}")
+        logger.info(f"❌ 草稿文件不存在: {draft_path}")
         return False
 
     try:
@@ -221,15 +224,15 @@ def inject_mix_modes_to_draft(draft_path: str, patches: list) -> bool:
                     break
 
             if not matched:
-                print(f"  ⚠️  未找到匹配片段: segment_id={patch.get('segment_id')}, material_id={patch.get('segment_material_id')}")
+                logger.info(f"  ⚠️  未找到匹配片段: segment_id={patch.get('segment_id')}, material_id={patch.get('segment_material_id')}")
 
         with open(content_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"  ✅ 已注入 {len(patches)} 个混合模式到草稿")
+        logger.info(f"  ✅ 已注入 {len(patches)} 个混合模式到草稿")
         return True
     except Exception as e:
-        print(f"❌ 注入混合模式失败: {e}")
+        logger.error(f"❌ 注入混合模式失败: {e}")
         return False
 
 
@@ -271,7 +274,7 @@ def discover_mix_modes(resources_path: str = None) -> dict:
 
     mix_dir = os.path.join(resources_path, "MixMode")
     if not os.path.exists(mix_dir):
-        print(f"❌ MixMode目录不存在: {mix_dir}")
+        logger.info(f"❌ MixMode目录不存在: {mix_dir}")
         return {}
 
     modes = {}
@@ -290,18 +293,18 @@ def discover_mix_modes(resources_path: str = None) -> dict:
             except Exception:
                 pass
 
-    print(f"  扫描到 {len(modes)} 个混合模式资源")
+    logger.info(f"  扫描到 {len(modes)} 个混合模式资源")
     return modes
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("混合模式工具模块")
-    print("=" * 60)
-    print("\n已逆向的混合模式:")
+    logger.info("=" * 60)
+    logger.info("混合模式工具模块")
+    logger.info("=" * 60)
+    logger.info("\n已逆向的混合模式:")
     for mode, config in MIX_MODES.items():
         status = "✅" if config["effect_id"] else "⏳"
-        print(f"  {status} {mode}: {config['name']}")
+        logger.info(f"  {status} {mode}: {config['name']}")
 
-    print("\n扫描剪映资源目录...")
+    logger.info("\n扫描剪映资源目录...")
     discover_mix_modes()

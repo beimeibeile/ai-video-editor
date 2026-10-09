@@ -12,10 +12,18 @@ import sys
 import json
 import hashlib
 import subprocess
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
+import logging
+logger = logging.getLogger(__name__)
 
-FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
-FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
+try:
+    from paths import FFPROBE
+except ImportError:
+    FFPROBE = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
+try:
+    from paths import FFMPEG
+except ImportError:
+    FFMPEG = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
 
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff'}
 VIDEO_EXTS = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv'}
@@ -375,7 +383,7 @@ def batch_inspect(filepaths: List[str], show_progress: bool = True) -> List[Dict
     total = len(filepaths)
     for i, fp in enumerate(filepaths):
         if show_progress and (i + 1) % 10 == 0:
-            print(f"  质检进度: {i+1}/{total}")
+            logger.info(f"  质检进度: {i+1}/{total}")
         results.append(inspect_asset(fp))
     return results
 
@@ -488,6 +496,7 @@ def quality_report(assets: List[Dict]) -> Dict:
 
 
 if __name__ == "__main__":
-    print("素材质检与筛选模块已加载")
-    print("功能: inspect_image / inspect_video / inspect_audio / inspect_asset")
-    print("      batch_inspect / filter_assets / find_duplicates / quality_report")
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.info("素材质检与筛选模块已加载")
+    logger.info("功能: inspect_image / inspect_video / inspect_audio / inspect_asset")
+    logger.info("      batch_inspect / filter_assets / find_duplicates / quality_report")

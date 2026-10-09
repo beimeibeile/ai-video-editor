@@ -9,6 +9,10 @@ jianying_adapter.py - 剪映工程适配层 v1.0
 3. 统一处理路径、编码、异常
 4. 未来切换剪映版本或替代方案时只需修改此层
 """
+
+import logging
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 from pathlib import Path

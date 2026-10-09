@@ -15,7 +15,7 @@ import sys
 import json
 import copy
 import time
-from typing import Optional, Dict, List, Any
+from typing import Dict, List, Any
 
 # 添加cap_comfyui_runner到路径
 CAP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "capabilities", "cap_comfyui_runner")
@@ -23,6 +23,8 @@ if os.path.exists(CAP_DIR):
     sys.path.insert(0, CAP_DIR)
 
 from comfy_client import ComfyClient
+import logging
+logger = logging.getLogger(__name__)
 
 
 # 素材类型配置
@@ -129,9 +131,9 @@ class ComfyUIAssetExecutor:
         # 构建提示词
         positive_prompt = f"{config['style_prefix']}{description}, high quality, detailed, masterpiece"
 
-        print(f"\n[ComfyUI] 生成{asset_type}素材: {name}")
-        print(f"  描述: {description[:50]}...")
-        print(f"  尺寸: {width}x{height}, 步数: {steps}, seed: {seed}")
+        logger.info(f"\n[ComfyUI] 生成{asset_type}素材: {name}")
+        logger.info(f"  描述: {description[:50]}...")
+        logger.info(f"  尺寸: {width}x{height}, 步数: {steps}, seed: {seed}")
 
         try:
             # 检查ComfyUI是否运行
@@ -170,8 +172,8 @@ class ComfyUIAssetExecutor:
             output_path = output_files[0]
             duration = time.time() - start_time
 
-            print(f"  ✅ 生成成功: {os.path.basename(output_path)}")
-            print(f"  耗时: {duration:.1f}s")
+            logger.info(f"  ✅ 生成成功: {os.path.basename(output_path)}")
+            logger.info(f"  耗时: {duration:.1f}s")
 
             return {
                 "success": True,
@@ -187,7 +189,7 @@ class ComfyUIAssetExecutor:
 
         except Exception as e:
             duration = time.time() - start_time
-            print(f"  ❌ 生成失败: {e}")
+            logger.info(f"  ❌ 生成失败: {e}")
             return {
                 "success": False,
                 "asset_type": asset_type,
@@ -312,7 +314,7 @@ class ComfyUIAssetExecutor:
         """
         results = []
         for i, asset in enumerate(assets):
-            print(f"\n[{i+1}/{len(assets)}] 批量生成进度")
+            logger.info(f"\n[{i+1}/{len(assets)}] 批量生成进度")
             asset_type = asset.get("type", "character")
             name = asset.get("name", f"{asset_type}_{i}")
             description = asset.get("description", "")
@@ -328,15 +330,16 @@ class ComfyUIAssetExecutor:
 
         # 汇总
         success_count = sum(1 for r in results if r["success"])
-        print(f"\n[ComfyUI] 批量生成完成: {success_count}/{len(results)} 成功")
+        logger.info(f"\n[ComfyUI] 批量生成完成: {success_count}/{len(results)} 成功")
 
         return results
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     # 测试
     executor = ComfyUIAssetExecutor()
-    print(f"ComfyUI可用: {executor.is_available()}")
+    logger.info(f"ComfyUI可用: {executor.is_available()}")
 
     if executor.is_available():
         # 测试生成角色图（低分辨率快速测试）
@@ -347,6 +350,6 @@ if __name__ == "__main__":
             height=512,
             steps=10,
         )
-        print(f"\n测试结果: {result['success']}")
+        logger.info(f"\n测试结果: {result['success']}")
         if result["success"]:
-            print(f"输出: {result['output_path']}")
+            logger.info(f"输出: {result['output_path']}")

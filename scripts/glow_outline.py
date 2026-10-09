@@ -14,18 +14,19 @@
 - Pillow（生成轮廓图）
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 import os
 import sys
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 
 skill_root = r"C:\Users\Administrator\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills\jianying-editor"
 sys.path.insert(0, os.path.join(skill_root, "scripts"))
 from jy_wrapper import JyProject
-# pyJianYingDraft已迁移到适配层
-import os as _os, sys as _sys
-_AVR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
-if _AVR not in _sys.path: _sys.path.insert(0, _AVR)
+import pyJianYingDraft as draft
 
 try:
     from PIL import Image, ImageFilter, ImageOps
@@ -58,7 +59,7 @@ def generate_outline_image(source_path: str, output_path: str,
         输出路径或None
     """
     if not _PIL_AVAILABLE:
-        print("❌ Pillow未安装，无法生成轮廓图")
+        logger.info("❌ Pillow未安装，无法生成轮廓图")
         return None
 
     try:
@@ -80,10 +81,10 @@ def generate_outline_image(source_path: str, output_path: str,
         # 转为RGB
         result = edges.convert("RGB")
         result.save(output_path)
-        print(f"  ✅ 轮廓图已生成: {output_path}")
+        logger.info(f"  ✅ 轮廓图已生成: {output_path}")
         return output_path
     except Exception as e:
-        print(f"❌ 生成轮廓图失败: {e}")
+        logger.error(f"❌ 生成轮廓图失败: {e}")
         return None
 
 
@@ -130,11 +131,11 @@ def create_glow_outline(
             return {"status": "failed", "reason": "轮廓图生成失败"}
 
     # 2. 创建工程
-    print(f"\n[1/4] 创建工程: {project_name} ({width}x{height})")
+    logger.info(f"\n[1/4] 创建工程: {project_name} ({width}x{height})")
     project = JyProject(project_name, width=width, height=height, overwrite=True)
 
     # 3. 添加底层彩色素材
-    print(f"[2/4] 添加底层彩色素材")
+    logger.info(f"[2/4] 添加底层彩色素材")
     base_seg = project.add_media_safe(
         base_image,
         start_time="0s",
@@ -145,7 +146,7 @@ def create_glow_outline(
         return {"status": "failed", "reason": "底层素材添加失败"}
 
     # 4. 添加上层轮廓图
-    print(f"[3/4] 添加上层轮廓图 + 正片叠底混合模式")
+    logger.info(f"[3/4] 添加上层轮廓图 + 正片叠底混合模式")
     outline_seg = project.add_media_safe(
         outline_image,
         start_time="0s",
@@ -159,10 +160,10 @@ def create_glow_outline(
     if _MIX_MODE_AVAILABLE:
         apply_mix_mode(project, outline_seg, mode="multiply", intensity=1.0)
     else:
-        print("  ⚠️  mix_mode模块不可用，正片叠底需手动设置")
+        logger.info("  ⚠️  mix_mode模块不可用，正片叠底需手动设置")
 
     # 6. 添加梦幻辉光特效（到底层）
-    print(f"[4/4] 添加特效: {glow_effect} + {dream_effect}")
+    logger.info(f"[4/4] 添加特效: {glow_effect} + {dream_effect}")
     try:
         project.add_effect_simple(
             glow_effect,
@@ -170,9 +171,9 @@ def create_glow_outline(
             duration=f"{duration}s",
             track_name="GlowEffect"
         )
-        print(f"  ✅ {glow_effect}特效已添加")
+        logger.info(f"  ✅ {glow_effect}特效已添加")
     except Exception as e:
-        print(f"  ⚠️  {glow_effect}特效添加失败: {e}")
+        logger.error(f"  ⚠️  {glow_effect}特效添加失败: {e}")
 
     # 7. 添加梦境特效（全局）
     try:
@@ -185,9 +186,9 @@ def create_glow_outline(
         # 设置为全局特效
         if dream_seg:
             dream_seg.render_index = 10000
-        print(f"  ✅ {dream_effect}特效已添加")
+        logger.info(f"  ✅ {dream_effect}特效已添加")
     except Exception as e:
-        print(f"  ⚠️  {dream_effect}特效添加失败: {e}")
+        logger.error(f"  ⚠️  {dream_effect}特效添加失败: {e}")
 
     # 8. 保存工程并自动注入混合模式
     if _MIX_MODE_AVAILABLE:
@@ -280,17 +281,17 @@ def add_glow_outline_to_project(
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("动态发光轮廓效果")
-    print("=" * 60)
-    print("\n使用方法:")
-    print("  create_glow_outline(")
-    print("    project_name='测试',")
-    print("    base_image='photo.jpg',")
-    print("    outline_image='outline.png',  # 可选")
-    print("    duration=5.0")
-    print("  )")
-    print("\n依赖:")
-    print(f"  Pillow: {'✅' if _PIL_AVAILABLE else '❌'}")
-    print(f"  mix_mode: {'✅' if _MIX_MODE_AVAILABLE else '❌'}")
-    print(f"  正片叠底: {'✅ 已逆向' if MIX_MODES['multiply']['effect_id'] else '⏳ 待逆向'}")
+    logger.info("=" * 60)
+    logger.info("动态发光轮廓效果")
+    logger.info("=" * 60)
+    logger.info("\n使用方法:")
+    logger.info("  create_glow_outline(")
+    logger.info("    project_name='测试',")
+    logger.info("    base_image='photo.jpg',")
+    logger.info("    outline_image='outline.png',  # 可选")
+    logger.info("    duration=5.0")
+    logger.info("  )")
+    logger.info("\n依赖:")
+    logger.info(f"  Pillow: {'✅' if _PIL_AVAILABLE else '❌'}")
+    logger.info(f"  mix_mode: {'✅' if _MIX_MODE_AVAILABLE else '❌'}")
+    logger.info(f"  正片叠底: {'✅ 已逆向' if MIX_MODES['multiply']['effect_id'] else '⏳ 待逆向'}")
