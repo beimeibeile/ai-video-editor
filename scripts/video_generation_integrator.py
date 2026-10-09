@@ -473,6 +473,98 @@ class VideoGenerationIntegrator:
             logger.error(f"视频导入剪映异常: {e}")
             return False
 
+    def smart_generate_h3(self, prompt: str,
+                            output_dir: str,
+                            scene_type: str = None,
+                            quality_mode: str = "balanced",
+                            style: str = "cinematic",
+                            camera_movement: str = "slow_push",
+                            use_timeline: bool = True,
+                            timeline_template: str = "cinematic_intro",
+                            target_duration: float = None,
+                            need_reference: bool = False,
+                            need_lip_sync: bool = False,
+                            max_retries: int = 3,
+                            output_name: str = None) -> Dict[str, Any]:
+        """
+        MiniMax H3智能生成（一键优化：提示词工程+智能选版+参数调优+质量门+自动重试）
+
+        Args:
+            prompt: 基础提示词
+            output_dir: 输出目录
+            scene_type: 场景类型（None自动推荐）
+            quality_mode: 质量模式：fast/balanced/high
+            style: 风格
+            camera_movement: 运镜方式
+            use_timeline: 是否使用Timeline结构化提示词
+            timeline_template: Timeline模板名
+            target_duration: 目标时长（秒）
+            need_reference: 是否需要参考驱动
+            need_lip_sync: 是否需要唇形同步
+            max_retries: 最大重试次数
+            output_name: 输出文件名
+
+        Returns:
+            生成结果
+        """
+        try:
+            from minimax_h3_enhancer import smart_generate_config, get_quality_gate, get_auto_retry_executor
+            from minimax_h3_runner import MiniMaxH3Runner
+        except ImportError as e:
+            return {"success": False, "error": f"增强模块导入失败: {e}"}
+
+        # 1. 智能生成配置
+        config = smart_generate_config(
+            prompt=prompt,
+            scene_type=scene_type,
+            quality_mode=quality_mode,
+            need_reference=need_reference,
+            need_lip_sync=need_lip_sync,
+            target_duration=target_duration,
+            style=style,
+            camera_movement=camera_movement,
+            use_timeline=use_timeline,
+            timeline_template=timeline_template,
+        )
+
+        logger.info(f"智能配置: 场景={config['scene_type']}, 模型={config['model_variant']}, "
+                    f"分辨率={config['width']}x{config['height']}, 帧数={config['frames']}")
+
+        # 2. 定义生成函数
+        runner = MiniMaxH3Runner(comfyui_url=self.comfyui_url)
+
+        def generate_func(cfg, out_dir, out_name):
+            try:
+                result = runner.generate(
+                    mode="t2v",
+                    prompt=cfg["prompt"],
+                    negative_prompt=cfg.get("negative_prompt", ""),
+                    width=cfg["width"],
+                    height=cfg["height"],
+                    frames=cfg["frames"],
+                    model_variant=cfg["model_variant"],
+                    use_turbo_lora=cfg["use_turbo_lora"],
+                    steps=cfg["steps"],
+                    seed=cfg.get("seed", -1),
+                    output_dir=out_dir,
+                    output_prefix=out_name or f"h3_smart_{int(time.time())}",
+                )
+                return result.get("output_path") if result else None
+            except Exception as e:
+                logger.error(f"H3生成异常: {e}")
+                return None
+
+        # 3. 带自动重试执行
+        executor = get_auto_retry_executor(max_retries=max_retries)
+        result = executor.execute_with_retry(
+            generate_func=generate_func,
+            config=config,
+            output_dir=output_dir,
+            output_name=output_name,
+        )
+
+        return result
+
     def list_models(self) -> List[Dict[str, Any]]:
         """列出支持的模型"""
         return [
