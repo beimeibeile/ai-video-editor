@@ -963,7 +963,8 @@ class JianyingExecutor:
                 duration: float = 20.0,
                 audio_files: List[Dict] = None,
                 asset_results: List[Dict] = None,
-                auto_music: Dict = None) -> Dict[str, Any]:
+                auto_music: Dict = None,
+                emotion_timeline: List[Dict] = None) -> Dict[str, Any]:
         """
         执行指令序列，构建剪映工程
 
@@ -1147,6 +1148,20 @@ class JianyingExecutor:
             # 5. 应用特效
             logger.info(f"[5/7] 应用特效...")
             effects = instruction_sequence.get("effect_instructions", [])
+
+            # 如果指定了情绪时间线，自动生成特效指令
+            if emotion_timeline:
+                try:
+                    from effect_composition_orchestrator import get_orchestrator
+                    orchestrator = get_orchestrator()
+                    auto_effects = orchestrator.compose_from_emotion_timeline(
+                        emotion_timeline, duration=duration, max_effects_per_segment=2
+                    )
+                    effects = effects + auto_effects
+                    logger.info(f"  🎯 情绪时间线自动生成 {len(auto_effects)} 个特效指令")
+                except Exception as e:
+                    logger.warning(f"  ⚠️  情绪时间线特效生成失败: {e}")
+
             effects_applied = self._apply_effects(effects)
             logger.info(f"  ✅ {effects_applied} 个特效")
 
