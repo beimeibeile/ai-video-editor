@@ -333,24 +333,54 @@ class BGMLibraryExpander:
         presets = [
             ("calm_piano_01", 262, 30, "calm", "piano"),  # C4
             ("calm_ambient_01", 220, 45, "calm", "ambient"),  # A3
+            ("calm_guitar_01", 196, 35, "calm", "guitar"),  # G3
+            ("calm_piano_02", 294, 40, "calm", "piano"),  # D4
+            ("calm_ambient_02", 175, 50, "calm", "ambient"),  # F3
+            ("calm_jazz_01", 247, 35, "calm", "jazz"),  # B3
+            ("calm_lofi_01", 220, 45, "calm", "ambient"),  # A3
             ("happy_pop_01", 523, 20, "happy", "pop"),  # C5
             ("happy_ukulele_01", 392, 25, "happy", "folk"),  # G4
+            ("happy_guitar_01", 440, 25, "happy", "guitar"),  # A4
+            ("happy_pop_02", 587, 20, "happy", "pop"),  # D5
+            ("happy_folk_01", 349, 30, "happy", "folk"),  # F4
+            ("happy_ukulele_02", 494, 25, "happy", "folk"),  # B4
             ("sad_piano_01", 196, 35, "sad", "piano"),  # G3
             ("sad_strings_01", 175, 40, "sad", "orchestral"),  # F3
+            ("sad_piano_02", 165, 40, "sad", "piano"),  # E3
+            ("sad_strings_02", 147, 45, "sad", "orchestral"),  # D3
+            ("sad_ambient_01", 131, 50, "sad", "ambient"),  # C3
             ("energetic_rock_01", 440, 20, "energetic", "rock"),  # A4
             ("energetic_edm_01", 330, 25, "energetic", "electronic"),  # E4
+            ("energetic_rock_02", 494, 20, "energetic", "rock"),  # B4
+            ("energetic_edm_02", 392, 25, "energetic", "electronic"),  # G4
+            ("energetic_hiphop_01", 294, 30, "energetic", "hiphop"),  # D4
+            ("energetic_pop_01", 523, 20, "energetic", "pop"),  # C5
             ("tense_suspense_01", 147, 30, "tense", "cinematic"),  # D3
             ("tense_dark_01", 110, 35, "tense", "ambient"),  # A2
+            ("tense_suspense_02", 131, 35, "tense", "cinematic"),  # C3
+            ("tense_dark_02", 98, 40, "tense", "ambient"),  # G2
+            ("tense_orchestral_01", 165, 30, "tense", "orchestral"),  # E3
             ("romantic_piano_01", 294, 30, "romantic", "piano"),  # D4
             ("romantic_strings_01", 247, 40, "romantic", "orchestral"),  # B3
+            ("romantic_piano_02", 330, 35, "romantic", "piano"),  # E4
+            ("romantic_guitar_01", 262, 35, "romantic", "guitar"),  # C4
             ("epic_orchestral_01", 349, 45, "epic", "orchestral"),  # F4
             ("epic_cinematic_01", 392, 50, "epic", "cinematic"),  # G4
+            ("epic_orchestral_02", 440, 45, "epic", "orchestral"),  # A4
+            ("epic_cinematic_02", 494, 50, "epic", "cinematic"),  # B4
             ("mysterious_ambient_01", 208, 35, "mysterious", "ambient"),  # G#3
             ("mysterious_fantasy_01", 262, 40, "mysterious", "cinematic"),  # C4
+            ("mysterious_ambient_02", 185, 40, "mysterious", "ambient"),  # F#3
+            ("mysterious_fantasy_02", 233, 45, "mysterious", "cinematic"),  # A#3
             ("corporate_motivational_01", 330, 30, "energetic", "corporate"),  # E4
             ("corporate_inspiring_01", 392, 35, "happy", "corporate"),  # G4
+            ("corporate_motivational_02", 349, 30, "energetic", "corporate"),  # F4
             ("jazz_smooth_01", 294, 40, "calm", "jazz"),  # D4
+            ("jazz_blues_01", 262, 35, "calm", "jazz"),  # C4
             ("lofi_chill_01", 220, 45, "calm", "ambient"),  # A3
+            ("lofi_chill_02", 196, 50, "calm", "ambient"),  # G3
+            ("folk_acoustic_01", 247, 35, "happy", "folk"),  # B3
+            ("folk_world_01", 220, 40, "calm", "folk"),  # A3
         ]
 
         count = min(count, len(presets))
