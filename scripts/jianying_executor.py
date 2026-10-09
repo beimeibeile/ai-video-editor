@@ -270,6 +270,38 @@ class JianyingExecutor:
 
         return applied
 
+    def _resolve_effect_name(self, effect_type: str, category: str = None) -> Optional[Dict]:
+        """
+        解析特效名称：先精确匹配，失败则模糊搜索最接近的特效
+
+        Args:
+            effect_type: 特效名称
+            category: 特效类别（scene/filter/character），None表示自动判断
+
+        Returns:
+            {name, type} 或 None
+        """
+        api = _get_effect_api()
+        if not api:
+            return None
+
+        # 1. 先检查精确匹配是否存在
+        info = api.get_effect_info(effect_type)
+        if info:
+            return {"name": effect_type, "type": info.get("type", "scene")}
+
+        # 2. 精确匹配失败，模糊搜索
+        try:
+            results = api.search(effect_type, effect_type=category)
+            if results:
+                best = results[0]
+                logger.info(f"  🔍 特效模糊匹配: '{effect_type}' → '{best['name']}' ({best['type']})")
+                return {"name": best["name"], "type": best["type"]}
+        except Exception as e:
+            logger.warning(f"  ⚠️  特效搜索失败: {e}")
+
+        return None
+
     def _apply_effects(self, effect_instructions: List[Dict]) -> int:
         """
         应用特效指令（支持VideoSceneEffectType枚举特效 + 关键帧实现的shake/pulse/blur）
@@ -334,20 +366,27 @@ class JianyingExecutor:
                 if enum_applied == 0:
                     api = _get_effect_api()
                     if api and self.project:
-                        if effect.get("category") == "filter":
-                            ok = api.apply_filter(
-                                self.project, effect_type,
-                                start=start_time, duration=duration,
-                                intensity=params.get("intensity", 100.0)
-                            )
+                        # 模糊匹配特效名称
+                        resolved = self._resolve_effect_name(effect_type, effect.get("category"))
+                        if resolved:
+                            actual_name = resolved["name"]
+                            actual_type = resolved["type"]
+                            if actual_type == "filter":
+                                ok = api.apply_filter(
+                                    self.project, actual_name,
+                                    start=start_time, duration=duration,
+                                    intensity=params.get("intensity", 100.0)
+                                )
+                            else:
+                                ok = api.apply_scene_effect(
+                                    self.project, actual_name,
+                                    start=start_time, duration=duration
+                                )
+                            if ok:
+                                applied += 1
+                                logger.info(f"  ✅ 特效API: {actual_name} → 全局")
                         else:
-                            ok = api.apply_scene_effect(
-                                self.project, effect_type,
-                                start=start_time, duration=duration
-                            )
-                        if ok:
-                            applied += 1
-                            logger.info(f"  ✅ 特效API: {effect_type} → 全局")
+                            logger.warning(f"  ⚠️  特效未找到: {effect_type}")
                 else:
                     applied += enum_applied
                     logger.info(f"  ✅ 特效: {effect_type} → 所有角色({enum_applied}个)")
@@ -366,23 +405,29 @@ class JianyingExecutor:
                     # 回退到JianyingEffectAPI（2309个特效库）
                     api = _get_effect_api()
                     if api and self.project:
-                        # 区分场景特效和滤镜
-                        if effect.get("category") == "filter":
-                            ok = api.apply_filter(
-                                self.project, effect_type,
-                                start=start_time, duration=duration,
-                                intensity=params.get("intensity", 100.0)
-                            )
+                        # 模糊匹配特效名称
+                        resolved = self._resolve_effect_name(effect_type, effect.get("category"))
+                        if resolved:
+                            actual_name = resolved["name"]
+                            actual_type = resolved["type"]
+                            if actual_type == "filter":
+                                ok = api.apply_filter(
+                                    self.project, actual_name,
+                                    start=start_time, duration=duration,
+                                    intensity=params.get("intensity", 100.0)
+                                )
+                            else:
+                                ok = api.apply_scene_effect(
+                                    self.project, actual_name,
+                                    start=start_time, duration=duration
+                                )
+                            if ok:
+                                applied += 1
+                                logger.info(f"  ✅ 特效API: {actual_name} → {target}")
+                            else:
+                                logger.warning(f"  ⚠️  特效API失败: {actual_name}")
                         else:
-                            ok = api.apply_scene_effect(
-                                self.project, effect_type,
-                                start=start_time, duration=duration
-                            )
-                        if ok:
-                            applied += 1
-                            logger.info(f"  ✅ 特效API: {effect_type} → {target}")
-                        else:
-                            logger.warning(f"  ⚠️  特效API失败: {effect_type}")
+                            logger.warning(f"  ⚠️  特效未找到: {effect_type}")
                     else:
                         logger.warning(f"  ⚠️  未知特效: {effect_type}")
                     continue
