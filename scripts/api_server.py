@@ -310,6 +310,79 @@ class APIHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return {}
 
+    def _handle_upload(self):
+        """处理文件上传（multipart/form-data）"""
+        try:
+            content_type = self.headers.get("Content-Type", "")
+            if "multipart/form-data" not in content_type:
+                self._send_json({"error": "需要multipart/form-data格式"}, 400)
+                return
+
+            # 解析boundary
+            boundary = None
+            for part in content_type.split(";"):
+                part = part.strip()
+                if part.startswith("boundary="):
+                    boundary = part[9:].strip('"')
+                    break
+
+            if not boundary:
+                self._send_json({"error": "无法解析boundary"}, 400)
+                return
+
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_data = self.rfile.read(content_length)
+
+            # 解析multipart
+            boundary_bytes = ("--" + boundary).encode("utf-8")
+            parts = raw_data.split(boundary_bytes)
+
+            upload_dir = os.path.join(_SKILL_ROOT, "..", "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+
+            saved_path = None
+            for part in parts:
+                if not part or part == b"--\r\n" or part == b"--":
+                    continue
+                # 分离header和content
+                if b"\r\n\r\n" in part:
+                    header_bytes, content = part.split(b"\r\n\r\n", 1)
+                    header_text = header_bytes.decode("utf-8", errors="ignore")
+                    # 提取文件名
+                    filename = None
+                    for line in header_text.split("\r\n"):
+                        if "filename=" in line:
+                            for segment in line.split(";"):
+                                segment = segment.strip()
+                                if segment.startswith("filename="):
+                                    filename = segment[9:].strip('"')
+                                    break
+                            break
+                    if filename and content:
+                        # 去除末尾的\r\n
+                        if content.endswith(b"\r\n"):
+                            content = content[:-2]
+                        # 生成唯一文件名
+                        ext = os.path.splitext(filename)[1]
+                        unique_name = f"{uuid.uuid4().hex[:8]}_{filename}"
+                        save_path = os.path.join(upload_dir, unique_name)
+                        with open(save_path, "wb") as f:
+                            f.write(content)
+                        saved_path = os.path.abspath(save_path)
+                        logger.info(f"文件上传成功: {filename} -> {saved_path} ({len(content)} bytes)")
+                        break
+
+            if saved_path:
+                self._send_json({"path": saved_path, "filename": filename, "size": len(content)})
+            else:
+                self._send_json({"error": "未找到文件"}, 400)
+
+        except Exception as e:
+            logger.error(f"文件上传失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self._send_json({"error": f"上传失败: {str(e)}"}, 500)
+
     def do_OPTIONS(self):
         """处理OPTIONS请求（CORS预检）"""
         self._send_json({"status": "ok"}, 200)
@@ -560,6 +633,12 @@ class APIHandler(BaseHTTPRequestHandler):
         """处理POST请求"""
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
+
+        # 文件上传端点（multipart/form-data）
+        if path == "/api/upload":
+            self._handle_upload()
+            return
+
         body = self._read_body()
 
         if path == "/api/video/generate":

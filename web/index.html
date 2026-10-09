@@ -435,18 +435,48 @@ body {
       </div>
 
       <div class="form-group" id="imagePathGroup" style="display:none">
-        <label class="form-label">首帧图片路径（I2V模式）</label>
-        <input type="text" class="form-input" id="imagePath" placeholder="例如：D:\images\input.png">
+        <label class="form-label">首帧图片（I2V模式）</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="file" id="imageFile" accept="image/*" style="flex:1;color:#888;font-size:12px" onchange="onFileSelected(this,'imagePath')">
+          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;white-space:nowrap" onclick="document.getElementById('imageFile').click()">📁 选择</button>
+        </div>
+        <input type="text" class="form-input" id="imagePath" placeholder="上传后自动填充路径，也可手动输入" style="margin-top:6px;font-size:12px">
       </div>
 
       <div class="form-row" id="fl2vGroup" style="display:none">
         <div class="form-group">
-          <label class="form-label">首帧图片路径</label>
-          <input type="text" class="form-input" id="firstFramePath" placeholder="首帧图片路径">
+          <label class="form-label">首帧图片</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="file" id="firstFrameFile" accept="image/*" style="flex:1;color:#888;font-size:12px" onchange="onFileSelected(this,'firstFramePath')">
+            <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;white-space:nowrap" onclick="document.getElementById('firstFrameFile').click()">📁</button>
+          </div>
+          <input type="text" class="form-input" id="firstFramePath" placeholder="首帧图片路径" style="margin-top:6px;font-size:12px">
         </div>
         <div class="form-group">
-          <label class="form-label">尾帧图片路径</label>
-          <input type="text" class="form-input" id="lastFramePath" placeholder="尾帧图片路径">
+          <label class="form-label">尾帧图片</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="file" id="lastFrameFile" accept="image/*" style="flex:1;color:#888;font-size:12px" onchange="onFileSelected(this,'lastFramePath')">
+            <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;white-space:nowrap" onclick="document.getElementById('lastFrameFile').click()">📁</button>
+          </div>
+          <input type="text" class="form-input" id="lastFramePath" placeholder="尾帧图片路径" style="margin-top:6px;font-size:12px">
+        </div>
+      </div>
+
+      <div class="form-group" id="ref2vGroup" style="display:none">
+        <label class="form-label">参考素材（Ref2V模式，至少上传一项）</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">参考图片</div>
+            <input type="file" id="refImageFile" accept="image/*" multiple style="color:#888;font-size:12px;width:100%">
+          </div>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">参考视频</div>
+            <input type="file" id="refVideoFile" accept="video/*" multiple style="color:#888;font-size:12px;width:100%">
+          </div>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">参考音频</div>
+            <input type="file" id="refAudioFile" accept="audio/*" multiple style="color:#888;font-size:12px;width:100%">
+          </div>
         </div>
       </div>
 
@@ -638,7 +668,45 @@ document.getElementById('mode').addEventListener('change', function() {
   const mode = this.value;
   document.getElementById('imagePathGroup').style.display = mode === 'i2v' ? 'block' : 'none';
   document.getElementById('fl2vGroup').style.display = mode === 'fl2v' ? 'block' : 'none';
+  document.getElementById('ref2vGroup').style.display = mode === 'ref2v' ? 'block' : 'none';
 });
+
+// 文件选择后自动上传
+async function onFileSelected(input, targetInputId) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(API_BASE + '/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.path) {
+      document.getElementById(targetInputId).value = data.path;
+    } else {
+      alert('上传失败: ' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    alert('上传异常: ' + e.message);
+  }
+}
+
+// 上传多个参考文件
+async function uploadMultipleFiles(inputId) {
+  const input = document.getElementById(inputId);
+  const paths = [];
+  for (const file of input.files) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(API_BASE + '/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.path) paths.push(data.path);
+    } catch (e) {
+      console.error('上传失败:', file.name, e);
+    }
+  }
+  return paths;
+}
 
 function onModelChange() {
   const model = document.getElementById('model').value;
@@ -675,10 +743,23 @@ async function generateVideo() {
   };
 
   const mode = body.mode;
-  if (mode === 'i2v') body.image_path = document.getElementById('imagePath').value;
+  if (mode === 'i2v') {
+    body.image_path = document.getElementById('imagePath').value;
+    if (!body.image_path) { alert('请选择首帧图片'); btn.disabled = false; btn.textContent = '🚀 开始生成'; return; }
+  }
   if (mode === 'fl2v') {
     body.first_frame_path = document.getElementById('firstFramePath').value;
     body.last_frame_path = document.getElementById('lastFramePath').value;
+    if (!body.first_frame_path || !body.last_frame_path) { alert('请选择首帧和尾帧图片'); btn.disabled = false; btn.textContent = '🚀 开始生成'; return; }
+  }
+  if (mode === 'ref2v') {
+    btn.textContent = '⏳ 上传参考素材...';
+    body.reference_images = await uploadMultipleFiles('refImageFile');
+    body.reference_videos = await uploadMultipleFiles('refVideoFile');
+    body.reference_audios = await uploadMultipleFiles('refAudioFile');
+    if (body.reference_images.length === 0 && body.reference_videos.length === 0 && body.reference_audios.length === 0) {
+      alert('请至少上传一项参考素材'); btn.disabled = false; btn.textContent = '🚀 开始生成'; return;
+    }
   }
 
   try {
