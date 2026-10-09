@@ -80,6 +80,15 @@ class VideoGenerationIntegrator:
             "max_frames": 129,
             "description": "混元视频图生视频",
         },
+        "minimax-h3": {
+            "name": "MiniMax H3",
+            "modes": ["t2v", "i2v", "fl2v"],
+            "max_resolution": (2560, 1440),
+            "max_frames": 361,
+            "description": "MiniMax H3全模态视频生成，原生2K/24fps/立体声音频",
+            "native_audio": True,
+            "timeline_prompt": True,
+        },
     }
 
     def __init__(self, comfyui_url: str = None):
@@ -165,6 +174,17 @@ class VideoGenerationIntegrator:
 
         # 构建工作流
         try:
+            # MiniMax H3使用专用runner
+            if config.model == "minimax-h3":
+                output_path = self._generate_with_h3(config, output_dir, output_name)
+                if output_path and os.path.exists(output_path):
+                    result.success = True
+                    result.output_path = output_path
+                    self._fill_video_metadata(result, output_path)
+                else:
+                    result.errors.append("MiniMax H3生成失败")
+                return result
+
             from workflow_templates import WorkflowTemplateLibrary
             library = WorkflowTemplateLibrary()
 
@@ -237,6 +257,107 @@ class VideoGenerationIntegrator:
             self._quality_check(result)
 
         return result
+
+    def _generate_with_h3(self, config: VideoGenConfig, output_dir: str,
+                           output_name: str = None) -> Optional[str]:
+        """使用MiniMax H3生成视频
+
+        Args:
+            config: 视频生成配置
+            output_dir: 输出目录
+            output_name: 输出文件名
+
+        Returns:
+            输出视频路径，失败返回None
+        """
+        try:
+            from minimax_h3_runner import MiniMaxH3Runner, PRESETS
+
+            # 选择预设
+            preset = "turbo_768p"
+            if config.width >= 2000 or config.height >= 1400:
+                preset = "turbo_2k"
+            if config.steps > 10:
+                preset = "standard_768p" if config.width < 2000 else "quality_2k"
+
+            runner = MiniMaxH3Runner(
+                server_addr=self.comfyui_url.replace("http://", ""),
+                output_dir=output_dir,
+                preset=preset,
+            )
+
+            os.makedirs(output_dir, exist_ok=True)
+            output_name = output_name or f"h3_{config.mode}_{config.duration}f.mp4"
+
+            if config.mode == "t2v":
+                result = runner.text_to_video(
+                    prompt=config.prompt,
+                    width=config.width,
+                    height=config.height,
+                    frames=config.duration,
+                )
+            elif config.mode == "i2v":
+                result = runner.image_to_video(
+                    prompt=config.prompt,
+                    image_path=config.image_path,
+                    width=config.width,
+                    height=config.height,
+                    frames=config.duration,
+                )
+            elif config.mode == "fl2v":
+                # fl2v模式：image_path作为首帧，需要额外指定尾帧
+                # 通过negative_prompt字段传递尾帧路径（临时方案）
+                last_frame = config.negative_prompt if config.negative_prompt else config.image_path
+                result = runner.first_last_to_video(
+                    prompt=config.prompt,
+                    first_frame_path=config.image_path,
+                    last_frame_path=last_frame,
+                    width=config.width,
+                    height=config.height,
+                    frames=config.duration,
+                )
+            else:
+                logger.error(f"H3不支持模式: {config.mode}")
+                return None
+
+            if result and os.path.exists(result):
+                # 重命名为指定文件名
+                final_path = os.path.join(output_dir, output_name)
+                if result != final_path:
+                    import shutil
+                    shutil.move(result, final_path)
+                return final_path
+            return None
+
+        except Exception as e:
+            logger.error(f"H3生成失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _fill_video_metadata(self, result: VideoGenResult, video_path: str):
+        """填充视频元数据（分辨率/帧率/时长/编码）"""
+        try:
+            result.file_size = os.path.getsize(video_path)
+            proc = subprocess.run(
+                [FFPROBE, "-v", "quiet", "-print_format", "json",
+                 "-show_format", "-show_streams", video_path],
+                capture_output=True, text=True, timeout=30
+            )
+            info = json.loads(proc.stdout)
+            for stream in info.get("streams", []):
+                if stream.get("codec_type") == "video":
+                    result.width = stream.get("width", 0)
+                    result.height = stream.get("height", 0)
+                    result.codec = stream.get("codec_name", "")
+                    fps_str = stream.get("r_frame_rate", "0/1")
+                    if "/" in fps_str:
+                        num, den = fps_str.split("/")
+                        result.fps = float(num) / float(den) if float(den) != 0 else 0
+            fmt = info.get("format", {})
+            result.duration = float(fmt.get("duration", 0))
+        except Exception as e:
+            result.warnings.append(f"元数据读取失败: {e}")
 
     def _quality_check(self, result: VideoGenResult):
         """视频质量检测"""
