@@ -721,6 +721,24 @@ class APIHandler(BaseHTTPRequestHandler):
             module = body.get("module") if body else None
             self._send_json({"best_practices": sls.get_best_practices(module)})
 
+        # 长视频生成端点
+        elif path == "/api/long-video/generate":
+            from long_video_generator import generate_long_video
+            script = body.get("script", "") if body else ""
+            duration = body.get("duration", 60)
+            structure = body.get("structure", "three_act")
+            style = body.get("style", "cinematic")
+            if not script:
+                self._send_json({"error": "需要script参数"}, 400)
+                return
+            result = generate_long_video(script, duration, structure, style=style)
+            self._send_json(result)
+
+        elif path == "/api/long-video/structures":
+            from long_video_generator import NarrativeEngine
+            engine = NarrativeEngine()
+            self._send_json({"structures": list(engine.STRUCTURE_TEMPLATES.keys())})
+
         # 智能导演能力列表
         elif path == "/api/director/skills":
             if not _director_v3:
