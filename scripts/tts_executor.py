@@ -19,9 +19,10 @@ try:
 except ImportError:
     COMFYUI_URL = "http://127.0.0.1:8188"
 
-# 角色→Qwen3-TTS内置音色映射
+# 角色→Qwen3-TTS内置音色映射（扩充至15+种）
 CHARACTER_VOICE_MAP = {
-    "豆包": "Serena",        # 温柔女声
+    # 女声
+    "豆包": "Serena",        # 温柔女声（默认助手）
     "顾客": "Vivian",        # 御姐女声
     "前台": "Ryan",          # 标准男声
     "机器人": "Aiden",       # 年轻男声
@@ -29,6 +30,23 @@ CHARACTER_VOICE_MAP = {
     "旁白": "Dylan",         # 沉稳男声
     "大叔": "Uncle_fu",      # 成熟大叔音
     "默认": "Serena",        # 温柔女声
+    # 新增女声
+    "少女": "Serena",        # 温柔少女
+    "御姐": "Vivian",        # 御姐
+    "萝莉": "Serena",        # 可爱萝莉（用Serena+情绪指令）
+    "女王": "Vivian",        # 霸气女王
+    "妈妈": "Serena",        # 温柔母亲
+    "老师": "Dylan",         # 知性女老师（用Dylan沉稳）
+    "客服": "Serena",        # 客服女声
+    "主播": "Vivian",        # 主播女声
+    # 新增男声
+    "少年": "Aiden",         # 少年音
+    "青年": "Ryan",          # 青年男声
+    "总裁": "Dylan",         # 霸道总裁
+    "老人": "Uncle_fu",      # 老人音
+    "父亲": "Dylan",         # 父亲音
+    "医生": "Ryan",          # 医生男声
+    "记者": "Aiden",         # 记者男声
 }
 
 # 情绪→instruct风格指令映射（拟人化描述）
@@ -72,7 +90,72 @@ EMOTION_INSTRUCT_MAP = {
     "轻松": "轻松，愉快，语速中等，带笑意",
     "紧张": "紧张，语速快，声音颤抖，停顿多",
     "质问": "质问，语速快，语气强烈，带火气",
+    # 新增情绪
+    "感动": "感动，哽咽，语速慢，带哭腔，温暖",
+    "思念": "思念，惆怅，语速慢，低沉，回忆感",
+    "害羞": "害羞，小声，语速慢，带笑意，不好意思",
+    "骄傲": "骄傲，自豪，语速中等，带得意，挺胸抬头",
+    "失望": "失望，叹气，语速慢，低沉，无奈",
+    "期待": "期待，兴奋，语速快，高音，迫不及待",
+    "感激": "感激，真诚，语速慢，温暖，带谢意",
+    "抱歉": "抱歉，愧疚，语速慢，低沉，诚恳道歉",
+    "疑惑": "疑惑，不解，语速慢，上扬语调，思考中",
+    "确认": "确认，肯定，语速中等，有力，不容置疑",
+    "介绍": "介绍，清晰，语速中等，专业，有条理",
+    "解说": "解说，专业，语速中等，清晰，有节奏感",
+    "叫卖": "叫卖，热情，语速快，高音，有感染力",
+    "播报": "播报，标准，语速中等，清晰，正式",
+    "朗诵": "朗诵，深情，语速慢，抑扬顿挫，有韵律",
+    "讲故事": "讲故事，生动，语速中等，有起伏，引人入胜",
+    "旁白_电影": "旁白，深沉，语速慢，有磁性，电影感",
+    "旁白_纪录片": "旁白，客观，语速中等，清晰，专业",
+    "旁白_广告": "旁白，激情，语速快，有感染力，促销感",
 }
+
+# 多音字/专有名词替换表（文本预处理用）
+PRONUNCIATION_FIXES = {
+    "银行": "银行（háng）",
+    "行走": "行走（xíng）",
+    "重要": "重要（zhòng）",
+    "重复": "重复（chóng）",
+    "音乐": "音乐（yuè）",
+    "快乐": "快乐（lè）",
+    "睡觉": "睡觉（jiào）",
+    "觉得": "觉得（jué）",
+    "朝阳": "朝阳（zhāo）",
+    "朝廷": "朝廷（cháo）",
+    "便宜": "便宜（pián）",
+    "方便": "方便（biàn）",
+    "长大": "长大（zhǎng）",
+    "长短": "长短（cháng）",
+    "多少": "多少（duō）",
+    "少年": "少年（shào）",
+}
+
+# 文本预处理：优化TTS发音和节奏
+def preprocess_text(text: str) -> str:
+    """
+    文本预处理：多音字标注、标点优化、节奏控制
+    """
+    if not text:
+        return text
+    
+    # 多音字替换（简化版，实际可根据上下文）
+    for word, replacement in PRONUNCIATION_FIXES.items():
+        if word in text:
+            # 只在没有上下文歧义时替换（简化处理）
+            pass  # 暂不自动替换，避免错误
+    
+    # 标点优化：确保句子末尾有标点
+    text = text.strip()
+    if text and text[-1] not in "。！？，；：…—":
+        text += "。"
+    
+    # 数字处理：长数字加逗号（TTS更容易读）
+    import re
+    text = re.sub(r'(\d{4})(?=\d)', r'\1,', text)
+    
+    return text
 
 
 # ============ 角色→克隆音色配置（zero-shot voice cloning） ============
@@ -252,14 +335,26 @@ class TTSExecutor:
             return False
 
     def synthesize(self, text: str, character: str = "默认",
-                   emotion: str = "normal", output_file: str = None) -> Optional[str]:
-        """合成单条语音（自动判断克隆音色/内置音色）"""
+                   emotion: str = "normal", output_file: str = None,
+                   speed: float = 1.0) -> Optional[str]:
+        """合成单条语音（自动判断克隆音色/内置音色）
+
+        Args:
+            text: 文本内容
+            character: 角色名称
+            emotion: 情绪标签
+            output_file: 输出文件路径
+            speed: 语速（0.5-2.0，1.0为正常）
+        """
         if not text:
             return None
 
         if not self.check_comfyui():
             logger.warning(f"  ⚠️  ComfyUI不可用，跳过TTS")
             return None
+
+        # 文本预处理
+        text = preprocess_text(text)
 
         # 检查是否配置了克隆音色
         clone_cfg = CLONE_VOICE_MAP.get(character)
@@ -358,6 +453,112 @@ class TTSExecutor:
             "failed": len(results) - success_count,
             "output_dir": self.output_dir,
             "results": results,
+        }
+
+    def synthesize_dialogue(self, dialogue: List[Dict],
+                            output_dir: str = None) -> Dict[str, Any]:
+        """
+        多角色对话批量生成
+
+        Args:
+            dialogue: 对话列表，每项包含:
+                - text: 台词
+                - character: 角色名
+                - emotion: 情绪（可选）
+                - speed: 语速（可选）
+            output_dir: 输出目录
+
+        Returns:
+            包含生成结果和时间轴的字典
+        """
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        else:
+            output_dir = self.output_dir
+
+        logger.info(f"\n{'='*60}")
+        logger.info(f"多角色对话生成: {len(dialogue)}句台词")
+        logger.info(f"{'='*60}")
+
+        if not self.check_comfyui():
+            logger.error("  ❌ ComfyUI未运行")
+            return {"status": "failed", "total": len(dialogue), "success": 0}
+
+        results = []
+        timeline = []
+        current_time = 0.0
+
+        for i, line in enumerate(dialogue):
+            text = line.get("text", "")
+            character = line.get("character", "默认")
+            emotion = line.get("emotion", "normal")
+            speed = line.get("speed", 1.0)
+
+            output_file = os.path.join(
+                output_dir, f"dialogue_{i:03d}_{character}.mp3"
+            )
+
+            logger.info(f"\n  [{i+1}/{len(dialogue)}] {character}: {text[:30]}...")
+            path = self.synthesize(text, character, emotion, output_file, speed)
+
+            # 获取音频时长
+            duration = 0.0
+            if path and os.path.exists(path):
+                try:
+                    import subprocess
+                    ffprobe = r"D:\Ai\ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe"
+                    result = subprocess.run(
+                        [ffprobe, "-v", "quiet", "-show_entries", "format=duration",
+                         "-of", "default=noprint_wrappers=1:nokey=1", path],
+                        capture_output=True, text=True, timeout=10
+                    )
+                    duration = float(result.stdout.strip()) if result.stdout.strip() else 0.0
+                except Exception:
+                    duration = len(text) * 0.2  # 估算
+
+            results.append({
+                "index": i,
+                "text": text,
+                "character": character,
+                "emotion": emotion,
+                "output_path": path,
+                "success": path is not None,
+                "duration": round(duration, 2),
+            })
+
+            timeline.append({
+                "index": i,
+                "character": character,
+                "start": round(current_time, 2),
+                "end": round(current_time + duration, 2),
+                "duration": round(duration, 2),
+                "text": text,
+            })
+            current_time += duration + 0.3  # 句间间隔0.3秒
+
+        success_count = sum(1 for r in results if r["success"])
+        logger.info(f"\n  完成: {success_count}/{len(dialogue)} 成功")
+        logger.info(f"  总时长: {current_time:.1f}秒")
+
+        return {
+            "status": "success" if success_count == len(dialogue) else "partial",
+            "total": len(dialogue),
+            "success": success_count,
+            "failed": len(dialogue) - success_count,
+            "total_duration": round(current_time, 2),
+            "output_dir": output_dir,
+            "results": results,
+            "timeline": timeline,
+        }
+
+    def list_voices(self) -> Dict[str, Any]:
+        """列出可用音色和情绪"""
+        return {
+            "characters": list(CHARACTER_VOICE_MAP.keys()),
+            "emotions": list(EMOTION_INSTRUCT_MAP.keys()),
+            "clone_voices": list(CLONE_VOICE_MAP.keys()),
+            "total_characters": len(CHARACTER_VOICE_MAP),
+            "total_emotions": len(EMOTION_INSTRUCT_MAP),
         }
 
 
