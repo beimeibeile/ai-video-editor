@@ -758,4 +758,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     result = create_template_from_video(args.video, args.name)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    logger.info(json.dumps(result, indent=2, ensure_ascii=False))

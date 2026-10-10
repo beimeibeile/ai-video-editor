@@ -164,9 +164,9 @@ def match_bgm(emotion: str = None, style: str = None,
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     matcher = BGMMatcher()
-    print(f"BGM库: {len(matcher.tracks)}首")
-    print("\n--- 测试匹配 ---")
+    logger.info(f"BGM库: {len(matcher.tracks)}首")
+    logger.info("\n--- 测试匹配 ---")
     for emotion in ["happy", "sad", "energetic", "calm", "romantic"]:
         result = matcher.match(emotion=emotion)
         if result:
-            print(f"  {emotion:12s} -> {result['name']} ({result['file']})")
+            logger.info(f"  {emotion:12s} -> {result['name']} ({result['file']})")

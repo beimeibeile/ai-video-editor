@@ -438,17 +438,17 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
     # 测试叙事引擎
-    print("=== 叙事引擎测试 ===")
+    logger.info("=== 叙事引擎测试 ===")
     engine = NarrativeEngine()
     script = "一个年轻人在城市中寻找自己的梦想。他遇到了许多困难，但从不放弃。最终，他成功实现了自己的目标，成为了一个更好的人。"
     beats = engine.parse_script(script, "three_act", 30.0)
     for beat in beats:
-        print(f"  [{beat.beat_id}] {beat.title}: {beat.description[:30]}... ({beat.duration:.1f}s)")
+        logger.info(f"  [{beat.beat_id}] {beat.title}: {beat.description[:30]}... ({beat.duration:.1f}s)")
 
-    print("\n=== 提示词生成测试 ===")
+    logger.info("\n=== 提示词生成测试 ===")
     for beat in beats[:2]:
         prompts = engine.generate_prompts(beat, "cinematic")
-        print(f"  {beat.title}:")
-        print(f"    Positive: {prompts['positive'][:80]}...")
+        logger.info(f"  {beat.title}:")
+        logger.info(f"    Positive: {prompts['positive'][:80]}...")
 
-    print("\n测试完成")
+    logger.info("\n测试完成")

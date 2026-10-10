@@ -293,7 +293,7 @@ bpy.context.scene.render.fps = 24
 # 类别: {preset.category}
 {self._get_preset_script(preset.preset_id, params)}
 
-print("渲染完成")
+logger.info("渲染完成")
 """
         script_path = os.path.join(self.output_dir, f"{preset.preset_id}_script.py")
         with open(script_path, "w", encoding="utf-8") as f:
@@ -361,14 +361,14 @@ def check_blender_available() -> bool:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
-    print("=== 3D特效预设库 ===")
-    print(f"Blender 可用: {check_blender_available()}")
-    print()
+    logger.info("=== 3D特效预设库 ===")
+    logger.info(f"Blender 可用: {check_blender_available()}")
+    logger.info()
 
     categories = ["intro", "transition", "effect", "title"]
     for cat in categories:
         presets = list_3d_presets(cat)
-        print(f"【{cat.upper()}】({len(presets)}个)")
+        logger.info(f"【{cat.upper()}】({len(presets)}个)")
         for p in presets:
-            print(f"  - {p['name']} ({p['preset_id']}): {p['description']} [{p['duration']}s]")
-        print()
+            logger.info(f"  - {p['name']} ({p['preset_id']}): {p['description']} [{p['duration']}s]")
+        logger.info()

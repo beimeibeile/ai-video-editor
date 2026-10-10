@@ -425,7 +425,7 @@ if __name__ == "__main__":
     system = SelfLearningSystem()
 
     # 模拟一些使用记录
-    print("=== 自学习系统测试 ===")
+    logger.info("=== 自学习系统测试 ===")
 
     # 记录使用
     system.log_usage("tts", "synthesize", {"character": "豆包", "emotion": "happy"},
@@ -443,23 +443,23 @@ if __name__ == "__main__":
         solution="降低分辨率至768x1344，帧数控制在81帧以内，使用分块VAE解码",
         error_pattern="OOM"
     )
-    print(f"添加踩坑记录: {pid}")
+    logger.info(f"添加踩坑记录: {pid}")
 
     # 匹配踩坑
     matched = system.match_pitfall("CUDA OOM error")
     if matched:
-        print(f"匹配到踩坑: {matched['symptom']}")
-        print(f"解决方案: {matched['solution']}")
+        logger.info(f"匹配到踩坑: {matched['symptom']}")
+        logger.info(f"解决方案: {matched['solution']}")
 
     # 获取最优参数
     best = system.get_best_params("h3", "text_to_video")
-    print(f"最优参数: {best}")
+    logger.info(f"最优参数: {best}")
 
     # 生成报告
     report = system.generate_report()
-    print(f"\n=== 学习系统报告 ===")
-    print(f"使用记录: {report['total_usage_records']}")
-    print(f"模块统计: {list(report['modules'].keys())}")
-    print(f"优化建议:")
+    logger.info(f"\n=== 学习系统报告 ===")
+    logger.info(f"使用记录: {report['total_usage_records']}")
+    logger.info(f"模块统计: {list(report['modules'].keys())}")
+    logger.info(f"优化建议:")
     for rec in report['recommendations']:
-        print(f"  {rec}")
+        logger.info(f"  {rec}")

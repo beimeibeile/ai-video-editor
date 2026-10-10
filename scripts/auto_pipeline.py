@@ -659,30 +659,30 @@ def auto_create_video(topic: str,
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    print("=== 剧本→成片全自动流水线 v2.0 测试 ===\n")
+    logger.info("=== 剧本→成片全自动流水线 v2.0 测试 ===\n")
 
     # 测试创意生成
-    print("--- 创意生成 ---")
+    logger.info("--- 创意生成 ---")
     gen = CreativeGenerator()
-    print(f"可用模板: {[t['name'] for t in gen.list_templates()]}")
+    logger.info(f"可用模板: {[t['name'] for t in gen.list_templates()]}")
     beats = gen.generate_story("测试视频", template="vlog")
-    print(f"剧本: {len(beats)}节拍")
+    logger.info(f"剧本: {len(beats)}节拍")
     for b in beats:
-        print(f"  {b.beat_id}: {b.title} ({b.duration}s, {b.mood})")
+        logger.info(f"  {b.beat_id}: {b.title} ({b.duration}s, {b.mood})")
 
     shots = gen.generate_shots(beats)
-    print(f"分镜: {len(shots)}个")
+    logger.info(f"分镜: {len(shots)}个")
 
     # 测试素材规划
-    print("\n--- 素材规划 ---")
+    logger.info("\n--- 素材规划 ---")
     planner = AssetPlanner()
     assets = planner.plan_assets(shots, style="cinematic", resolution="portrait_768")
-    print(f"素材: {len(assets)}个")
+    logger.info(f"素材: {len(assets)}个")
     for a in assets[:3]:
-        print(f"  {a.asset_id}: {a.asset_type} - {a.name} ({a.width}x{a.height})")
+        logger.info(f"  {a.asset_id}: {a.asset_type} - {a.name} ({a.width}x{a.height})")
 
     # 测试流水线（不生成素材和工程，只测试创意和规划）
-    print("\n--- 流水线测试（创意+规划模式） ---")
+    logger.info("\n--- 流水线测试（创意+规划模式） ---")
     result = auto_create_video(
         topic="测试视频",
         template="vlog",
@@ -691,10 +691,10 @@ if __name__ == "__main__":
         build_draft=False,
         enhance_quality=False,
     )
-    print(f"成功: {result.success}")
-    print(f"剧本: {len(result.story_beats)}节拍")
-    print(f"分镜: {len(result.shots)}个")
-    print(f"素材规划: {len(result.assets)}个")
-    print(f"耗时: {result.total_time:.1f}秒")
+    logger.info(f"成功: {result.success}")
+    logger.info(f"剧本: {len(result.story_beats)}节拍")
+    logger.info(f"分镜: {len(result.shots)}个")
+    logger.info(f"素材规划: {len(result.assets)}个")
+    logger.info(f"耗时: {result.total_time:.1f}秒")
 
-    print("\n✅ 所有模块测试通过")
+    logger.info("\n✅ 所有模块测试通过")
