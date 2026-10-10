@@ -474,6 +474,26 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "未找到匹配的BGM"}, 404)
 
+        # BGM搜索
+        elif path == "/api/bgm/search":
+            if not _bgm_selector:
+                self._send_json({"error": "BGM选择器未初始化"}, 500)
+                return
+            query = parse_qs(parsed.query)
+            emotion = query.get("emotion", [""])[0]
+            style = query.get("style", [""])[0]
+            tempo = query.get("tempo", [""])[0]
+            limit = int(query.get("limit", ["10"])[0])
+            results = _bgm_selector.select(emotion=emotion or None, style=style or None,
+                                            tempo=tempo or None, limit=limit)
+            self._send_json({"bgms": results, "total": len(results)})
+
+        elif path == "/api/bgm/stats":
+            if not _bgm_selector:
+                self._send_json({"error": "BGM选择器未初始化"}, 500)
+                return
+            self._send_json(_bgm_selector.get_stats())
+
         elif path.startswith("/api/bgm/"):
             from bgm_matcher import get_matcher
             matcher = get_matcher()
@@ -624,26 +644,6 @@ class APIHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"error": "端点不存在", "path": path}, 404)
 
-        # BGM搜索
-        elif path == "/api/bgm/search":
-            if not _bgm_selector:
-                self._send_json({"error": "BGM选择器未初始化"}, 500)
-                return
-            query = parse_qs(parsed.query)
-            emotion = query.get("emotion", [""])[0]
-            style = query.get("style", [""])[0]
-            tempo = query.get("tempo", [""])[0]
-            limit = int(query.get("limit", ["10"])[0])
-            results = _bgm_selector.select(emotion=emotion or None, style=style or None,
-                                            tempo=tempo or None, limit=limit)
-            self._send_json({"bgms": results, "total": len(results)})
-
-        elif path == "/api/bgm/stats":
-            if not _bgm_selector:
-                self._send_json({"error": "BGM选择器未初始化"}, 500)
-                return
-            self._send_json(_bgm_selector.get_stats())
-
         # 音效搜索
         elif path == "/api/sfx/search":
             if not _sfx_manager:
@@ -689,8 +689,9 @@ class APIHandler(BaseHTTPRequestHandler):
         elif path == "/api/learning/best-params":
             from self_learning_system import get_self_learning_system
             sls = get_self_learning_system()
-            module = body.get("module", "") if body else ""
-            action = body.get("action", "") if body else ""
+            query = parse_qs(parsed.query)
+            module = query.get("module", [""])[0]
+            action = query.get("action", [""])[0]
             if not module or not action:
                 self._send_json({"error": "需要module和action参数"}, 400)
                 return
@@ -699,13 +700,15 @@ class APIHandler(BaseHTTPRequestHandler):
         elif path == "/api/learning/pitfalls":
             from self_learning_system import get_self_learning_system
             sls = get_self_learning_system()
-            module = body.get("module") if body else None
+            query = parse_qs(parsed.query)
+            module = query.get("module", [None])[0]
             self._send_json({"pitfalls": sls.get_pitfalls(module)})
 
         elif path == "/api/learning/pitfalls/match":
             from self_learning_system import get_self_learning_system
             sls = get_self_learning_system()
-            error_msg = body.get("error", "") if body else ""
+            query = parse_qs(parsed.query)
+            error_msg = query.get("error", [""])[0]
             if not error_msg:
                 self._send_json({"error": "需要error参数"}, 400)
                 return
@@ -718,21 +721,18 @@ class APIHandler(BaseHTTPRequestHandler):
         elif path == "/api/learning/best-practices":
             from self_learning_system import get_self_learning_system
             sls = get_self_learning_system()
-            module = body.get("module") if body else None
+            query = parse_qs(parsed.query)
+            module = query.get("module", [None])[0]
             self._send_json({"best_practices": sls.get_best_practices(module)})
 
-        # 长视频生成端点
+        # 长视频生成端点（GET用于查询，POST用于生成）
         elif path == "/api/long-video/generate":
-            from long_video_generator import generate_long_video
-            script = body.get("script", "") if body else ""
-            duration = body.get("duration", 60)
-            structure = body.get("structure", "three_act")
-            style = body.get("style", "cinematic")
-            if not script:
-                self._send_json({"error": "需要script参数"}, 400)
-                return
-            result = generate_long_video(script, duration, structure, style=style)
-            self._send_json(result)
+            # GET请求返回参数说明，实际生成用POST
+            self._send_json({
+                "message": "请使用POST请求提交生成任务",
+                "required_params": ["script"],
+                "optional_params": ["duration", "structure", "style"]
+            })
 
         elif path == "/api/long-video/structures":
             from long_video_generator import NarrativeEngine
@@ -742,18 +742,17 @@ class APIHandler(BaseHTTPRequestHandler):
         # 3D特效端点
         elif path == "/api/3d/presets":
             from three_d_effects import list_3d_presets
-            category = body.get("category") if body else None
+            query = parse_qs(parsed.query)
+            category = query.get("category", [None])[0]
             self._send_json({"presets": list_3d_presets(category)})
 
         elif path == "/api/3d/generate":
-            from three_d_effects import generate_3d_effect
-            preset_id = body.get("preset_id", "") if body else ""
-            params = body.get("params", {}) if body else {}
-            if not preset_id:
-                self._send_json({"error": "需要preset_id参数"}, 400)
-                return
-            result = generate_3d_effect(preset_id, params)
-            self._send_json(result)
+            # GET请求返回参数说明，实际生成用POST
+            self._send_json({
+                "message": "请使用POST请求提交生成任务",
+                "required_params": ["preset_id"],
+                "optional_params": ["params"]
+            })
 
         elif path == "/api/3d/status":
             from three_d_effects import check_blender_available
@@ -814,6 +813,28 @@ class APIHandler(BaseHTTPRequestHandler):
                 "status": TASK_PENDING,
                 "message": "视频生成任务已创建",
             }, 202)
+
+        elif path == "/api/long-video/generate":
+            from long_video_generator import generate_long_video
+            script = body.get("script", "")
+            duration = body.get("duration", 60)
+            structure = body.get("structure", "three_act")
+            style = body.get("style", "cinematic")
+            if not script:
+                self._send_json({"error": "需要script参数"}, 400)
+                return
+            result = generate_long_video(script, duration, structure, style=style)
+            self._send_json(result)
+
+        elif path == "/api/3d/generate":
+            from three_d_effects import generate_3d_effect
+            preset_id = body.get("preset_id", "")
+            params = body.get("params", {})
+            if not preset_id:
+                self._send_json({"error": "需要preset_id参数"}, 400)
+                return
+            result = generate_3d_effect(preset_id, params)
+            self._send_json(result)
 
         elif path == "/api/draft/create":
             # 创建剪映工程（简化版，后续完善）
