@@ -739,6 +739,26 @@ class APIHandler(BaseHTTPRequestHandler):
             engine = NarrativeEngine()
             self._send_json({"structures": list(engine.STRUCTURE_TEMPLATES.keys())})
 
+        # 3D特效端点
+        elif path == "/api/3d/presets":
+            from three_d_effects import list_3d_presets
+            category = body.get("category") if body else None
+            self._send_json({"presets": list_3d_presets(category)})
+
+        elif path == "/api/3d/generate":
+            from three_d_effects import generate_3d_effect
+            preset_id = body.get("preset_id", "") if body else ""
+            params = body.get("params", {}) if body else {}
+            if not preset_id:
+                self._send_json({"error": "需要preset_id参数"}, 400)
+                return
+            result = generate_3d_effect(preset_id, params)
+            self._send_json(result)
+
+        elif path == "/api/3d/status":
+            from three_d_effects import check_blender_available
+            self._send_json({"blender_available": check_blender_available()})
+
         # 智能导演能力列表
         elif path == "/api/director/skills":
             if not _director_v3:
