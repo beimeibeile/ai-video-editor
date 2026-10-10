@@ -680,6 +680,47 @@ class APIHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(_asset_manager.get_stats())
 
+        # 自学习系统端点
+        elif path == "/api/learning/report":
+            from self_learning_system import get_self_learning_system
+            sls = get_self_learning_system()
+            self._send_json(sls.generate_report())
+
+        elif path == "/api/learning/best-params":
+            from self_learning_system import get_self_learning_system
+            sls = get_self_learning_system()
+            module = body.get("module", "") if body else ""
+            action = body.get("action", "") if body else ""
+            if not module or not action:
+                self._send_json({"error": "需要module和action参数"}, 400)
+                return
+            self._send_json({"module": module, "action": action, "best_params": sls.get_best_params(module, action)})
+
+        elif path == "/api/learning/pitfalls":
+            from self_learning_system import get_self_learning_system
+            sls = get_self_learning_system()
+            module = body.get("module") if body else None
+            self._send_json({"pitfalls": sls.get_pitfalls(module)})
+
+        elif path == "/api/learning/pitfalls/match":
+            from self_learning_system import get_self_learning_system
+            sls = get_self_learning_system()
+            error_msg = body.get("error", "") if body else ""
+            if not error_msg:
+                self._send_json({"error": "需要error参数"}, 400)
+                return
+            matched = sls.match_pitfall(error_msg)
+            if matched:
+                self._send_json({"matched": True, "pitfall": matched})
+            else:
+                self._send_json({"matched": False, "message": "未匹配到已知踩坑记录"})
+
+        elif path == "/api/learning/best-practices":
+            from self_learning_system import get_self_learning_system
+            sls = get_self_learning_system()
+            module = body.get("module") if body else None
+            self._send_json({"best_practices": sls.get_best_practices(module)})
+
         # 智能导演能力列表
         elif path == "/api/director/skills":
             if not _director_v3:
